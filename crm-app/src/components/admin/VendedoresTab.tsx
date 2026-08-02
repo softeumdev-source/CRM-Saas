@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { UserPlus, Loader2, Copy, Check, Mail, Clock } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
 
@@ -24,26 +23,27 @@ export function VendedoresTab({
   const [erro, setErro] = useState<string | null>(null);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [emailEnviado, setEmailEnviado] = useState(false);
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
     setEnviando(true);
-    const supabase = createClient();
-    const { data, error } = await supabase.rpc("convidar_usuario", {
-      p_email: email.trim(),
-      p_nome: nome.trim(),
-      p_role: "vendedor",
+    const resp = await fetch("/api/vendedores/convidar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nome: nome.trim(), email: email.trim() }),
     });
+    const data = await resp.json();
     setEnviando(false);
-    if (error || !data || data.length === 0) {
-      setErro(error?.message || "Erro ao convidar vendedor.");
+    if (!resp.ok) {
+      setErro(data.error || "Erro ao convidar vendedor.");
       return;
     }
-    const link = `${window.location.origin}/aceitar-convite/${data[0].token}`;
-    setLinkGerado(link);
+    setLinkGerado(data.link);
+    setEmailEnviado(data.emailEnviado);
     setConvites((prev) => [
-      { id: data[0].convite_id, token: data[0].token, email, nome, role: "vendedor", status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
+      { id: data.convite_id, token: data.token, email, nome, role: "vendedor", status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
       ...prev,
     ]);
     setNome("");
@@ -96,7 +96,9 @@ export function VendedoresTab({
 
           {linkGerado && (
             <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs">
-              <p className="font-bold text-indigo-800 dark:text-indigo-300 mb-1.5">Link de convite (envie manualmente se o e-mail nao chegar):</p>
+              <p className="font-bold text-indigo-800 dark:text-indigo-300 mb-1.5">
+                {emailEnviado ? "E-mail de convite enviado! Link de apoio:" : "E-mail nao configurado - envie este link manualmente:"}
+              </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">{linkGerado}</code>
                 <button onClick={copiarLink} className="text-indigo-600">{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>

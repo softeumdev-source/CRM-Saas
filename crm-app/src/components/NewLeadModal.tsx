@@ -43,6 +43,7 @@ export function NewLeadModal({
     const { data: contato, error: erroContato } = await supabase
       .from("contatos")
       .insert({
+        tenant_id: usuarioAtual.tenant_id,
         nome: nome.trim(),
         empresa: empresa.trim() || null,
         email: email.trim() || null,
@@ -64,6 +65,7 @@ export function NewLeadModal({
     const { data: negocio, error: erroNegocio } = await supabase
       .from("negocios")
       .insert({
+        tenant_id: usuarioAtual.tenant_id,
         titulo: titulo.trim(),
         valor,
         contato_id: contato.id,

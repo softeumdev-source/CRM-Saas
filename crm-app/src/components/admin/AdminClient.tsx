@@ -68,7 +68,7 @@ export function AdminClient({
       {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedores} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} />}
-      {aba === "leads" && <LeadsTab vendedores={vendedores} contatosSemDonoIniciais={contatosSemDono} />}
+      {aba === "leads" && <LeadsTab vendedores={vendedores} contatosSemDonoIniciais={contatosSemDono} usuarioAtual={usuarioAtual} />}
     </div>
   );
 }

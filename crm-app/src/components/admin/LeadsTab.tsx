@@ -60,9 +60,11 @@ function linhasParaContatos(linhas: Record<string, any>[]): LinhaImportada[] {
 export function LeadsTab({
   vendedores,
   contatosSemDonoIniciais,
+  usuarioAtual,
 }: {
   vendedores: Usuario[];
   contatosSemDonoIniciais: Contato[];
+  usuarioAtual: Usuario;
 }) {
   const [contatosSemDono, setContatosSemDono] = useState(contatosSemDonoIniciais);
   const [processando, setProcessando] = useState(false);
@@ -116,7 +118,7 @@ export function LeadsTab({
       const supabase = createClient();
       let inseridos = 0;
       for (let i = 0; i < contatos.length; i += TAMANHO_LOTE) {
-        const lote = contatos.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, origem: "importacao" }));
+        const lote = contatos.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
         setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, contatos.length)} de ${contatos.length}...`);
         const { data, error } = await supabase
           .from("contatos")
