@@ -1,0 +1,6 @@
+{
+  "name": "SaaS Pipeline CRM - Gestão de Leads",
+  "description": "CRM moderno focado em vendas SaaS com pipeline Kanban, funil de conversão, métricas de MRR/ARR e assistente de vendas de IA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
