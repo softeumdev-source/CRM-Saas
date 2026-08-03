@@ -109,7 +109,7 @@ async function gerarPdfComCertificado(
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
   const body = await request.json();
-  const { tipo, dados } = body;
+  const { tipo, dados, email_faturamento } = body;
 
   if (!tipo || !dados) {
     return NextResponse.json({ error: "Assinatura vazia." }, { status: 400 });
@@ -125,6 +125,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     p_dados: dados,
     p_ip: ip,
     p_user_agent: userAgent,
+    p_email_faturamento: email_faturamento || null,
   });
 
   if (error) {
