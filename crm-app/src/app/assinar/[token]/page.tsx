@@ -61,7 +61,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         }
         setDados(data as EnvelopePublico);
         setNomeDigitado(data.signatario.nome);
-        setEmailFaturamento(data.contato.email || "");
+        setEmailFaturamento("");
         if (data.signatario.status === "assinado") setConcluido(true);
       });
   }, [token]);

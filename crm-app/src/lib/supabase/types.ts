@@ -782,6 +782,7 @@ export type Database = {
       registrar_assinatura: {
         Args: {
           p_dados: string
+          p_email_faturamento?: string
           p_ip: string
           p_tipo: string
           p_token: string

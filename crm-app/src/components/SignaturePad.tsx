@@ -1,14 +1,41 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Eraser } from "lucide-react";
 
 export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const desenhando = useRef(false);
   const [vazio, setVazio] = useState(true);
 
-  const getCtx = () => canvasRef.current?.getContext("2d");
+  const configCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#1e293b";
+    }
+  }, []);
+
+  useEffect(() => {
+    configCanvas();
+    window.addEventListener("resize", configCanvas);
+    return () => window.removeEventListener("resize", configCanvas);
+  }, [configCanvas]);
 
   const posicao = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -17,20 +44,18 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
 
   const handleDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     desenhando.current = true;
-    const ctx = getCtx();
+    const ctx = canvasRef.current?.getContext("2d");
     const { x, y } = posicao(e);
     ctx?.beginPath();
     ctx?.moveTo(x, y);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handleMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!desenhando.current) return;
-    const ctx = getCtx();
+    const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     const { x, y } = posicao(e);
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#1e293b";
     ctx.lineTo(x, y);
     ctx.stroke();
     setVazio(false);
@@ -44,24 +69,27 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
 
   const limpar = () => {
     const canvas = canvasRef.current;
-    const ctx = getCtx();
-    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      configCanvas();
+    }
     setVazio(true);
     onChange(null);
   };
 
   return (
     <div className="space-y-2">
-      <canvas
-        ref={canvasRef}
-        width={480}
-        height={160}
-        onPointerDown={handleDown}
-        onPointerMove={handleMove}
-        onPointerUp={handleUp}
-        onPointerLeave={handleUp}
-        className="w-full h-40 bg-white rounded-xl border-2 border-dashed border-slate-300 touch-none cursor-crosshair"
-      />
+      <div ref={containerRef} className="w-full h-40">
+        <canvas
+          ref={canvasRef}
+          onPointerDown={handleDown}
+          onPointerMove={handleMove}
+          onPointerUp={handleUp}
+          onPointerLeave={handleUp}
+          className="w-full h-full bg-white rounded-xl border-2 border-dashed border-slate-300 touch-none cursor-crosshair"
+        />
+      </div>
       <button
         type="button"
         onClick={limpar}
