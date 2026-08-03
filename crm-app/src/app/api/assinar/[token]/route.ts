@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { createAnonClient } from "@/lib/supabase/server";
+import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 
 async function gerarPdfComCertificado(
@@ -67,18 +68,19 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   }
 
   // Se o envelope foi concluido, gera os PDFs com certificado de conclusao
-  if (data && (data as any).envelope_concluido) {
+  if (data && (data as any).envelope_concluido && temServiceRole()) {
     try {
+      const admin = createAdminClient();
       const envelopeInfo = (await supabase.rpc("obter_envelope_publico", { p_token: token })) as any;
       const info = envelopeInfo.data;
 
-      const { data: signatariosData } = await supabase
+      const { data: signatariosData } = await admin
         .from("signatarios")
         .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, envelope_id")
         .eq("token", token)
         .single();
 
-      const { data: todosSig } = await supabase
+      const { data: todosSig } = await admin
         .from("signatarios")
         .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo")
         .eq("envelope_id", signatariosData?.envelope_id || "");
@@ -105,11 +107,11 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         const tecnicaAssinado = await gerarPdfComCertificado(tecnicaBuf, { titulo, assinantes, numero: `${numero} (Tecnica)` });
 
         await Promise.all([
-          supabase.storage.from("assinatura-publica").upload(`${token}/comercial-assinado.pdf`, comercialAssinado, {
+          admin.storage.from("assinatura-publica").upload(`${token}/comercial-assinado.pdf`, comercialAssinado, {
             contentType: "application/pdf",
             upsert: true,
           }),
-          supabase.storage.from("assinatura-publica").upload(`${token}/tecnica-assinado.pdf`, tecnicaAssinado, {
+          admin.storage.from("assinatura-publica").upload(`${token}/tecnica-assinado.pdf`, tecnicaAssinado, {
             contentType: "application/pdf",
             upsert: true,
           }),

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
 
 interface SignatarioEntrada {
@@ -91,9 +92,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: erroSig?.message }, { status: 500 });
   }
 
+  const admin = createAdminClient();
   const [comercialFile, tecnicaFile] = await Promise.all([
-    supabase.storage.from("documentos").download(proposta.pdf_comercial_path),
-    supabase.storage.from("documentos").download(proposta.pdf_tecnica_path),
+    admin.storage.from("documentos").download(proposta.pdf_comercial_path),
+    admin.storage.from("documentos").download(proposta.pdf_tecnica_path),
   ]);
 
   if (comercialFile.error || tecnicaFile.error || !comercialFile.data || !tecnicaFile.data) {
@@ -109,16 +111,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   let algumEmailEnviado = false;
   for (const sig of signatariosCriados) {
     const token = sig.token;
-    await Promise.all([
-      supabase.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialBuffer, {
+    const [upComercial, upTecnica] = await Promise.all([
+      admin.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialBuffer, {
         contentType: "application/pdf",
         upsert: true,
       }),
-      supabase.storage.from("assinatura-publica").upload(`${token}/tecnica.pdf`, tecnicaBuffer, {
+      admin.storage.from("assinatura-publica").upload(`${token}/tecnica.pdf`, tecnicaBuffer, {
         contentType: "application/pdf",
         upsert: true,
       }),
     ]);
+    if (upComercial.error || upTecnica.error) {
+      console.error("Falha ao publicar PDFs para assinatura", upComercial.error, upTecnica.error);
+      return NextResponse.json({ error: "Falha ao publicar os PDFs para assinatura." }, { status: 500 });
+    }
 
     const linkAssinatura = `${origin}/assinar/${token}`;
     try {
