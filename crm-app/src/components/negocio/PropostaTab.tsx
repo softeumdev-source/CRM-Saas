@@ -77,28 +77,33 @@ export function PropostaTab({
   const handleGerar = async () => {
     setErro(null);
     setGerando(true);
-    const resp = await fetch("/api/propostas/gerar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        negocioId: negocio.id,
-        planoId,
-        avisoPrevioDias,
-        valorPlataforma: plano?.valor_plataforma_base,
-        valorUso: plano?.valor_uso_base,
-        qtdCaixasEmail: 0,
-        qtdNumerosWhatsapp: 0,
-        prazoContratoMeses,
-      }),
-    });
-    const data = await resp.json();
-    setGerando(false);
-    if (!resp.ok) {
-      setErro(data.error || "Erro ao gerar proposta.");
-      return;
+    try {
+      const resp = await fetch("/api/propostas/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          negocioId: negocio.id,
+          planoId,
+          avisoPrevioDias,
+          valorPlataforma: plano?.valor_plataforma_base,
+          valorUso: plano?.valor_uso_base,
+          qtdCaixasEmail: 0,
+          qtdNumerosWhatsapp: 0,
+          prazoContratoMeses,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao gerar proposta.");
+        return;
+      }
+      setPropostas((prev) => [{ ...data.proposta, plano, envelopes: [] }, ...prev]);
+      if (data.urlComercial) window.open(data.urlComercial, "_blank");
+    } catch (e: any) {
+      setErro(e?.message || "Erro de conexao ao gerar proposta.");
+    } finally {
+      setGerando(false);
     }
-    setPropostas((prev) => [{ ...data.proposta, plano, envelopes: [] }, ...prev]);
-    if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
   const abrirEnvio = (propostaId: string) => {
@@ -141,38 +146,43 @@ export function PropostaTab({
 
     setEnviandoId(editandoEnvioId);
     setErro(null);
-    const resp = await fetch(`/api/propostas/${editandoEnvioId}/enviar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        signatarios: signatariosValidos,
-        copias: copias.filter((c) => c.trim()),
-        campos_assinatura: campos,
-      }),
-    });
-    const data = await resp.json();
-    setEnviandoId(null);
-    if (!resp.ok) {
-      setErro(data.error || "Erro ao enviar proposta.");
-      return;
-    }
-    setEditandoEnvioId(null);
-    setEtapaEnvio(null);
-    setUltimoResultado({
-      propostaId: editandoEnvioId,
-      linkAssinatura: data.linkAssinatura,
-      emailEnviado: data.emailEnviado,
-      emailErro: data.emailErro || null,
-      remetenteTest: data.remetenteTest || false,
-    });
-    const supabase = createClient();
-    const { data: propostaAtualizada } = await supabase
-      .from("propostas")
-      .select("*, plano:planos(*), envelopes(*, signatarios(*))")
-      .eq("id", editandoEnvioId)
-      .single();
-    if (propostaAtualizada) {
-      setPropostas((prev) => prev.map((p) => (p.id === editandoEnvioId ? propostaAtualizada : p)));
+    try {
+      const resp = await fetch(`/api/propostas/${editandoEnvioId}/enviar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signatarios: signatariosValidos,
+          copias: copias.filter((c) => c.trim()),
+          campos_assinatura: campos,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao enviar proposta.");
+        return;
+      }
+      setEditandoEnvioId(null);
+      setEtapaEnvio(null);
+      setUltimoResultado({
+        propostaId: editandoEnvioId,
+        linkAssinatura: data.linkAssinatura,
+        emailEnviado: data.emailEnviado,
+        emailErro: data.emailErro || null,
+        remetenteTest: data.remetenteTest || false,
+      });
+      const supabase = createClient();
+      const { data: propostaAtualizada } = await supabase
+        .from("propostas")
+        .select("*, plano:planos(*), envelopes(*, signatarios(*))")
+        .eq("id", editandoEnvioId)
+        .single();
+      if (propostaAtualizada) {
+        setPropostas((prev) => prev.map((p) => (p.id === editandoEnvioId ? propostaAtualizada : p)));
+      }
+    } catch (e: any) {
+      setErro(e?.message || "Erro de conexao ao enviar proposta.");
+    } finally {
+      setEnviandoId(null);
     }
   };
 

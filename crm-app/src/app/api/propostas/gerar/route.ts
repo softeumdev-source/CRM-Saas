@@ -4,7 +4,10 @@ import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { renderPropostaTecnicaPdf } from "@/lib/pdf/PropostaTecnica";
 import type { DadosProposta } from "@/lib/pdf/dados";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
+  try {
   const supabase = await createClient();
   const {
     data: { user },
@@ -197,4 +200,8 @@ export async function POST(request: Request) {
     urlComercial: urlComercial?.signedUrl,
     urlTecnica: urlTecnica?.signedUrl,
   });
+  } catch (e: any) {
+    console.error("Erro ao gerar proposta:", e);
+    return NextResponse.json({ error: e?.message || "Erro interno ao gerar proposta." }, { status: 500 });
+  }
 }

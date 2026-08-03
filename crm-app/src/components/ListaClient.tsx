@@ -1,14 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 
-export function ListaClient({ negocios, etapas }: { negocios: NegocioComRelacoes[]; etapas: EtapaPipeline[] }) {
+export function ListaClient({ negocios: negociosIniciais, etapas }: { negocios: NegocioComRelacoes[]; etapas: EtapaPipeline[] }) {
+  const [negocios, setNegocios] = useState(negociosIniciais);
   const [busca, setBusca] = useState("");
   const [etapaFiltro, setEtapaFiltro] = useState("all");
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("lista-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, () => {
+        supabase
+          .from("negocios")
+          .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+          .order("criado_em", { ascending: false })
+          .then(({ data }) => data && setNegocios(data as any));
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const filtrados = useMemo(() => {
     return negocios.filter((n) => {
