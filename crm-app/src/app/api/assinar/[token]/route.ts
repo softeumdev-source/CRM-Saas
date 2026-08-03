@@ -107,32 +107,33 @@ async function gerarPdfComCertificado(
 }
 
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
-  const { token } = await context.params;
-  const body = await request.json();
-  const { tipo, dados, email_faturamento } = body;
+  try {
+    const { token } = await context.params;
+    const body = await request.json();
+    const { tipo, dados, email_faturamento } = body;
 
-  if (!tipo || !dados) {
-    return NextResponse.json({ error: "Assinatura vazia." }, { status: 400 });
-  }
+    if (!tipo || !dados) {
+      return NextResponse.json({ error: "Assinatura vazia." }, { status: 400 });
+    }
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecido";
-  const userAgent = request.headers.get("user-agent") || "desconhecido";
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecido";
+    const userAgent = request.headers.get("user-agent") || "desconhecido";
 
-  const supabase = createAnonClient();
-  const { data, error } = await supabase.rpc("registrar_assinatura", {
-    p_token: token,
-    p_tipo: tipo,
-    p_dados: dados,
-    p_ip: ip,
-    p_user_agent: userAgent,
-    p_email_faturamento: email_faturamento || null,
-  });
+    const supabase = createAnonClient();
+    const { data, error } = await supabase.rpc("registrar_assinatura", {
+      p_token: token,
+      p_tipo: tipo,
+      p_dados: dados,
+      p_ip: ip,
+      p_user_agent: userAgent,
+      p_email_faturamento: email_faturamento || null,
+    });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
-  if (data && (data as any).envelope_concluido && temServiceRole()) {
+    if (data && (data as any).envelope_concluido && temServiceRole()) {
     try {
       const admin = createAdminClient();
       const envelopeInfo = (await supabase.rpc("obter_envelope_publico", { p_token: token })) as any;
@@ -208,5 +209,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     }
   }
 
-  return NextResponse.json(data);
+    return NextResponse.json(data);
+  } catch (e: any) {
+    console.error("Erro na rota /api/assinar:", e);
+    return NextResponse.json({ error: e?.message || "Erro interno ao processar assinatura." }, { status: 500 });
+  }
 }

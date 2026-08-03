@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/config";
 
-const PUBLIC_PATHS = ["/login", "/aceitar-convite", "/assinar", "/redefinir-senha"];
+const PUBLIC_PATHS = ["/login", "/aceitar-convite", "/assinar", "/api/assinar", "/redefinir-senha"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
