@@ -47,10 +47,17 @@ export function NegocioDetailClient({
   };
 
   const handleExcluir = async () => {
-    if (!confirm("Deseja realmente excluir este negocio?")) return;
+    const etapaPerdido = etapas.find((e) => e.nome.trim().toLowerCase() === "perdido");
+    if (!etapaPerdido) return;
+    if (!confirm("Este negocio sera movido para a etapa Perdido. Deseja continuar?")) return;
+    const motivo = window.prompt("Motivo da perda (opcional):") || null;
     const supabase = createClient();
-    await supabase.from("negocios").delete().eq("id", negocio.id);
+    await supabase
+      .from("negocios")
+      .update({ etapa_id: etapaPerdido.id, ganho: false, motivo_perda: motivo, probabilidade: 0, atualizado_em: new Date().toISOString() })
+      .eq("id", negocio.id);
     router.push("/");
+    router.refresh();
   };
 
   const etapaAtual = etapas.find((e) => e.id === negocio.etapa_id);
@@ -85,7 +92,7 @@ export function NegocioDetailClient({
             <button
               onClick={handleExcluir}
               className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
-              title="Excluir negocio"
+              title="Marcar como perdido"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -141,7 +148,7 @@ export function NegocioDetailClient({
           { id: "geral", label: "Visao Geral" },
           { id: "cadencia", label: "Cadencia" },
           { id: "proposta", label: "Proposta & Assinatura" },
-          { id: "ia", label: "Copiloto IA" },
+          { id: "ia", label: "Mensagens" },
         ].map((t) => (
           <button
             key={t.id}
@@ -164,7 +171,7 @@ export function NegocioDetailClient({
       {aba === "proposta" && (
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostasIniciais} />
       )}
-      {aba === "ia" && <CopilotoTab negocio={negocio} />}
+      {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
     </div>
   );
 }

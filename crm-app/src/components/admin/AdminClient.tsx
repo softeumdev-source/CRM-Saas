@@ -15,6 +15,7 @@ export function AdminClient({
   negocios,
   etapas,
   contatosSemDono,
+  contatosComDono,
   usuarioAtual,
 }: {
   usuarios: Usuario[];
@@ -23,10 +24,12 @@ export function AdminClient({
   negocios: NegocioComRelacoes[];
   etapas: EtapaPipeline[];
   contatosSemDono: Contato[];
+  contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   usuarioAtual: Usuario;
 }) {
   const [aba, setAba] = useState<"vendedores" | "funil" | "planos" | "leads">("vendedores");
   const vendedores = usuarios.filter((u) => u.role === "vendedor");
+  const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
 
   return (
     <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -43,7 +46,7 @@ export function AdminClient({
 
         <div className="flex flex-wrap items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shrink-0">
           {[
-            { id: "vendedores", label: `Vendedores (${vendedores.length})`, icon: Users },
+            { id: "vendedores", label: `Vendedores (${vendedoresAtivos.length})`, icon: Users },
             { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
             { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
@@ -66,9 +69,9 @@ export function AdminClient({
       </div>
 
       {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
-      {aba === "funil" && <FunilTab vendedores={vendedores} negocios={negocios} etapas={etapas} />}
+      {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} />}
-      {aba === "leads" && <LeadsTab vendedores={vendedores} contatosSemDonoIniciais={contatosSemDono} usuarioAtual={usuarioAtual} />}
+      {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
     </div>
   );
 }

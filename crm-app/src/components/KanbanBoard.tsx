@@ -27,7 +27,7 @@ export function KanbanBoard({
       .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, () => {
         supabase
           .from("negocios")
-          .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+          .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
           .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
       })
       .subscribe();
@@ -60,7 +60,16 @@ export function KanbanBoard({
     <div className="flex-1 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
       <div className="flex gap-4 min-w-max">
         {etapas.map((etapa) => {
-          const doEtapa = negocios.filter((n) => n.etapa_id === etapa.id);
+          const hoje = new Date().toDateString();
+          const doEtapa = negocios
+            .filter((n) => n.etapa_id === etapa.id)
+            .slice()
+            .sort((a, b) => {
+              const aHoje = a.ultima_atividade_em ? new Date(a.ultima_atividade_em).toDateString() === hoje : false;
+              const bHoje = b.ultima_atividade_em ? new Date(b.ultima_atividade_em).toDateString() === hoje : false;
+              if (aHoje === bHoje) return 0;
+              return aHoje ? 1 : -1;
+            });
           const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
 
           return (

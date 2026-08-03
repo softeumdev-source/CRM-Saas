@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import { Upload, Loader2, Users2, Shuffle, CheckCircle2 } from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
+
+type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | null };
 
 interface LinhaImportada {
   nome: string;
@@ -60,13 +62,16 @@ function linhasParaContatos(linhas: Record<string, any>[]): LinhaImportada[] {
 export function LeadsTab({
   vendedores,
   contatosSemDonoIniciais,
+  contatosComDonoIniciais = [],
   usuarioAtual,
 }: {
   vendedores: Usuario[];
   contatosSemDonoIniciais: Contato[];
+  contatosComDonoIniciais?: ContatoComDono[];
   usuarioAtual: Usuario;
 }) {
   const [contatosSemDono, setContatosSemDono] = useState(contatosSemDonoIniciais);
+  const [contatosComDono, setContatosComDono] = useState<ContatoComDono[]>(contatosComDonoIniciais);
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ inseridos: number; total: number } | null>(null);
@@ -74,6 +79,12 @@ export function LeadsTab({
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [vendedorManual, setVendedorManual] = useState("");
   const [distribuindo, setDistribuindo] = useState(false);
+  // reatribuicao de leads que ja tem dono
+  const [selComDono, setSelComDono] = useState<Set<string>>(new Set());
+  const [filtroVendedor, setFiltroVendedor] = useState("all");
+  const [buscaComDono, setBuscaComDono] = useState("");
+  const [novoResp, setNovoResp] = useState("");
+  const [reatribuindo, setReatribuindo] = useState(false);
 
   const handleArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -173,6 +184,47 @@ export function LeadsTab({
     setSelecionados(new Set());
   };
 
+  const selecionarTodosPool = () => {
+    setSelecionados((prev) => (prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id))));
+  };
+
+  const comDonoFiltrados = contatosComDono.filter((c) => {
+    const okVendedor = filtroVendedor === "all" || c.responsavel?.id === filtroVendedor;
+    const okBusca = !buscaComDono.trim() || (c.nome + " " + (c.empresa || "") + " " + (c.email || "")).toLowerCase().includes(buscaComDono.trim().toLowerCase());
+    return okVendedor && okBusca;
+  });
+
+  const alternarSelComDono = (id: string) => {
+    setSelComDono((prev) => {
+      const novo = new Set(prev);
+      novo.has(id) ? novo.delete(id) : novo.add(id);
+      return novo;
+    });
+  };
+
+  const reatribuir = async (paraPool: boolean) => {
+    if (selComDono.size === 0) return;
+    if (!paraPool && !novoResp) return;
+    setReatribuindo(true);
+    const ids = Array.from(selComDono);
+    const supabase = createClient();
+    const destino = paraPool ? null : novoResp;
+    await supabase.from("contatos").update({ responsavel_id: destino }).in("id", ids);
+    if (paraPool) {
+      const movidos = contatosComDono.filter((c) => selComDono.has(c.id)).map((c) => ({ ...c, responsavel_id: null, responsavel: null }));
+      setContatosSemDono((prev) => [...movidos, ...prev]);
+      setContatosComDono((prev) => prev.filter((c) => !selComDono.has(c.id)));
+    } else {
+      const dest = vendedores.find((v) => v.id === novoResp);
+      setContatosComDono((prev) =>
+        prev.map((c) => (selComDono.has(c.id) ? { ...c, responsavel_id: novoResp, responsavel: dest ? { id: dest.id, nome: dest.nome } : null } : c))
+      );
+    }
+    setSelComDono(new Set());
+    setNovoResp("");
+    setReatribuindo(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-3">
@@ -232,7 +284,14 @@ export function LeadsTab({
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-white dark:bg-slate-900">
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
-                <th className="p-3 w-8"></th>
+                <th className="p-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={contatosSemDono.length > 0 && selecionados.size === contatosSemDono.length}
+                    onChange={selecionarTodosPool}
+                    title="Selecionar todos"
+                  />
+                </th>
                 <th className="p-3">Nome</th>
                 <th className="p-3">Empresa</th>
                 <th className="p-3">E-mail</th>
@@ -251,6 +310,92 @@ export function LeadsTab({
               ))}
               {contatosSemDono.length === 0 && (
                 <tr><td colSpan={5} className="p-6 text-center text-slate-400">Nenhum lead sem dono no momento.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 text-indigo-600" /> Leads com vendedor ({comDonoFiltrados.length})
+              </h3>
+              <p className="text-xs text-slate-500">{selComDono.size} selecionados · reatribua ou devolva ao pool</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                value={buscaComDono}
+                onChange={(e) => setBuscaComDono(e.target.value)}
+                placeholder="Buscar nome/empresa/e-mail..."
+                className="pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-56"
+              />
+            </div>
+            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <option value="all">Todos os vendedores</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+            <div className="flex-1" />
+            <select value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <option value="">Passar para...</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => reatribuir(false)}
+              disabled={reatribuindo || selComDono.size === 0 || !novoResp}
+              className="px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-50"
+            >
+              {reatribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reatribuir"}
+            </button>
+            <button
+              onClick={() => reatribuir(true)}
+              disabled={reatribuindo || selComDono.size === 0}
+              className="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl disabled:opacity-50"
+            >
+              Devolver ao pool
+            </button>
+          </div>
+        </div>
+        <div className="max-h-[420px] overflow-y-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="sticky top-0 bg-white dark:bg-slate-900">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
+                <th className="p-3 w-8">
+                  <input
+                    type="checkbox"
+                    checked={comDonoFiltrados.length > 0 && comDonoFiltrados.every((c) => selComDono.has(c.id))}
+                    onChange={() =>
+                      setSelComDono((prev) =>
+                        comDonoFiltrados.every((c) => prev.has(c.id)) ? new Set() : new Set(comDonoFiltrados.map((c) => c.id))
+                      )
+                    }
+                  />
+                </th>
+                <th className="p-3">Nome</th>
+                <th className="p-3">Empresa</th>
+                <th className="p-3">Vendedor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {comDonoFiltrados.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
+                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
+                  <td className="p-3 text-indigo-600 dark:text-indigo-400 font-semibold">{c.responsavel?.nome || "—"}</td>
+                </tr>
+              ))}
+              {comDonoFiltrados.length === 0 && (
+                <tr><td colSpan={4} className="p-6 text-center text-slate-400">Nenhum lead com vendedor neste filtro.</td></tr>
               )}
             </tbody>
           </table>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Loader2, Copy, Check, Mail, Clock } from "lucide-react";
+import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
 
@@ -24,6 +25,9 @@ export function VendedoresTab({
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [emailEnviado, setEmailEnviado] = useState(false);
+  const [vendedoresState, setVendedoresState] = useState(vendedores);
+  const [reenviandoId, setReenviandoId] = useState<string | null>(null);
+  const [reenviado, setReenviado] = useState<string | null>(null);
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +61,32 @@ export function VendedoresTab({
     setTimeout(() => setCopiado(false), 2000);
   };
 
-  const totalMeta = vendedores.reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
+  const handleReenviar = async (conviteId: string) => {
+    setReenviandoId(conviteId);
+    const resp = await fetch("/api/vendedores/reenviar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conviteId }),
+    });
+    setReenviandoId(null);
+    if (resp.ok) {
+      setReenviado(conviteId);
+      setTimeout(() => setReenviado(null), 2500);
+    }
+  };
+
+  const toggleAtivo = async (v: Usuario) => {
+    const novoAtivo = !v.ativo;
+    if (novoAtivo === false && !confirm(`Remover ${v.nome} do time de vendedores? Os leads dele continuam com ele, mas ele deixa de aparecer para receber novos leads e nao consegue mais acessar o sistema.`)) return;
+    setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo: novoAtivo } : u)));
+    const supabase = createClient();
+    await supabase.from("usuarios").update({ ativo: novoAtivo }).eq("id", v.id);
+  };
+
+  const totalMeta = vendedoresState.filter((v) => v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
   const pendentes = convites.filter((c) => c.status === "pendente");
+  const vendedoresAtivos = vendedoresState.filter((v) => v.ativo !== false);
+  const vendedoresInativos = vendedoresState.filter((v) => v.ativo === false);
 
   return (
     <div className="space-y-6">
@@ -111,11 +139,28 @@ export function VendedoresTab({
               <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Convites pendentes</p>
               <div className="space-y-1.5">
                 {pendentes.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg">
-                    <span className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
-                      <Mail className="h-3.5 w-3.5" /> {c.email}
+                  <div key={c.id} className="flex items-center justify-between gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg">
+                    <span className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300 truncate">
+                      <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{c.email}</span>
                     </span>
-                    <span className="flex items-center gap-1 text-amber-600"><Clock className="h-3 w-3" /> pendente</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="flex items-center gap-1 text-amber-600"><Clock className="h-3 w-3" /> pendente</span>
+                      <button
+                        type="button"
+                        onClick={() => handleReenviar(c.id)}
+                        disabled={reenviandoId === c.id}
+                        className="flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                      >
+                        {reenviandoId === c.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : reenviado === c.id ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        Reenviar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -126,7 +171,7 @@ export function VendedoresTab({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <p className="text-xs font-bold uppercase text-slate-400">Total de vendedores</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{vendedores.length}</p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{vendedoresAtivos.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <p className="text-xs font-bold uppercase text-slate-400">Meta mensal somada</p>
@@ -137,27 +182,64 @@ export function VendedoresTab({
             <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => !n.ganho).length}</p>
           </div>
 
-          {vendedores.map((v) => {
+          {vendedoresAtivos.map((v) => {
             const deles = negocios.filter((n) => n.responsavel_id === v.id);
             const valorAtivo = deles.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
-              <div key={v.id} className="col-span-full sm:col-span-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold">
+              <div key={v.id} className="col-span-full sm:col-span-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold shrink-0">
                     {iniciais(v.nome)}
                   </div>
-                  <div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{v.nome}</p>
-                    <p className="text-xs text-slate-500">{v.email}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{v.nome}</p>
+                    <p className="text-xs text-slate-500 truncate">{v.email}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
-                  <p className="text-[11px] text-slate-400">{deles.length} negocios</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
+                    <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
+                    <p className="text-[11px] text-slate-400">{deles.length} negocios</p>
+                  </div>
+                  <button
+                    onClick={() => toggleAtivo(v)}
+                    title="Remover vendedor"
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+                  >
+                    <UserX className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             );
           })}
+
+          {vendedoresInativos.length > 0 && (
+            <div className="col-span-full">
+              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Vendedores removidos ({vendedoresInativos.length})</p>
+              <div className="space-y-2">
+                {vendedoresInativos.map((v) => (
+                  <div key={v.id} className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 opacity-70">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 w-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px] font-extrabold shrink-0">
+                        {iniciais(v.nome)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-slate-700 dark:text-slate-300 truncate">{v.nome}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{v.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleAtivo(v)}
+                      title="Reativar vendedor"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
+                    >
+                      <UserCheck className="h-3.5 w-3.5" /> Reativar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -10,10 +10,10 @@ import {
   Users,
   CheckCircle2,
   Bell,
-  BellOff,
   Plus,
   Clock,
   ArrowLeftRight,
+  BadgeCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Atividade, TipoAtividade, Usuario } from "@/lib/types";
@@ -57,8 +57,6 @@ export function CadenciaTab({
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [dataAgendada, setDataAgendada] = useState("");
-  const [lembreteAtivo, setLembreteAtivo] = useState(false);
-  const [lembreteData, setLembreteData] = useState("");
   const [salvando, setSalvando] = useState(false);
 
   const proximosPassos = atividades.filter((a) => !a.concluida && a.data_agendada);
@@ -78,7 +76,7 @@ export function CadenciaTab({
         titulo: titulo.trim(),
         descricao: descricao.trim() || null,
         data_agendada: dataAgendada ? new Date(dataAgendada).toISOString() : null,
-        lembrete_data: lembreteAtivo && lembreteData ? new Date(lembreteData).toISOString() : null,
+        lembrete_data: dataAgendada ? new Date(dataAgendada).toISOString() : null,
       })
       .select("*, usuario:usuarios(*)")
       .single();
@@ -88,8 +86,6 @@ export function CadenciaTab({
       setTitulo("");
       setDescricao("");
       setDataAgendada("");
-      setLembreteAtivo(false);
-      setLembreteData("");
     }
   };
 
@@ -97,6 +93,13 @@ export function CadenciaTab({
     setAtividades((prev) => prev.map((a) => (a.id === id ? { ...a, concluida: true } : a)));
     const supabase = createClient();
     await supabase.from("atividades").update({ concluida: true }).eq("id", id);
+    await supabase.from("negocios").update({ ultima_atividade_em: new Date().toISOString() }).eq("id", negocioId);
+  };
+
+  const confirmarAgenda = async (id: string) => {
+    setAtividades((prev) => prev.map((a) => (a.id === id ? { ...a, confirmada: true } : a)));
+    const supabase = createClient();
+    await supabase.from("atividades").update({ confirmada: true }).eq("id", id);
   };
 
   return (
@@ -128,33 +131,18 @@ export function CadenciaTab({
             className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
           />
           <div>
-            <label className="text-[11px] font-bold text-slate-500 block mb-1">Proxima acao agendada para</label>
+            <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 mb-1">
+              <Bell className="h-3.5 w-3.5 text-indigo-600" /> Proxima acao agendada para
+            </label>
             <input
               type="datetime-local"
               value={dataAgendada}
               onChange={(e) => setDataAgendada(e.target.value)}
               className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
-          </div>
-
-          <div className="p-3 rounded-xl border border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-2">
-            <label className="flex items-center gap-2 text-xs font-bold text-indigo-700 dark:text-indigo-300">
-              <input
-                type="checkbox"
-                checked={lembreteAtivo}
-                onChange={(e) => setLembreteAtivo(e.target.checked)}
-              />
-              {lembreteAtivo ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-              Me notificar com alerta nesta data/hora
-            </label>
-            {lembreteAtivo && (
-              <input
-                type="datetime-local"
-                value={lembreteData}
-                onChange={(e) => setLembreteData(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-xl"
-              />
-            )}
+            <p className="text-[10px] text-slate-400 mt-1">
+              Voce sera notificado automaticamente pelo sino do sistema nesta data/hora.
+            </p>
           </div>
 
           <button
@@ -181,22 +169,35 @@ export function CadenciaTab({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{a.titulo}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 flex-wrap">
                         <Clock className="h-3 w-3" />
                         {a.data_agendada && new Date(a.data_agendada).toLocaleString("pt-BR")}
-                        {a.lembrete_data && (
-                          <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold ml-2">
-                            <Bell className="h-3 w-3" /> alerta configurado
+                        <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold ml-2">
+                          <Bell className="h-3 w-3" /> alerta automatico
+                        </span>
+                        {(a as any).confirmada && (
+                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold ml-2">
+                            <BadgeCheck className="h-3 w-3" /> agenda confirmada
                           </span>
                         )}
                       </p>
                     </div>
-                    <button
-                      onClick={() => marcarConcluida(a.id)}
-                      className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg"
-                    >
-                      Concluir
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!(a as any).confirmada && (
+                        <button
+                          onClick={() => confirmarAgenda(a.id)}
+                          className="text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-2.5 py-1.5 rounded-lg"
+                        >
+                          Confirmar agenda
+                        </button>
+                      )}
+                      <button
+                        onClick={() => marcarConcluida(a.id)}
+                        className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-2.5 py-1.5 rounded-lg"
+                      >
+                        Concluir
+                      </button>
+                    </div>
                   </div>
                 );
               })}

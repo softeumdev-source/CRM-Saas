@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 
@@ -15,9 +16,19 @@ export function FunilTab({
   etapas: EtapaPipeline[];
 }) {
   const [filtro, setFiltro] = useState<string>("all");
+  const [busca, setBusca] = useState("");
+
+  const vendedoresFiltrados = busca.trim()
+    ? vendedores.filter((v) => v.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    : vendedores;
+
+  const negociosPorFiltro =
+    filtro === "all" ? negocios : filtro === "sem_dono" ? negocios.filter((n) => !n.responsavel_id) : negocios.filter((n) => n.responsavel_id === filtro);
 
   const negociosFiltrados =
-    filtro === "all" ? negocios : filtro === "sem_dono" ? negocios.filter((n) => !n.responsavel_id) : negocios.filter((n) => n.responsavel_id === filtro);
+    busca.trim() && filtro === "all"
+      ? negociosPorFiltro.filter((n) => n.responsavel_id && vendedoresFiltrados.some((v) => v.id === n.responsavel_id))
+      : negociosPorFiltro;
 
   const totalValor = negociosFiltrados.reduce((acc, n) => acc + (n.valor || 0), 0);
   const semDonoCount = negocios.filter((n) => !n.responsavel_id).length;
@@ -25,19 +36,33 @@ export function FunilTab({
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Filtrar funil</label>
-          <select
-            value={filtro}
-            onChange={(e) => setFiltro(e.target.value)}
-            className="px-4 py-2.5 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl"
-          >
-            <option value="all">Visao geral (todos os vendedores)</option>
-            <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
-            {vendedores.map((v) => (
-              <option key={v.id} value={v.id}>{v.nome}</option>
-            ))}
-          </select>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Buscar vendedor</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Nome do vendedor..."
+                className="pl-8 pr-3 py-2.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full sm:w-56"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Filtrar funil</label>
+            <select
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              className="px-4 py-2.5 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full"
+            >
+              <option value="all">Visao geral (todos os vendedores)</option>
+              <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
+              {vendedoresFiltrados.map((v) => (
+                <option key={v.id} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-500">Valor total no filtro</p>

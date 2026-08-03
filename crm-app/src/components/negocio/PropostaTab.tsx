@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   AlertTriangle,
   FileText,
@@ -12,6 +11,9 @@ import {
   Download,
   Copy,
   Check,
+  Plus,
+  X,
+  Eye,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, Plano } from "@/lib/types";
@@ -23,6 +25,11 @@ const STATUS_COR: Record<string, string> = {
   assinada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   cancelada: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
 };
+
+interface Signatario {
+  nome: string;
+  email: string;
+}
 
 export function PropostaTab({
   negocio,
@@ -37,11 +44,7 @@ export function PropostaTab({
   const [planoId, setPlanoId] = useState(planos[0]?.id || "");
   const plano = planos.find((p) => p.id === planoId);
 
-  const [valorPlataforma, setValorPlataforma] = useState(plano?.valor_plataforma_base || 0);
-  const [valorUso, setValorUso] = useState(plano?.valor_uso_base || 0);
   const [avisoPrevioDias, setAvisoPrevioDias] = useState(180);
-  const [qtdCaixasEmail, setQtdCaixasEmail] = useState(1);
-  const [qtdNumerosWhatsapp, setQtdNumerosWhatsapp] = useState(0);
   const [prazoContratoMeses, setPrazoContratoMeses] = useState(12);
 
   const [gerando, setGerando] = useState(false);
@@ -50,14 +53,14 @@ export function PropostaTab({
   const [linkCopiado, setLinkCopiado] = useState<string | null>(null);
   const [ultimoResultado, setUltimoResultado] = useState<{ propostaId: string; linkAssinatura: string; emailEnviado: boolean } | null>(null);
 
+  // editor de signatarios (aparece ao clicar Enviar)
+  const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
+  const [signatarios, setSignatarios] = useState<Signatario[]>([]);
+  const [copias, setCopias] = useState<string[]>([]);
+
   const temCnpj = !!negocio.contato?.cnpj?.trim();
 
-  const trocarPlano = (id: string) => {
-    setPlanoId(id);
-    const p = planos.find((pl) => pl.id === id);
-    setValorPlataforma(p?.valor_plataforma_base || 0);
-    setValorUso(p?.valor_uso_base || 0);
-  };
+  const valorMensal = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
 
   const handleGerar = async () => {
     setErro(null);
@@ -69,12 +72,10 @@ export function PropostaTab({
         negocioId: negocio.id,
         planoId,
         avisoPrevioDias,
-        valorPlataforma,
-        valorUso,
-        qtdCaixasEmail,
-        valorModuloEmail: 150,
-        qtdNumerosWhatsapp,
-        valorModuloWhatsapp: 250,
+        valorPlataforma: plano?.valor_plataforma_base,
+        valorUso: plano?.valor_uso_base,
+        qtdCaixasEmail: 0,
+        qtdNumerosWhatsapp: 0,
         prazoContratoMeses,
       }),
     });
@@ -85,19 +86,36 @@ export function PropostaTab({
       return;
     }
     setPropostas((prev) => [{ ...data.proposta, plano, envelopes: [] }, ...prev]);
-    window.open(data.urlComercial, "_blank");
+    if (data.urlComercial) window.open(data.urlComercial, "_blank");
+  };
+
+  const abrirEnvio = (propostaId: string) => {
+    setEditandoEnvioId(propostaId);
+    setSignatarios([{ nome: negocio.contato?.nome || "", email: negocio.contato?.email || "" }]);
+    setCopias([]);
+    setErro(null);
   };
 
   const handleEnviar = async (propostaId: string) => {
+    const signatariosValidos = signatarios.filter((s) => s.nome.trim() && s.email.trim());
+    if (signatariosValidos.length === 0) {
+      setErro("Adicione pelo menos um signatario com nome e e-mail.");
+      return;
+    }
     setEnviandoId(propostaId);
     setErro(null);
-    const resp = await fetch(`/api/propostas/${propostaId}/enviar`, { method: "POST" });
+    const resp = await fetch(`/api/propostas/${propostaId}/enviar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signatarios: signatariosValidos, copias: copias.filter((c) => c.trim()) }),
+    });
     const data = await resp.json();
     setEnviandoId(null);
     if (!resp.ok) {
       setErro(data.error || "Erro ao enviar proposta.");
       return;
     }
+    setEditandoEnvioId(null);
     setUltimoResultado({ propostaId, linkAssinatura: data.linkAssinatura, emailEnviado: data.emailEnviado });
     const supabase = createClient();
     const { data: propostaAtualizada } = await supabase
@@ -108,6 +126,16 @@ export function PropostaTab({
     if (propostaAtualizada) {
       setPropostas((prev) => prev.map((p) => (p.id === propostaId ? propostaAtualizada : p)));
     }
+  };
+
+  const baixarPdf = async (path: string) => {
+    if (path.startsWith("http")) {
+      window.open(path, "_blank");
+      return;
+    }
+    const supabase = createClient();
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 60 * 5);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
   const copiarLink = (link: string) => {
@@ -135,79 +163,37 @@ export function PropostaTab({
 
         <div>
           <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Plano</label>
-          <select value={planoId} onChange={(e) => trocarPlano(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
+          <select value={planoId} onChange={(e) => setPlanoId(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — ate {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mes</option>
             ))}
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-              Mensalidade plataforma (min. {formatarMoeda(plano?.valor_plataforma_base)})
-            </label>
-            <input
-              type="number"
-              min={plano?.valor_plataforma_base || 0}
-              value={valorPlataforma}
-              onChange={(e) => setValorPlataforma(parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-indigo-600"
-            />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-              Mensalidade de uso (min. {formatarMoeda(plano?.valor_uso_base)})
-            </label>
-            <input
-              type="number"
-              min={plano?.valor_uso_base || 0}
-              value={valorUso}
-              onChange={(e) => setValorUso(parseFloat(e.target.value) || 0)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-indigo-600"
-            />
-          </div>
-          <p className="col-span-2 text-[11px] text-slate-400 -mt-1">
-            Voce pode colocar qualquer valor igual ou acima do minimo cadastrado pelo admin. Nunca abaixo.
+        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+          <p className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400">Mensalidade do plano</p>
+          <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{formatarMoeda(valorMensal)}<span className="text-sm font-semibold text-slate-500">/mes</span></p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Valor definido pelo plano cadastrado no painel admin. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Caixas de e-mail</label>
-            <input type="number" min={0} value={qtdCaixasEmail} onChange={(e) => setQtdCaixasEmail(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Numeros WhatsApp</label>
-            <input type="number" min={0} value={qtdNumerosWhatsapp} onChange={(e) => setQtdNumerosWhatsapp(parseInt(e.target.value) || 0)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
-          </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Prazo contrato (meses)</label>
             <input type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
           </div>
-        </div>
-
-        <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso previo de rescisao</label>
-          <div className="flex flex-wrap gap-1.5">
-            {AVISOS_PREVIOS_DIAS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setAvisoPrevioDias(d)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg border ${
-                  avisoPrevioDias === d
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                }`}
-              >
-                {d} dias {d === 180 && "(padrao)"}
-              </button>
-            ))}
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso previo de rescisao</label>
+            <select value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
+              {AVISOS_PREVIOS_DIAS.map((d) => (
+                <option key={d} value={d}>{d} dias {d === 180 ? "(padrao)" : ""}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+        {erro && !editandoEnvioId && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
         <button
           onClick={handleGerar}
@@ -229,7 +215,6 @@ export function PropostaTab({
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {propostas.map((p) => {
               const envelope = p.envelopes?.[0];
-              const cliente = envelope?.signatarios?.find((s: any) => s.papel === "cliente");
               return (
                 <div key={p.id} className="p-5 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -238,7 +223,7 @@ export function PropostaTab({
                         Proposta {p.numero} v{p.versao} — {p.plano?.nome}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {formatarMoeda(p.valor_plataforma + p.valor_uso)}/mes · aviso previo {p.aviso_previo_dias} dias
+                        {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mes · aviso previo {p.aviso_previo_dias} dias
                       </p>
                     </div>
                     <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
@@ -248,24 +233,110 @@ export function PropostaTab({
 
                   <div className="flex flex-wrap items-center gap-2">
                     {p.pdf_comercial_path && (
-                      <span className="text-[11px] flex items-center gap-1 text-slate-500">
-                        <Download className="h-3 w-3" /> PDFs gerados
-                      </span>
+                      <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
+                        <Eye className="h-3 w-3" /> Comercial
+                      </button>
                     )}
-                    {p.status === "rascunho" && (
+                    {p.pdf_tecnica_path && (
+                      <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
+                        <Eye className="h-3 w-3" /> Tecnica
+                      </button>
+                    )}
+                    {p.pdf_assinado_comercial_path && (
+                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="text-[11px] flex items-center gap-1 text-emerald-600 hover:text-emerald-800 font-bold">
+                        <Download className="h-3 w-3" /> Assinado (comercial)
+                      </button>
+                    )}
+                    {p.pdf_assinado_tecnica_path && (
+                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="text-[11px] flex items-center gap-1 text-emerald-600 hover:text-emerald-800 font-bold">
+                        <Download className="h-3 w-3" /> Assinado (tecnica)
+                      </button>
+                    )}
+                    {p.status === "rascunho" && editandoEnvioId !== p.id && (
                       <button
-                        onClick={() => handleEnviar(p.id)}
-                        disabled={enviandoId === p.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60"
+                        onClick={() => abrirEnvio(p.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
                       >
-                        {enviandoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                        Enviar para assinatura
+                        <Send className="h-3.5 w-3.5" /> Enviar para assinatura
                       </button>
                     )}
                   </div>
 
+                  {editandoEnvioId === p.id && (
+                    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Quem vai assinar?</p>
+                      {signatarios.map((s, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            value={s.nome}
+                            onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
+                            placeholder="Nome completo"
+                            className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+                          />
+                          <input
+                            value={s.email}
+                            onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))}
+                            placeholder="email@empresa.com"
+                            className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+                          />
+                          {signatarios.length > 1 && (
+                            <button onClick={() => setSignatarios((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-rose-600">
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setSignatarios((prev) => [...prev, { nome: "", email: "" }])}
+                        className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" /> Adicionar signatario
+                      </button>
+
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Enviar copia para (opcional)</p>
+                        {copias.map((c, i) => (
+                          <div key={i} className="flex items-center gap-2 mb-2">
+                            <input
+                              value={c}
+                              onChange={(e) => setCopias((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))}
+                              placeholder="email@empresa.com"
+                              className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+                            />
+                            <button onClick={() => setCopias((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-rose-600">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => setCopias((prev) => [...prev, ""])}
+                          className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
+                        >
+                          <Plus className="h-3 w-3" /> Adicionar copia
+                        </button>
+                      </div>
+
+                      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => handleEnviar(p.id)}
+                          disabled={enviandoId === p.id}
+                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60"
+                        >
+                          {enviandoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                          Enviar agora
+                        </button>
+                        <button onClick={() => setEditandoEnvioId(null)} className="px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {envelope && (
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Status da assinatura (tempo real)</p>
                       {envelope.signatarios?.map((s: any) => (
                         <div key={s.id} className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-700 dark:text-slate-300">{s.nome} <span className="text-slate-400">({s.papel})</span></span>
@@ -281,7 +352,7 @@ export function PropostaTab({
                   {ultimoResultado && ultimoResultado.propostaId === p.id && (
                     <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs">
                       <p className="font-bold text-indigo-800 dark:text-indigo-300">
-                        {ultimoResultado.emailEnviado ? "E-mail de assinatura enviado ao cliente." : "Resend nao configurado — copie e envie o link manualmente:"}
+                        {ultimoResultado.emailEnviado ? "E-mail de assinatura enviado aos envolvidos." : "Resend nao configurado — copie e envie o link manualmente:"}
                       </p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">

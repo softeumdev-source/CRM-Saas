@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
 
+interface SignatarioEntrada {
+  nome: string;
+  email: string;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
+  const body = await request.json().catch(() => ({}));
+  const signatariosEntrada: SignatarioEntrada[] = Array.isArray(body.signatarios) ? body.signatarios : [];
+  const copias: string[] = Array.isArray(body.copias) ? body.copias.filter((c: string) => c && c.trim()) : [];
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,13 +34,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const negocio = proposta.negocio as any;
   const contato = negocio?.contato;
-  if (!contato?.email) {
-    return NextResponse.json({ error: "O contato precisa ter um e-mail cadastrado para assinar." }, { status: 422 });
+
+  const signatariosFinal =
+    signatariosEntrada.length > 0
+      ? signatariosEntrada.filter((s) => s.nome?.trim() && s.email?.trim())
+      : contato?.email
+        ? [{ nome: contato.nome, email: contato.email }]
+        : [];
+
+  if (signatariosFinal.length === 0) {
+    return NextResponse.json({ error: "Informe pelo menos um signatario com nome e e-mail." }, { status: 422 });
   }
 
   const { data: envelope, error: erroEnvelope } = await supabase
     .from("envelopes")
-    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado" })
+    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado", copias_emails: copias })
     .select()
     .single();
   if (erroEnvelope || !envelope) {
@@ -40,38 +57,37 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "interno";
 
-  const { data: signatarioSofteum } = await supabase
-    .from("signatarios")
-    .insert({
-      envelope_id: envelope.id,
-      nome: usuarioAtual?.nome || "Softeum",
-      email: usuarioAtual?.email || "contato@softeum.com.br",
-      papel: "softeum",
-      ordem: 1,
-      status: "assinado",
-      assinado_em: new Date().toISOString(),
-      ip_assinatura: ip,
-      user_agent: "sistema-crm-interno",
-      assinatura_tipo: "digitada",
-      assinatura_dados: usuarioAtual?.nome || "Softeum",
-    })
-    .select()
-    .single();
+  // Signatario interno Softeum (ja assinado)
+  await supabase.from("signatarios").insert({
+    envelope_id: envelope.id,
+    nome: usuarioAtual?.nome || "Softeum",
+    email: usuarioAtual?.email || "contato@softeum.com.br",
+    papel: "softeum",
+    ordem: 1,
+    status: "assinado",
+    assinado_em: new Date().toISOString(),
+    ip_assinatura: ip,
+    user_agent: "sistema-crm-interno",
+    assinatura_tipo: "digitada",
+    assinatura_dados: usuarioAtual?.nome || "Softeum",
+  });
 
-  const { data: signatarioCliente, error: erroSig } = await supabase
-    .from("signatarios")
-    .insert({
-      envelope_id: envelope.id,
-      nome: contato.nome,
-      email: contato.email,
-      papel: "cliente",
-      ordem: 2,
-      status: "pendente",
-    })
-    .select()
-    .single();
+  // Signatarios do cliente
+  const linhasClientes = signatariosFinal.map((s, idx) => ({
+    envelope_id: envelope.id,
+    nome: s.nome.trim(),
+    email: s.email.trim(),
+    papel: "cliente" as const,
+    ordem: idx + 2,
+    status: "pendente" as const,
+  }));
 
-  if (erroSig || !signatarioCliente) {
+  const { data: signatariosCriados, error: erroSig } = await supabase
+    .from("signatarios")
+    .insert(linhasClientes)
+    .select();
+
+  if (erroSig || !signatariosCriados) {
     return NextResponse.json({ error: erroSig?.message }, { status: 500 });
   }
 
@@ -84,17 +100,66 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Falha ao carregar os PDFs gerados." }, { status: 500 });
   }
 
-  const token = signatarioCliente.token;
-  await Promise.all([
-    supabase.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, await comercialFile.data.arrayBuffer(), {
-      contentType: "application/pdf",
-      upsert: true,
-    }),
-    supabase.storage.from("assinatura-publica").upload(`${token}/tecnica.pdf`, await tecnicaFile.data.arrayBuffer(), {
-      contentType: "application/pdf",
-      upsert: true,
-    }),
-  ]);
+  const comercialBuffer = await comercialFile.data.arrayBuffer();
+  const tecnicaBuffer = await tecnicaFile.data.arrayBuffer();
+
+  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+
+  // Publica os PDFs por token e envia e-mail para cada signatario
+  let algumEmailEnviado = false;
+  for (const sig of signatariosCriados) {
+    const token = sig.token;
+    await Promise.all([
+      supabase.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialBuffer, {
+        contentType: "application/pdf",
+        upsert: true,
+      }),
+      supabase.storage.from("assinatura-publica").upload(`${token}/tecnica.pdf`, tecnicaBuffer, {
+        contentType: "application/pdf",
+        upsert: true,
+      }),
+    ]);
+
+    const linkAssinatura = `${origin}/assinar/${token}`;
+    try {
+      const resultado = await enviarEmail({
+        to: sig.email,
+        subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
+        html: emailBase(`
+          <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
+          <p>Ola ${sig.nome},</p>
+          <p>A Softeum preparou a proposta comercial e tecnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
+          <p style="text-align:center; margin: 28px 0;">
+            <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
+          </p>
+          <p style="font-size:12px; color:#64748b;">Se o botao nao funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
+        `),
+      });
+      if (!resultado.skipped) algumEmailEnviado = true;
+    } catch (e) {
+      console.error("Falha ao enviar e-mail de assinatura", e);
+    }
+  }
+
+  // Envia copia (somente leitura) para os e-mails em copia
+  const linkPrimario = `${origin}/assinar/${signatariosCriados[0].token}`;
+  for (const email of copias) {
+    try {
+      await enviarEmail({
+        to: email,
+        subject: `Copia: Proposta Softeum ${proposta.numero}`,
+        html: emailBase(`
+          <h2 style="margin-top:0;">Copia da proposta enviada para assinatura</h2>
+          <p>Voce esta recebendo uma copia da proposta ${proposta.numero} enviada para assinatura.</p>
+          <p style="text-align:center; margin: 28px 0;">
+            <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
+          </p>
+        `),
+      });
+    } catch (e) {
+      console.error("Falha ao enviar copia", e);
+    }
+  }
 
   await supabase.from("propostas").update({ status: "enviada", enviada_em: new Date().toISOString() }).eq("id", id);
   await supabase.from("atividades").insert({
@@ -102,36 +167,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     usuario_id: user.id,
     tipo: "proposta",
     titulo: `Proposta ${proposta.numero} enviada para assinatura`,
-    descricao: `Enviada para ${contato.email}.`,
+    descricao: `Enviada para ${signatariosFinal.map((s) => s.email).join(", ")}.`,
   });
-
-  const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-  const linkAssinatura = `${origin}/assinar/${token}`;
-
-  let emailEnviado = false;
-  try {
-    const resultado = await enviarEmail({
-      to: contato.email,
-      subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
-      html: emailBase(`
-        <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
-        <p>Ola ${contato.nome},</p>
-        <p>A Softeum preparou sua proposta comercial e tecnica (${proposta.numero}). Revise os documentos e assine eletronicamente pelo link abaixo.</p>
-        <p style="text-align:center; margin: 28px 0;">
-          <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
-        </p>
-        <p style="font-size:12px; color:#64748b;">Se o botao nao funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
-      `),
-    });
-    emailEnviado = !resultado.skipped;
-  } catch (e) {
-    console.error("Falha ao enviar e-mail de assinatura", e);
+  if (proposta.negocio_id) {
+    await supabase.from("negocios").update({ ultima_atividade_em: new Date().toISOString() }).eq("id", proposta.negocio_id);
   }
 
   return NextResponse.json({
     envelope,
-    linkAssinatura,
-    emailEnviado,
+    linkAssinatura: linkPrimario,
+    emailEnviado: algumEmailEnviado,
     resendConfigurado: temResendConfigurado(),
   });
 }

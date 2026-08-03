@@ -10,9 +10,9 @@ const PLANO_VAZIO = {
   nome: "",
   descricao: "",
   franquia_pedidos: 1000,
-  valor_setup_plataforma: 2500,
-  valor_setup_erp: 1500,
-  valor_setup_catalogo: 1000,
+  valor_setup_plataforma: 0,
+  valor_setup_erp: 0,
+  valor_setup_catalogo: 0,
   valor_plataforma_base: 690,
   valor_uso_base: 890,
   valor_excedente_pedido: 2,
@@ -86,7 +86,6 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
               <div className="flex justify-between"><span className="text-slate-500">Plataforma (min)</span><strong className="text-indigo-600">{formatarMoeda(p.valor_plataforma_base)}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Uso (min)</span><strong className="text-indigo-600">{formatarMoeda(p.valor_uso_base)}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Excedente/pedido</span><strong>{formatarMoeda(p.valor_excedente_pedido)}</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Setup total</span><strong>{formatarMoeda(p.valor_setup_plataforma + p.valor_setup_erp + p.valor_setup_catalogo)}</strong></div>
             </div>
           </div>
         ))}
@@ -107,9 +106,6 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
                 <Campo label="Excedente por pedido (R$)" value={form.valor_excedente_pedido} onChange={(v) => setForm({ ...form, valor_excedente_pedido: v })} step="0.01" />
                 <Campo label="Plataforma base (R$/mes)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
                 <Campo label="Uso base (R$/mes)" value={form.valor_uso_base} onChange={(v) => setForm({ ...form, valor_uso_base: v })} />
-                <Campo label="Setup plataforma (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
-                <Campo label="Setup ERP (R$)" value={form.valor_setup_erp} onChange={(v) => setForm({ ...form, valor_setup_erp: v })} />
-                <Campo label="Setup catalogo (R$)" value={form.valor_setup_catalogo} onChange={(v) => setForm({ ...form, valor_setup_catalogo: v })} />
               </div>
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancelar</button>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, Clock, ChevronRight, Flame } from "lucide-react";
+import { Building2, Clock, ChevronRight, Flame, Bell, CalendarClock } from "lucide-react";
 import type { NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
 
@@ -12,6 +12,12 @@ const PRIORIDADE_COR: Record<string, string> = {
 };
 
 export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
+  const hoje = new Date().toDateString();
+  const comAtividadeHoje = negocio.ultima_atividade_em ? new Date(negocio.ultima_atividade_em).toDateString() === hoje : false;
+  const proximaAtividade = (negocio.atividades_pendentes || [])
+    .filter((a) => !a.concluida && a.data_agendada)
+    .sort((a, b) => new Date(a.data_agendada!).getTime() - new Date(b.data_agendada!).getTime())[0];
+
   return (
     <Link
       href={`/negocios/${negocio.id}`}
@@ -24,14 +30,23 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
       <div className="flex items-start justify-between gap-2 mb-2.5">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
+            <span
+              className={`h-2 w-2 rounded-full shrink-0 ${comAtividadeHoje ? "bg-emerald-500" : "bg-amber-500"}`}
+            />
             <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
               {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
             </h3>
+            {proximaAtividade && <Bell className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium pl-5 mt-0.5 line-clamp-1">
             {negocio.contato?.nome} {negocio.contato?.cargo ? `• ${negocio.contato.cargo}` : ""}
           </p>
+          {proximaAtividade && (
+            <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold pl-5 mt-0.5 flex items-center gap-1">
+              <CalendarClock className="h-3 w-3" /> {new Date(proximaAtividade.data_agendada!).toLocaleString("pt-BR")}
+            </p>
+          )}
         </div>
         {negocio.prioridade && (
           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border shrink-0 capitalize ${PRIORIDADE_COR[negocio.prioridade]}`}>

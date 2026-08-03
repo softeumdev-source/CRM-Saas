@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
@@ -17,6 +15,7 @@ export type Database = {
       atividades: {
         Row: {
           concluida: boolean | null
+          confirmada: boolean | null
           criado_em: string | null
           data_agendada: string | null
           descricao: string | null
@@ -30,6 +29,7 @@ export type Database = {
         }
         Insert: {
           concluida?: boolean | null
+          confirmada?: boolean | null
           criado_em?: string | null
           data_agendada?: string | null
           descricao?: string | null
@@ -43,6 +43,7 @@ export type Database = {
         }
         Update: {
           concluida?: boolean | null
+          confirmada?: boolean | null
           criado_em?: string | null
           data_agendada?: string | null
           descricao?: string | null
@@ -194,6 +195,7 @@ export type Database = {
       envelopes: {
         Row: {
           concluido_em: string | null
+          copias_emails: string[] | null
           criado_em: string | null
           id: string
           proposta_id: string | null
@@ -202,6 +204,7 @@ export type Database = {
         }
         Insert: {
           concluido_em?: string | null
+          copias_emails?: string[] | null
           criado_em?: string | null
           id?: string
           proposta_id?: string | null
@@ -210,6 +213,7 @@ export type Database = {
         }
         Update: {
           concluido_em?: string | null
+          copias_emails?: string[] | null
           criado_em?: string | null
           id?: string
           proposta_id?: string | null
@@ -283,6 +287,7 @@ export type Database = {
           responsavel_id: string | null
           tenant_id: string | null
           titulo: string
+          ultima_atividade_em: string | null
           valor: number | null
         }
         Insert: {
@@ -299,6 +304,7 @@ export type Database = {
           responsavel_id?: string | null
           tenant_id?: string | null
           titulo: string
+          ultima_atividade_em?: string | null
           valor?: number | null
         }
         Update: {
@@ -315,6 +321,7 @@ export type Database = {
           responsavel_id?: string | null
           tenant_id?: string | null
           titulo?: string
+          ultima_atividade_em?: string | null
           valor?: number | null
         }
         Relationships: [
@@ -455,6 +462,8 @@ export type Database = {
           id: string
           negocio_id: string | null
           numero: string
+          pdf_assinado_comercial_path: string | null
+          pdf_assinado_tecnica_path: string | null
           pdf_comercial_path: string | null
           pdf_tecnica_path: string | null
           plano_id: string | null
@@ -484,6 +493,8 @@ export type Database = {
           id?: string
           negocio_id?: string | null
           numero: string
+          pdf_assinado_comercial_path?: string | null
+          pdf_assinado_tecnica_path?: string | null
           pdf_comercial_path?: string | null
           pdf_tecnica_path?: string | null
           plano_id?: string | null
@@ -513,6 +524,8 @@ export type Database = {
           id?: string
           negocio_id?: string | null
           numero?: string
+          pdf_assinado_comercial_path?: string | null
+          pdf_assinado_tecnica_path?: string | null
           pdf_comercial_path?: string | null
           pdf_tecnica_path?: string | null
           plano_id?: string | null
@@ -765,7 +778,7 @@ export type Database = {
       }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
       obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
-      processar_lembretes: { Args: never; Returns: number }
+      processar_lembretes: { Args: Record<string, never>; Returns: number }
       registrar_assinatura: {
         Args: {
           p_dados: string
@@ -776,8 +789,16 @@ export type Database = {
         }
         Returns: Json
       }
-      usuario_role: { Args: never; Returns: string }
-      usuario_tenant_id: { Args: never; Returns: string }
+      salvar_pdf_assinado: {
+        Args: {
+          p_comercial_url: string
+          p_tecnica_url: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      usuario_role: { Args: Record<string, never>; Returns: string }
+      usuario_tenant_id: { Args: Record<string, never>; Returns: string }
     }
     Enums: {
       [_ in never]: never

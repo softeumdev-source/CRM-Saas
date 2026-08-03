@@ -18,6 +18,7 @@ export type NegocioComRelacoes = Negocio & {
   contato: Contato | null;
   responsavel: Usuario | null;
   etapa: EtapaPipeline | null;
+  atividades_pendentes?: { id: string; data_agendada: string | null; concluida: boolean | null }[] | null;
 };
 
 export const PRIORIDADES = ["alta", "media", "baixa"] as const;

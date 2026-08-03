@@ -12,7 +12,7 @@ export default async function KanbanPage() {
     supabase.from("etapas_pipeline").select("*").order("ordem"),
     supabase
       .from("negocios")
-      .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+      .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
       .order("criado_em", { ascending: false }),
     supabase.from("usuarios").select("*").eq("role", "vendedor").eq("ativo", true),
     supabase.from("usuarios").select("*").eq("id", user!.id).single(),
