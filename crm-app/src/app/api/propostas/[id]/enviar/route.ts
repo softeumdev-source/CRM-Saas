@@ -57,30 +57,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: erroEnvelope?.message }, { status: 500 });
   }
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "interno";
-
-  // Signatario interno Softeum (ja assinado)
-  await supabase.from("signatarios").insert({
-    envelope_id: envelope.id,
-    nome: usuarioAtual?.nome || "Softeum",
-    email: usuarioAtual?.email || "contato@softeum.com.br",
-    papel: "softeum",
-    ordem: 1,
-    status: "assinado",
-    assinado_em: new Date().toISOString(),
-    ip_assinatura: ip,
-    user_agent: "sistema-crm-interno",
-    assinatura_tipo: "digitada",
-    assinatura_dados: usuarioAtual?.nome || "Softeum",
-  });
-
-  // Signatarios do cliente
+  // Signatarios cadastrados pelo usuario
   const linhasClientes = signatariosFinal.map((s, idx) => ({
     envelope_id: envelope.id,
     nome: s.nome.trim(),
     email: s.email.trim(),
     papel: "cliente" as const,
-    ordem: idx + 2,
+    ordem: idx + 1,
     status: "pendente" as const,
   }));
 

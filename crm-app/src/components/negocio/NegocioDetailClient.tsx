@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Building2, Mail, Phone, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
@@ -14,6 +14,7 @@ import { CopilotoTab } from "@/components/negocio/CopilotoTab";
 
 type AtividadeComUsuario = any;
 type PropostaComRelacoes = any;
+type AbaNegocio = "geral" | "cadencia" | "proposta" | "ia";
 
 export function NegocioDetailClient({
   negocioInicial,
@@ -33,8 +34,19 @@ export function NegocioDetailClient({
   usuarioAtual: Usuario;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [negocio, setNegocio] = useState(negocioInicial);
-  const [aba, setAba] = useState<"geral" | "cadencia" | "proposta" | "ia">("geral");
+  const abaInicial = (searchParams.get("tab") as AbaNegocio) || "geral";
+  const [aba, setAba] = useState<AbaNegocio>(
+    ["geral", "cadencia", "proposta", "ia"].includes(abaInicial) ? abaInicial : "geral"
+  );
+
+  const trocarAba = (novaAba: AbaNegocio) => {
+    setAba(novaAba);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", novaAba);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
 
   const atualizarNegocio = async (campos: Partial<NegocioComRelacoes>) => {
     setNegocio((prev) => ({ ...prev, ...campos }));
@@ -152,7 +164,7 @@ export function NegocioDetailClient({
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setAba(t.id as any)}
+            onClick={() => trocarAba(t.id as AbaNegocio)}
             className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
               aba === t.id ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-xs" : "text-slate-500 dark:text-slate-400"
             }`}

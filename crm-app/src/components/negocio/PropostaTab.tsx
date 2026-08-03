@@ -405,7 +405,7 @@ export function PropostaTab({
                         documento={documentoEditor}
                         signatarios={signatarios
                           .filter((s) => s.nome.trim() && s.email.trim())
-                          .map((s, i) => ({ nome: s.nome, email: s.email, ordem: i + 2 }))}
+                          .map((s, i) => ({ nome: s.nome, email: s.email, ordem: i + 1 }))}
                         camposIniciais={camposAssinatura}
                         onSalvar={(campos) => {
                           setCamposAssinatura(campos);

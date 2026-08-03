@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, FileSignature, Download } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Download, FileCheck2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function AssinaturasClient({
-  envelopesIniciais,
-  usuarioRole,
-  usuarioId,
-}: {
-  envelopesIniciais: any[];
-  usuarioRole: string;
-  usuarioId: string;
-}) {
+export function DocumentosAssinadosTab({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "concluido" | "aguardando">("todos");
 
   useEffect(() => {
     const supabase = createClient();
@@ -24,55 +17,62 @@ export function AssinaturasClient({
         .from("envelopes")
         .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))")
         .order("criado_em", { ascending: false });
-      if (!data) return;
-      const filtrados =
-        usuarioRole === "vendedor"
-          ? data.filter((e: any) => e.proposta?.negocio?.responsavel_id === usuarioId)
-          : data;
-      setEnvelopes(filtrados);
+      if (data) setEnvelopes(data);
     };
 
     const channel = supabase
-      .channel("envelopes-realtime")
+      .channel("admin-docs-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, recarregar)
       .on("postgres_changes", { event: "*", schema: "public", table: "signatarios" }, recarregar)
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [usuarioRole, usuarioId]);
+  }, []);
+
+  const filtrados = envelopes.filter((e) => {
+    if (filtroStatus === "concluido") return e.status === "concluido";
+    if (filtroStatus === "aguardando") return e.status === "enviado" || e.status === "aguardando";
+    return true;
+  });
 
   const contadores = {
-    acaoNecessaria: envelopes.filter((e) => e.status === "enviado" || e.status === "aguardando").length,
+    todos: envelopes.length,
+    aguardando: envelopes.filter((e) => e.status === "enviado" || e.status === "aguardando").length,
     concluido: envelopes.filter((e) => e.status === "concluido").length,
-    cancelado: envelopes.filter((e) => e.status === "cancelado").length,
   };
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center gap-2">
-        <FileSignature className="h-5 w-5 text-indigo-600" />
-        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Assinaturas</h1>
+        <FileCheck2 className="h-5 w-5 text-indigo-600" />
+        <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100">Documentos Assinados — Todos os Vendedores</h2>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-amber-600">{contadores.acaoNecessaria}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Aguardando assinatura</p>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-emerald-600">{contadores.concluido}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Concluidas</p>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-slate-400">{contadores.cancelado}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Canceladas</p>
-        </div>
+        {([
+          { key: "todos", label: "Total", cor: "text-indigo-600", valor: contadores.todos },
+          { key: "aguardando", label: "Aguardando", cor: "text-amber-600", valor: contadores.aguardando },
+          { key: "concluido", label: "Concluidas", cor: "text-emerald-600", valor: contadores.concluido },
+        ] as const).map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setFiltroStatus(c.key)}
+            className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border text-center transition-all ${
+              filtroStatus === c.key
+                ? "border-indigo-400 dark:border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-900"
+                : "border-slate-200 dark:border-slate-800 hover:border-slate-300"
+            }`}
+          >
+            <p className={`text-2xl font-extrabold ${c.cor}`}>{c.valor}</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase">{c.label}</p>
+          </button>
+        ))}
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-        {envelopes.length === 0 && <p className="p-6 text-xs text-slate-400 text-center">Nenhum envelope de assinatura ainda.</p>}
-        {envelopes.map((env) => {
+        {filtrados.length === 0 && <p className="p-6 text-xs text-slate-400 text-center">Nenhum envelope encontrado.</p>}
+        {filtrados.map((env) => {
           const negocio = env.proposta?.negocio;
           const assinadoComercial = env.proposta?.pdf_assinado_comercial_path;
           const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
@@ -84,7 +84,10 @@ export function AssinaturasClient({
                     <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
                       {negocio?.contato?.empresa || negocio?.contato?.nome} — Proposta {env.proposta?.numero}
                     </p>
-                    <p className="text-xs text-slate-500">Vendedor: {negocio?.responsavel?.nome || "—"}</p>
+                    <p className="text-xs text-slate-500">
+                      Vendedor: {negocio?.responsavel?.nome || "—"}
+                      {env.criado_em && <> · Enviado em {new Date(env.criado_em).toLocaleDateString("pt-BR")}</>}
+                    </p>
                   </div>
                   <span
                     className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${

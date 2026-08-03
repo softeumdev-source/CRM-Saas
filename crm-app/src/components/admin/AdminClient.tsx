@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Users, BarChart3, Package, UserSquare2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Users, BarChart3, Package, UserSquare2, FileCheck2 } from "lucide-react";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
 import { LeadsTab } from "@/components/admin/LeadsTab";
+import { DocumentosAssinadosTab } from "@/components/admin/DocumentosAssinadosTab";
+
+type AbaAdmin = "vendedores" | "funil" | "planos" | "leads" | "documentos";
 
 export function AdminClient({
   usuarios,
@@ -17,6 +21,7 @@ export function AdminClient({
   contatosSemDono,
   contatosComDono,
   usuarioAtual,
+  envelopesAssinados,
 }: {
   usuarios: Usuario[];
   convites: Convite[];
@@ -26,8 +31,21 @@ export function AdminClient({
   contatosSemDono: Contato[];
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   usuarioAtual: Usuario;
+  envelopesAssinados?: any[];
 }) {
-  const [aba, setAba] = useState<"vendedores" | "funil" | "planos" | "leads">("vendedores");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const abaInicial = (searchParams.get("tab") as AbaAdmin) || "vendedores";
+  const [aba, setAba] = useState<AbaAdmin>(
+    ["vendedores", "funil", "planos", "leads", "documentos"].includes(abaInicial) ? abaInicial : "vendedores"
+  );
+
+  const trocarAba = (novaAba: AbaAdmin) => {
+    setAba(novaAba);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", novaAba);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
   const vendedores = usuarios.filter((u) => u.role === "vendedor");
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
 
@@ -50,12 +68,13 @@ export function AdminClient({
             { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
             { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
+            { id: "documentos", label: "Documentos Assinados", icon: FileCheck2 },
           ].map((t) => {
             const Icon = t.icon;
             return (
               <button
                 key={t.id}
-                onClick={() => setAba(t.id as any)}
+                onClick={() => trocarAba(t.id as AbaAdmin)}
                 className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
                   aba === t.id ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:text-white"
                 }`}
@@ -72,6 +91,7 @@ export function AdminClient({
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} />}
       {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
+      {aba === "documentos" && <DocumentosAssinadosTab envelopesIniciais={envelopesAssinados || []} />}
     </div>
   );
 }
