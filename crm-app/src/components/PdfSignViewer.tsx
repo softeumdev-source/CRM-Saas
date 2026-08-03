@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FileSignature, ChevronLeft, ChevronRight, Loader2, CheckCircle2 } from "lucide-react";
+import { FileSignature, ChevronLeft, ChevronRight, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { CampoAssinatura } from "./PdfFieldEditor";
 
 const CORES = [
@@ -29,46 +29,58 @@ export function PdfSignViewer({
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(0);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfDocRef = useRef<any>(null);
 
   const renderizarPagina = useCallback(async (num: number) => {
     if (!pdfDocRef.current || !canvasRef.current) return;
-    const page = await pdfDocRef.current.getPage(num);
-    const viewport = page.getViewport({ scale: 1.5 });
-    const canvas = canvasRef.current;
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext("2d")!;
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    try {
+      const page = await pdfDocRef.current.getPage(num);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = canvasRef.current;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+    } catch (e: any) {
+      console.error("Erro ao renderizar pagina", e);
+    }
   }, []);
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const pdfjsLib = await import("pdfjs-dist");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-      const doc = await pdfjsLib.getDocument(pdfUrl).promise;
-      if (cancelado) return;
-      pdfDocRef.current = doc;
-      setTotalPaginas(doc.numPages);
-      setCarregando(false);
-      await renderizarPagina(1);
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        const doc = await pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false }).promise;
+        if (cancelado) return;
+        pdfDocRef.current = doc;
+        setTotalPaginas(doc.numPages);
+        setCarregando(false);
+        await renderizarPagina(1);
 
-      const primeiraPagComCampo = campos
-        .filter((c) => c.documento === documento && c.signatario_ordem === signatarioOrdem)
-        .sort((a, b) => a.pagina - b.pagina)[0];
-      if (primeiraPagComCampo && primeiraPagComCampo.pagina > 1) {
-        setPaginaAtual(primeiraPagComCampo.pagina);
+        const primeiraPagComCampo = campos
+          .filter((c) => c.documento === documento && c.signatario_ordem === signatarioOrdem)
+          .sort((a, b) => a.pagina - b.pagina)[0];
+        if (primeiraPagComCampo && primeiraPagComCampo.pagina > 1) {
+          setPaginaAtual(primeiraPagComCampo.pagina);
+        }
+      } catch (e: any) {
+        if (cancelado) return;
+        console.error("Erro ao carregar PDF", e);
+        setCarregando(false);
+        setErro(e?.message || "Nao foi possivel carregar o documento.");
       }
     })();
     return () => { cancelado = true; };
   }, [pdfUrl, renderizarPagina, campos, documento, signatarioOrdem]);
 
   useEffect(() => {
-    if (!carregando) renderizarPagina(paginaAtual);
-  }, [paginaAtual, carregando, renderizarPagina]);
+    if (!carregando && !erro) renderizarPagina(paginaAtual);
+  }, [paginaAtual, carregando, erro, renderizarPagina]);
 
   const camposPagina = campos.filter(
     (c) => c.pagina === paginaAtual && c.documento === documento
@@ -84,6 +96,25 @@ export function PdfSignViewer({
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p className="text-xs font-bold">Nao foi possivel carregar o documento no visualizador.</p>
+        </div>
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+        >
+          Abrir PDF diretamente
+        </a>
       </div>
     );
   }

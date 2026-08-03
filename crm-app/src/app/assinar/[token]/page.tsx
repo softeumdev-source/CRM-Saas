@@ -142,6 +142,25 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 
+              <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                <a
+                  href={comercialUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
+                >
+                  <FileText className="h-4 w-4 text-indigo-600" /> Proposta Comercial (PDF)
+                </a>
+                <a
+                  href={tecnicaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
+                >
+                  <FileText className="h-4 w-4 text-indigo-600" /> Proposta Tecnica (PDF)
+                </a>
+              </div>
+
               {temCamposPosicionados ? (
                 <div className="mt-4 space-y-4">
                   <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center gap-2">
@@ -178,29 +197,9 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                    <a
-                      href={comercialUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
-                    >
-                      <FileText className="h-4 w-4 text-indigo-600" /> Proposta Comercial (PDF)
-                    </a>
-                    <a
-                      href={tecnicaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
-                    >
-                      <FileText className="h-4 w-4 text-indigo-600" /> Proposta Tecnica (PDF)
-                    </a>
-                  </div>
-                  <div className="mt-4 rounded-xl overflow-hidden border border-slate-200">
-                    <iframe src={comercialUrl} className="w-full h-[420px]" title="Proposta Comercial" />
-                  </div>
-                </>
+                <div className="mt-4 rounded-xl overflow-hidden border border-slate-200">
+                  <iframe src={comercialUrl} className="w-full h-[420px]" title="Proposta Comercial" />
+                </div>
               )}
             </div>
 
