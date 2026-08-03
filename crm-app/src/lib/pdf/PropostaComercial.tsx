@@ -116,6 +116,7 @@ function Corpo({ d }: { d: DadosProposta }) {
       <View style={estilos.tabela}>
         <View style={estilos.linha}><Text style={estilos.celula}>Razao Social</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteRazaoSocial}</Text></View>
         <View style={estilos.linha}><Text style={estilos.celula}>CNPJ</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteCnpj}</Text></View>
+        <View style={estilos.linha}><Text style={estilos.celula}>E-mail de faturamento</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.emailFaturamento || ""}</Text></View>
       </View>
 
       <Rodape d={d} />
