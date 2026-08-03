@@ -25,6 +25,8 @@ export function VendedoresTab({
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [emailEnviado, setEmailEnviado] = useState(false);
+  const [emailErro, setEmailErro] = useState<string | null>(null);
+  const [remetenteTest, setRemetenteTest] = useState(false);
   const [vendedoresState, setVendedoresState] = useState(vendedores);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
@@ -46,6 +48,8 @@ export function VendedoresTab({
     }
     setLinkGerado(data.link);
     setEmailEnviado(data.emailEnviado);
+    setEmailErro(data.emailErro || null);
+    setRemetenteTest(data.remetenteTest || false);
     setConvites((prev) => [
       { id: data.convite_id, token: data.token, email, nome, role: "vendedor", status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
       ...prev,
@@ -123,12 +127,23 @@ export function VendedoresTab({
           </form>
 
           {linkGerado && (
-            <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs">
-              <p className="font-bold text-indigo-800 dark:text-indigo-300 mb-1.5">
-                {emailEnviado ? "E-mail de convite enviado! Link de apoio:" : "E-mail nao configurado - envie este link manualmente:"}
+            <div className={`rounded-xl p-3 text-xs ${emailEnviado ? "bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800" : "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"}`}>
+              <p className={`font-bold mb-1.5 ${emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
+                {emailEnviado
+                  ? remetenteTest
+                    ? "E-mail enviado (remetente de teste — so chega no e-mail da conta Resend). Link de apoio:"
+                    : "E-mail de convite enviado! Link de apoio:"
+                  : emailErro
+                    ? `Falha ao enviar e-mail: ${emailErro}`
+                    : "RESEND_API_KEY nao configurada — envie este link manualmente:"}
               </p>
+              {!emailEnviado && (
+                <p className="text-amber-700 dark:text-amber-400 mb-2">
+                  Configure as variaveis RESEND_API_KEY e RESEND_FROM_EMAIL (com dominio verificado no Resend) nas variaveis de ambiente do Vercel.
+                </p>
+              )}
               <div className="flex items-center gap-2">
-                <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">{linkGerado}</code>
+                <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{linkGerado}</code>
                 <button onClick={copiarLink} className="text-indigo-600">{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>
               </div>
             </div>

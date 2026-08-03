@@ -108,8 +108,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 
-  // Publica os PDFs por token e envia e-mail para cada signatario
   let algumEmailEnviado = false;
+  let emailErro: string | null = null;
+  let remetenteTest = false;
   for (const sig of signatariosCriados) {
     const token = sig.token;
     const [upComercial, upTecnica] = await Promise.all([
@@ -128,44 +129,37 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     const linkAssinatura = `${origin}/assinar/${token}`;
-    try {
-      const resultado = await enviarEmail({
-        to: sig.email,
-        subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
-        html: emailBase(`
-          <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
-          <p>Ola ${sig.nome},</p>
-          <p>A Softeum preparou a proposta comercial e tecnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
-          <p style="text-align:center; margin: 28px 0;">
-            <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
-          </p>
-          <p style="font-size:12px; color:#64748b;">Se o botao nao funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
-        `),
-      });
-      if (!resultado.skipped) algumEmailEnviado = true;
-    } catch (e) {
-      console.error("Falha ao enviar e-mail de assinatura", e);
-    }
+    const resultado = await enviarEmail({
+      to: sig.email,
+      subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
+      html: emailBase(`
+        <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
+        <p>Ola ${sig.nome},</p>
+        <p>A Softeum preparou a proposta comercial e tecnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
+        <p style="text-align:center; margin: 28px 0;">
+          <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
+        </p>
+        <p style="font-size:12px; color:#64748b;">Se o botao nao funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
+      `),
+    });
+    if (resultado.sent) algumEmailEnviado = true;
+    if (resultado.error && !emailErro) emailErro = resultado.error;
+    if (resultado.remetenteTest) remetenteTest = true;
   }
 
-  // Envia copia (somente leitura) para os e-mails em copia
   const linkPrimario = `${origin}/assinar/${signatariosCriados[0].token}`;
   for (const email of copias) {
-    try {
-      await enviarEmail({
-        to: email,
-        subject: `Copia: Proposta Softeum ${proposta.numero}`,
-        html: emailBase(`
-          <h2 style="margin-top:0;">Copia da proposta enviada para assinatura</h2>
-          <p>Voce esta recebendo uma copia da proposta ${proposta.numero} enviada para assinatura.</p>
-          <p style="text-align:center; margin: 28px 0;">
-            <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
-          </p>
-        `),
-      });
-    } catch (e) {
-      console.error("Falha ao enviar copia", e);
-    }
+    await enviarEmail({
+      to: email,
+      subject: `Copia: Proposta Softeum ${proposta.numero}`,
+      html: emailBase(`
+        <h2 style="margin-top:0;">Copia da proposta enviada para assinatura</h2>
+        <p>Voce esta recebendo uma copia da proposta ${proposta.numero} enviada para assinatura.</p>
+        <p style="text-align:center; margin: 28px 0;">
+          <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
+        </p>
+      `),
+    });
   }
 
   await supabase.from("propostas").update({ status: "enviada", enviada_em: new Date().toISOString() }).eq("id", id);
@@ -185,5 +179,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     linkAssinatura: linkPrimario,
     emailEnviado: algumEmailEnviado,
     resendConfigurado: temResendConfigurado(),
+    emailErro: emailErro || null,
+    remetenteTest,
   });
 }

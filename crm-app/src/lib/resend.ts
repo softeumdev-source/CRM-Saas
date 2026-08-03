@@ -4,21 +4,50 @@ export function temResendConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY;
 }
 
-export async function enviarEmail(params: { to: string; subject: string; html: string }) {
+export function usandoRemetenteTest(): boolean {
+  return !process.env.RESEND_FROM_EMAIL;
+}
+
+export interface EmailResult {
+  sent: boolean;
+  skipped: boolean;
+  id?: string;
+  error?: string;
+  remetenteTest?: boolean;
+}
+
+export async function enviarEmail(params: { to: string; subject: string; html: string }): Promise<EmailResult> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[resend] RESEND_API_KEY nao configurada - e-mail nao enviado:", params.subject, "->", params.to);
-    return { skipped: true as const };
+    return { sent: false, skipped: true, error: "RESEND_API_KEY nao configurada no servidor." };
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+
   const from = process.env.RESEND_FROM_EMAIL || "Softeum <onboarding@resend.dev>";
-  const { data, error } = await resend.emails.send({
-    from,
-    to: params.to,
-    subject: params.subject,
-    html: params.html,
-  });
-  if (error) throw new Error(error.message);
-  return { skipped: false as const, id: data?.id };
+  const remetenteTest = from.includes("onboarding@resend.dev");
+
+  if (remetenteTest) {
+    console.warn("[resend] Usando remetente de teste onboarding@resend.dev — e-mails so chegam no dono da conta Resend. Configure RESEND_FROM_EMAIL com um dominio verificado.");
+  }
+
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { data, error } = await resend.emails.send({
+      from,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+    });
+
+    if (error) {
+      console.error("[resend] Erro ao enviar e-mail:", error.message, "-> ", params.to);
+      return { sent: false, skipped: false, error: error.message, remetenteTest };
+    }
+
+    return { sent: true, skipped: false, id: data?.id, remetenteTest };
+  } catch (e: any) {
+    console.error("[resend] Excecao ao enviar e-mail:", e);
+    return { sent: false, skipped: false, error: e?.message || String(e), remetenteTest };
+  }
 }
 
 export function emailBase(conteudo: string): string {

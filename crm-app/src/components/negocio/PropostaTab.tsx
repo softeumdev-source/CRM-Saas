@@ -59,6 +59,8 @@ export function PropostaTab({
     propostaId: string;
     linkAssinatura: string;
     emailEnviado: boolean;
+    emailErro: string | null;
+    remetenteTest: boolean;
   } | null>(null);
 
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
@@ -160,6 +162,8 @@ export function PropostaTab({
       propostaId: editandoEnvioId,
       linkAssinatura: data.linkAssinatura,
       emailEnviado: data.emailEnviado,
+      emailErro: data.emailErro || null,
+      remetenteTest: data.remetenteTest || false,
     });
     const supabase = createClient();
     const { data: propostaAtualizada } = await supabase
@@ -429,12 +433,23 @@ export function PropostaTab({
                   )}
 
                   {ultimoResultado && ultimoResultado.propostaId === p.id && (
-                    <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs">
-                      <p className="font-bold text-indigo-800 dark:text-indigo-300">
-                        {ultimoResultado.emailEnviado ? "E-mail de assinatura enviado aos envolvidos." : "Resend nao configurado — copie e envie o link manualmente:"}
+                    <div className={`rounded-xl p-3 text-xs ${ultimoResultado.emailEnviado ? "bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800" : "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"}`}>
+                      <p className={`font-bold ${ultimoResultado.emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
+                        {ultimoResultado.emailEnviado
+                          ? ultimoResultado.remetenteTest
+                            ? "E-mail enviado (remetente de teste — so chega no e-mail da conta Resend)."
+                            : "E-mail de assinatura enviado aos envolvidos."
+                          : ultimoResultado.emailErro
+                            ? `Falha ao enviar e-mail: ${ultimoResultado.emailErro}`
+                            : "RESEND_API_KEY nao configurada — copie e envie o link manualmente:"}
                       </p>
+                      {!ultimoResultado.emailEnviado && (
+                        <p className="text-amber-700 dark:text-amber-400 mt-1">
+                          Configure RESEND_API_KEY e RESEND_FROM_EMAIL (dominio verificado) no Vercel.
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-1.5">
-                        <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                        <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
                           {ultimoResultado.linkAssinatura}
                         </code>
                         <button onClick={() => copiarLink(ultimoResultado!.linkAssinatura)} className="text-indigo-600 hover:text-indigo-800">
