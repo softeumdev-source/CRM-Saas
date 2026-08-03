@@ -13,6 +13,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const body = await request.json().catch(() => ({}));
   const signatariosEntrada: SignatarioEntrada[] = Array.isArray(body.signatarios) ? body.signatarios : [];
   const copias: string[] = Array.isArray(body.copias) ? body.copias.filter((c: string) => c && c.trim()) : [];
+  const camposAssinatura: any[] = Array.isArray(body.campos_assinatura) ? body.campos_assinatura : [];
 
   const supabase = await createClient();
   const {
@@ -49,7 +50,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: envelope, error: erroEnvelope } = await supabase
     .from("envelopes")
-    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado", copias_emails: copias })
+    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado", copias_emails: copias, campos_assinatura: camposAssinatura } as any)
     .select()
     .single();
   if (erroEnvelope || !envelope) {

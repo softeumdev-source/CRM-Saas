@@ -20,6 +20,7 @@
     "next": "16.2.12",
     "papaparse": "^5.5.4",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.18.1"

@@ -4,8 +4,72 @@ import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 
+interface CampoAssinatura {
+  id: string;
+  signatario_ordem: number;
+  tipo: string;
+  documento: "comercial" | "tecnica";
+  pagina: number;
+  x: number;
+  y: number;
+  largura: number;
+  altura: number;
+}
+
+async function embutirAssinaturasNoPdf(
+  pdfBytes: ArrayBuffer | Uint8Array,
+  campos: CampoAssinatura[],
+  signatarioOrdem: number,
+  assinaturaTipo: string,
+  assinaturaDados: string
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(pdfBytes);
+  const font = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const meusCampos = campos.filter((c) => c.signatario_ordem === signatarioOrdem);
+
+  for (const campo of meusCampos) {
+    const pageIdx = campo.pagina - 1;
+    if (pageIdx < 0 || pageIdx >= doc.getPageCount()) continue;
+    const page = doc.getPage(pageIdx);
+    const { width, height } = page.getSize();
+
+    const x = campo.x * width;
+    const w = campo.largura * width;
+    const h = campo.altura * height;
+    const y = height - campo.y * height - h;
+
+    if (assinaturaTipo === "desenhada" && assinaturaDados.startsWith("data:image/png")) {
+      try {
+        const base64 = assinaturaDados.split(",")[1];
+        const imgBytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const img = await doc.embedPng(imgBytes);
+        const scaled = img.scaleToFit(w - 4, h - 4);
+        page.drawImage(img, {
+          x: x + (w - scaled.width) / 2,
+          y: y + (h - scaled.height) / 2,
+          width: scaled.width,
+          height: scaled.height,
+        });
+      } catch (e) {
+        console.error("Falha ao embutir imagem de assinatura", e);
+      }
+    } else {
+      const fontSize = Math.min(h * 0.5, 18);
+      page.drawText(String(assinaturaDados), {
+        x: x + 4,
+        y: y + h / 2 - fontSize / 3,
+        size: fontSize,
+        font,
+        color: rgb(0.1, 0.1, 0.3),
+      });
+    }
+  }
+
+  return doc.save();
+}
+
 async function gerarPdfComCertificado(
-  pdfOriginal: ArrayBuffer,
+  pdfOriginal: ArrayBuffer | Uint8Array,
   info: { titulo: string; assinantes: { nome: string; email: string; ip: string; data: string; tipo: string }[]; numero: string }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.load(pdfOriginal);
@@ -67,22 +131,22 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Se o envelope foi concluido, gera os PDFs com certificado de conclusao
   if (data && (data as any).envelope_concluido && temServiceRole()) {
     try {
       const admin = createAdminClient();
       const envelopeInfo = (await supabase.rpc("obter_envelope_publico", { p_token: token })) as any;
       const info = envelopeInfo.data;
+      const camposAssinatura: CampoAssinatura[] = info?.envelope?.campos_assinatura || [];
 
       const { data: signatariosData } = await admin
         .from("signatarios")
-        .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, envelope_id")
+        .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, assinatura_dados, envelope_id, ordem")
         .eq("token", token)
         .single();
 
       const { data: todosSig } = await admin
         .from("signatarios")
-        .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo")
+        .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, assinatura_dados, ordem")
         .eq("envelope_id", signatariosData?.envelope_id || "");
 
       const assinantes = (todosSig || []).map((s: any) => ({
@@ -102,7 +166,24 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       ]);
 
       if (comercialResp.ok && tecnicaResp.ok) {
-        const [comercialBuf, tecnicaBuf] = await Promise.all([comercialResp.arrayBuffer(), tecnicaResp.arrayBuffer()]);
+        let comercialBuf: ArrayBuffer | Uint8Array = await comercialResp.arrayBuffer();
+        let tecnicaBuf: ArrayBuffer | Uint8Array = await tecnicaResp.arrayBuffer();
+
+        if (camposAssinatura.length > 0 && todosSig) {
+          for (const sig of todosSig) {
+            if (sig.assinatura_tipo && sig.assinatura_dados && sig.ordem != null) {
+              const camposComercial = camposAssinatura.filter((c) => c.documento === "comercial");
+              const camposTecnica = camposAssinatura.filter((c) => c.documento === "tecnica");
+              if (camposComercial.length > 0) {
+                comercialBuf = await embutirAssinaturasNoPdf(comercialBuf, camposComercial, sig.ordem as number, sig.assinatura_tipo, sig.assinatura_dados);
+              }
+              if (camposTecnica.length > 0) {
+                tecnicaBuf = await embutirAssinaturasNoPdf(tecnicaBuf, camposTecnica, sig.ordem as number, sig.assinatura_tipo, sig.assinatura_dados);
+              }
+            }
+          }
+        }
+
         const comercialAssinado = await gerarPdfComCertificado(comercialBuf, { titulo, assinantes, numero: `${numero} (Comercial)` });
         const tecnicaAssinado = await gerarPdfComCertificado(tecnicaBuf, { titulo, assinantes, numero: `${numero} (Tecnica)` });
 

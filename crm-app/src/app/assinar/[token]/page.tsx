@@ -4,11 +4,21 @@ import { use, useEffect, useState } from "react";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 import { SignaturePad } from "@/components/SignaturePad";
-import { FileSignature, CheckCircle2, Loader2, FileText, ShieldCheck, Building2 } from "lucide-react";
+import { PdfSignViewer } from "@/components/PdfSignViewer";
+import type { CampoAssinatura } from "@/components/PdfFieldEditor";
+import {
+  FileSignature,
+  CheckCircle2,
+  Loader2,
+  FileText,
+  ShieldCheck,
+  Building2,
+  X,
+} from "lucide-react";
 
 interface EnvelopePublico {
-  signatario: { id: string; nome: string; email: string; papel: string; status: string };
-  envelope: { id: string; status: string };
+  signatario: { id: string; nome: string; email: string; papel: string; status: string; ordem: number };
+  envelope: { id: string; status: string; campos_assinatura: CampoAssinatura[] | null };
   outros_signatarios: { nome: string; papel: string; status: string }[];
   proposta: {
     numero: string;
@@ -35,6 +45,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [aceite, setAceite] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [concluido, setConcluido] = useState(false);
+  const [modalAssinatura, setModalAssinatura] = useState(false);
 
   useEffect(() => {
     const supabase = createAnonClient();
@@ -69,6 +80,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       setErro(err.error || "Falha ao registrar assinatura.");
       return;
     }
+    setModalAssinatura(false);
     setConcluido(true);
   };
 
@@ -95,6 +107,9 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   const comercialUrl = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial.pdf`;
   const tecnicaUrl = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica.pdf`;
+  const campos: CampoAssinatura[] = dados.envelope.campos_assinatura || [];
+  const temCamposPosicionados = campos.length > 0;
+  const signatarioOrdem = dados.signatario.ordem ?? 2;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -127,82 +142,185 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 
-              <div className="mt-4 grid sm:grid-cols-2 gap-3">
-                <a
-                  href={comercialUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
-                >
-                  <FileText className="h-4 w-4 text-indigo-600" /> Proposta Comercial (PDF)
-                </a>
-                <a
-                  href={tecnicaUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
-                >
-                  <FileText className="h-4 w-4 text-indigo-600" /> Proposta Tecnica (PDF)
-                </a>
-              </div>
+              {temCamposPosicionados ? (
+                <div className="mt-4 space-y-4">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center gap-2">
+                    <FileSignature className="h-4 w-4 text-indigo-600 shrink-0" />
+                    <p className="text-xs font-semibold text-indigo-800">
+                      Clique nos campos &quot;Assinar aqui&quot; destacados no documento para assinar.
+                    </p>
+                  </div>
 
-              <div className="mt-4 rounded-xl overflow-hidden border border-slate-200">
-                <iframe src={comercialUrl} className="w-full h-[420px]" title="Proposta Comercial" />
-              </div>
-            </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Proposta Comercial</p>
+                    <PdfSignViewer
+                      pdfUrl={comercialUrl}
+                      documento="comercial"
+                      campos={campos}
+                      signatarioOrdem={signatarioOrdem}
+                      assinado={concluido}
+                      onCampoClick={() => setModalAssinatura(true)}
+                    />
+                  </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <h2 className="font-bold text-sm text-slate-900">Assinar como {dados.signatario.nome}</h2>
-
-              <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
-                <button
-                  onClick={() => setModoAssinatura("digitada")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "digitada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
-                >
-                  Digitar nome
-                </button>
-                <button
-                  onClick={() => setModoAssinatura("desenhada")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "desenhada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
-                >
-                  Desenhar assinatura
-                </button>
-              </div>
-
-              {modoAssinatura === "digitada" ? (
-                <input
-                  value={nomeDigitado}
-                  onChange={(e) => setNomeDigitado(e.target.value)}
-                  className="w-full px-4 py-3 text-2xl border-b-2 border-slate-300 focus:border-indigo-500 outline-hidden"
-                  style={{ fontFamily: "cursive" }}
-                />
+                  {campos.some((c) => c.documento === "tecnica") && (
+                    <div>
+                      <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Proposta Tecnica</p>
+                      <PdfSignViewer
+                        pdfUrl={tecnicaUrl}
+                        documento="tecnica"
+                        campos={campos}
+                        signatarioOrdem={signatarioOrdem}
+                        assinado={concluido}
+                        onCampoClick={() => setModalAssinatura(true)}
+                      />
+                    </div>
+                  )}
+                </div>
               ) : (
-                <SignaturePad onChange={setAssinaturaDesenhada} />
+                <>
+                  <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                    <a
+                      href={comercialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
+                    >
+                      <FileText className="h-4 w-4 text-indigo-600" /> Proposta Comercial (PDF)
+                    </a>
+                    <a
+                      href={tecnicaUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-400 text-xs font-semibold text-slate-700"
+                    >
+                      <FileText className="h-4 w-4 text-indigo-600" /> Proposta Tecnica (PDF)
+                    </a>
+                  </div>
+                  <div className="mt-4 rounded-xl overflow-hidden border border-slate-200">
+                    <iframe src={comercialUrl} className="w-full h-[420px]" title="Proposta Comercial" />
+                  </div>
+                </>
               )}
-
-              <label className="flex items-start gap-2 text-xs text-slate-600">
-                <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
-                <span>
-                  Declaro que li e concordo com os termos das propostas Comercial e Tecnica acima, e que esta
-                  assinatura eletronica tem validade juridica nos termos do art. 10, par. 2 da Medida Provisoria
-                  no 2.200-2/2001.
-                </span>
-              </label>
-
-              {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{erro}</p>}
-
-              <button
-                onClick={handleAssinar}
-                disabled={!aceite || enviando}
-                className="w-full py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
-                Assinar documento
-              </button>
             </div>
+
+            {/* Painel de assinatura inline (sem campos posicionados) */}
+            {!temCamposPosicionados && (
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-4">
+                <h2 className="font-bold text-sm text-slate-900">Assinar como {dados.signatario.nome}</h2>
+
+                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+                  <button
+                    onClick={() => setModoAssinatura("digitada")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "digitada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+                  >
+                    Digitar nome
+                  </button>
+                  <button
+                    onClick={() => setModoAssinatura("desenhada")}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "desenhada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+                  >
+                    Desenhar assinatura
+                  </button>
+                </div>
+
+                {modoAssinatura === "digitada" ? (
+                  <input
+                    value={nomeDigitado}
+                    onChange={(e) => setNomeDigitado(e.target.value)}
+                    className="w-full px-4 py-3 text-2xl border-b-2 border-slate-300 focus:border-indigo-500 outline-hidden"
+                    style={{ fontFamily: "cursive" }}
+                  />
+                ) : (
+                  <SignaturePad onChange={setAssinaturaDesenhada} />
+                )}
+
+                <label className="flex items-start gap-2 text-xs text-slate-600">
+                  <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
+                  <span>
+                    Declaro que li e concordo com os termos das propostas Comercial e Tecnica acima, e que esta
+                    assinatura eletronica tem validade juridica nos termos do art. 10, par. 2 da Medida Provisoria
+                    no 2.200-2/2001.
+                  </span>
+                </label>
+
+                {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{erro}</p>}
+
+                <button
+                  onClick={handleAssinar}
+                  disabled={!aceite || enviando}
+                  className="w-full py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Assinar documento
+                </button>
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Modal de assinatura (quando clica no campo posicionado) */}
+      {modalAssinatura && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
+            <button onClick={() => setModalAssinatura(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-indigo-600" />
+              <h2 className="font-bold text-sm text-slate-900">Assinar como {dados.signatario.nome}</h2>
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+              <button
+                onClick={() => setModoAssinatura("digitada")}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "digitada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+              >
+                Digitar nome
+              </button>
+              <button
+                onClick={() => setModoAssinatura("desenhada")}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "desenhada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+              >
+                Desenhar assinatura
+              </button>
+            </div>
+
+            {modoAssinatura === "digitada" ? (
+              <input
+                value={nomeDigitado}
+                onChange={(e) => setNomeDigitado(e.target.value)}
+                className="w-full px-4 py-3 text-2xl border-b-2 border-slate-300 focus:border-indigo-500 outline-hidden"
+                style={{ fontFamily: "cursive" }}
+              />
+            ) : (
+              <SignaturePad onChange={setAssinaturaDesenhada} />
+            )}
+
+            <label className="flex items-start gap-2 text-xs text-slate-600">
+              <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
+              <span>
+                Declaro que li e concordo com os termos das propostas Comercial e Tecnica acima, e que esta
+                assinatura eletronica tem validade juridica nos termos do art. 10, par. 2 da Medida Provisoria
+                no 2.200-2/2001.
+              </span>
+            </label>
+
+            {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{erro}</p>}
+
+            <button
+              onClick={handleAssinar}
+              disabled={!aceite || enviando}
+              className="w-full py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
+              Assinar documento
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

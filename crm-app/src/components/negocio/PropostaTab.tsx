@@ -14,10 +14,12 @@ import {
   Plus,
   X,
   Eye,
+  FileSignature,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, Plano } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
+import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 
 const STATUS_COR: Record<string, string> = {
   rascunho: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
@@ -30,6 +32,8 @@ interface Signatario {
   nome: string;
   email: string;
 }
+
+type EtapaEnvio = "signatarios" | "editor" | null;
 
 export function PropostaTab({
   negocio,
@@ -51,15 +55,21 @@ export function PropostaTab({
   const [erro, setErro] = useState<string | null>(null);
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState<string | null>(null);
-  const [ultimoResultado, setUltimoResultado] = useState<{ propostaId: string; linkAssinatura: string; emailEnviado: boolean } | null>(null);
+  const [ultimoResultado, setUltimoResultado] = useState<{
+    propostaId: string;
+    linkAssinatura: string;
+    emailEnviado: boolean;
+  } | null>(null);
 
-  // editor de signatarios (aparece ao clicar Enviar)
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
+  const [etapaEnvio, setEtapaEnvio] = useState<EtapaEnvio>(null);
   const [signatarios, setSignatarios] = useState<Signatario[]>([]);
   const [copias, setCopias] = useState<string[]>([]);
+  const [pdfComercialUrl, setPdfComercialUrl] = useState<string | null>(null);
+  const [camposAssinatura, setCamposAssinatura] = useState<CampoAssinatura[]>([]);
+  const [documentoEditor, setDocumentoEditor] = useState<"comercial" | "tecnica">("comercial");
 
   const temCnpj = !!negocio.contato?.cnpj?.trim();
-
   const valorMensal = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
 
   const handleGerar = async () => {
@@ -91,23 +101,52 @@ export function PropostaTab({
 
   const abrirEnvio = (propostaId: string) => {
     setEditandoEnvioId(propostaId);
+    setEtapaEnvio("signatarios");
     setSignatarios([{ nome: negocio.contato?.nome || "", email: negocio.contato?.email || "" }]);
     setCopias([]);
+    setCamposAssinatura([]);
     setErro(null);
   };
 
-  const handleEnviar = async (propostaId: string) => {
+  const avancarParaEditor = async () => {
     const signatariosValidos = signatarios.filter((s) => s.nome.trim() && s.email.trim());
     if (signatariosValidos.length === 0) {
       setErro("Adicione pelo menos um signatario com nome e e-mail.");
       return;
     }
-    setEnviandoId(propostaId);
     setErro(null);
-    const resp = await fetch(`/api/propostas/${propostaId}/enviar`, {
+
+    const proposta = propostas.find((p) => p.id === editandoEnvioId);
+    if (!proposta?.pdf_comercial_path) {
+      setErro("PDF nao encontrado.");
+      return;
+    }
+
+    const supabase = createClient();
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(proposta.pdf_comercial_path, 60 * 30);
+    if (!data?.signedUrl) {
+      setErro("Falha ao carregar PDF.");
+      return;
+    }
+    setPdfComercialUrl(data.signedUrl);
+    setDocumentoEditor("comercial");
+    setEtapaEnvio("editor");
+  };
+
+  const handleEnviarComCampos = async (campos: CampoAssinatura[]) => {
+    if (!editandoEnvioId) return;
+    const signatariosValidos = signatarios.filter((s) => s.nome.trim() && s.email.trim());
+
+    setEnviandoId(editandoEnvioId);
+    setErro(null);
+    const resp = await fetch(`/api/propostas/${editandoEnvioId}/enviar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ signatarios: signatariosValidos, copias: copias.filter((c) => c.trim()) }),
+      body: JSON.stringify({
+        signatarios: signatariosValidos,
+        copias: copias.filter((c) => c.trim()),
+        campos_assinatura: campos,
+      }),
     });
     const data = await resp.json();
     setEnviandoId(null);
@@ -116,15 +155,20 @@ export function PropostaTab({
       return;
     }
     setEditandoEnvioId(null);
-    setUltimoResultado({ propostaId, linkAssinatura: data.linkAssinatura, emailEnviado: data.emailEnviado });
+    setEtapaEnvio(null);
+    setUltimoResultado({
+      propostaId: editandoEnvioId,
+      linkAssinatura: data.linkAssinatura,
+      emailEnviado: data.emailEnviado,
+    });
     const supabase = createClient();
     const { data: propostaAtualizada } = await supabase
       .from("propostas")
       .select("*, plano:planos(*), envelopes(*, signatarios(*))")
-      .eq("id", propostaId)
+      .eq("id", editandoEnvioId)
       .single();
     if (propostaAtualizada) {
-      setPropostas((prev) => prev.map((p) => (p.id === propostaId ? propostaAtualizada : p)));
+      setPropostas((prev) => prev.map((p) => (p.id === editandoEnvioId ? propostaAtualizada : p)));
     }
   };
 
@@ -262,9 +306,13 @@ export function PropostaTab({
                     )}
                   </div>
 
-                  {editandoEnvioId === p.id && (
+                  {/* Etapa 1: Signatarios */}
+                  {editandoEnvioId === p.id && etapaEnvio === "signatarios" && (
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Quem vai assinar?</p>
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Quem vai assinar?</p>
+                      </div>
                       {signatarios.map((s, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <input
@@ -320,17 +368,48 @@ export function PropostaTab({
 
                       <div className="flex items-center gap-2 pt-1">
                         <button
-                          onClick={() => handleEnviar(p.id)}
-                          disabled={enviandoId === p.id}
-                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60"
+                          onClick={avancarParaEditor}
+                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
                         >
-                          {enviandoId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                          Enviar agora
+                          <FileSignature className="h-3.5 w-3.5" /> Preparar documento
                         </button>
-                        <button onClick={() => setEditandoEnvioId(null)} className="px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                        <button onClick={() => { setEditandoEnvioId(null); setEtapaEnvio(null); }} className="px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                           Cancelar
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Etapa 2: Editor de campos */}
+                  {editandoEnvioId === p.id && etapaEnvio === "editor" && pdfComercialUrl && (
+                    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Posicione os campos de assinatura no documento</p>
+                        <button
+                          onClick={() => setEtapaEnvio("signatarios")}
+                          className="ml-auto text-[11px] text-slate-500 hover:text-indigo-600 font-semibold"
+                        >
+                          Voltar
+                        </button>
+                      </div>
+
+                      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+
+                      <PdfFieldEditor
+                        pdfUrl={pdfComercialUrl}
+                        documento={documentoEditor}
+                        signatarios={signatarios
+                          .filter((s) => s.nome.trim() && s.email.trim())
+                          .map((s, i) => ({ nome: s.nome, email: s.email, ordem: i + 2 }))}
+                        camposIniciais={camposAssinatura}
+                        onSalvar={(campos) => {
+                          setCamposAssinatura(campos);
+                          handleEnviarComCampos(campos);
+                        }}
+                        onCancelar={() => setEtapaEnvio("signatarios")}
+                        enviando={!!enviandoId}
+                      />
                     </div>
                   )}
 
