@@ -31,11 +31,14 @@ export function ListaClient({ negocios: negociosIniciais, etapas }: { negocios: 
 
   const filtrados = useMemo(() => {
     return negocios.filter((n) => {
+      const termo = busca.toLowerCase();
       const matchBusca =
         busca === "" ||
-        n.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-        n.contato?.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        n.contato?.empresa?.toLowerCase().includes(busca.toLowerCase());
+        n.titulo.toLowerCase().includes(termo) ||
+        n.contato?.nome.toLowerCase().includes(termo) ||
+        (n.contato?.sobrenome || "").toLowerCase().includes(termo) ||
+        (n.contato?.empresa || "").toLowerCase().includes(termo) ||
+        (n.contato?.cargo || "").toLowerCase().includes(termo);
       const matchEtapa = etapaFiltro === "all" || n.etapa_id === etapaFiltro;
       return matchBusca && matchEtapa;
     });
@@ -86,7 +89,7 @@ export function ListaClient({ negocios: negociosIniciais, etapas }: { negocios: 
                 <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="p-4">
                     <p className="font-bold text-slate-900 dark:text-slate-100">{n.contato?.empresa || n.contato?.nome}</p>
-                    <p className="text-[11px] text-slate-500">{n.contato?.nome}</p>
+                    <p className="text-[11px] text-slate-500">{n.contato?.nome}{n.contato?.sobrenome ? ` ${n.contato.sobrenome}` : ""}{n.contato?.cargo ? ` · ${n.contato.cargo}` : ""}</p>
                   </td>
                   <td className="p-4">
                     <span

@@ -74,6 +74,7 @@ export type Database = {
       }
       contatos: {
         Row: {
+          area: string | null
           atualizado_em: string | null
           cargo: string | null
           cidade: string | null
@@ -86,11 +87,14 @@ export type Database = {
           nome: string
           origem: string | null
           responsavel_id: string | null
+          sobrenome: string | null
           tags: string[] | null
           telefone: string | null
+          telefone_comercial: string | null
           tenant_id: string | null
         }
         Insert: {
+          area?: string | null
           atualizado_em?: string | null
           cargo?: string | null
           cidade?: string | null
@@ -103,11 +107,14 @@ export type Database = {
           nome: string
           origem?: string | null
           responsavel_id?: string | null
+          sobrenome?: string | null
           tags?: string[] | null
           telefone?: string | null
+          telefone_comercial?: string | null
           tenant_id?: string | null
         }
         Update: {
+          area?: string | null
           atualizado_em?: string | null
           cargo?: string | null
           cidade?: string | null
@@ -120,8 +127,10 @@ export type Database = {
           nome?: string
           origem?: string | null
           responsavel_id?: string | null
+          sobrenome?: string | null
           tags?: string[] | null
           telefone?: string | null
+          telefone_comercial?: string | null
           tenant_id?: string | null
         }
         Relationships: [

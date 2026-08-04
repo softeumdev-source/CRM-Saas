@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ import {
   LogOut,
   Loader2,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -26,6 +27,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -36,7 +38,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
         .from("notificacoes")
         .select("*")
         .order("criado_em", { ascending: false })
-        .limit(20);
+        .limit(30);
       if (active && data) setNotificacoes(data);
     }
     carregar();
@@ -55,6 +57,17 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
       supabase.removeChannel(channel);
     };
   }, [usuario.id]);
+
+  useEffect(() => {
+    if (!showNotifs) return;
+    const handleClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showNotifs]);
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
 
@@ -131,22 +144,22 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
               onClick={marcarLidas}
               className="relative p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
             >
               <Bell className="h-4.5 w-4.5" />
               {naoLidas > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center animate-pulse">
                   {naoLidas}
                 </span>
               )}
             </button>
             {showNotifs && (
-              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Notificacoes</span>
+              <div className="absolute right-0 mt-2 w-96 max-h-[480px] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
+                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 z-10 rounded-t-2xl">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Notificacoes ({notificacoes.length})</span>
                   {notificacoes.length > 0 && (
                     <button
                       onClick={limparNotificacoes}
@@ -158,17 +171,28 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
                   )}
                 </div>
                 {notificacoes.length === 0 ? (
-                  <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificacao ainda.</p>
+                  <p className="p-6 text-xs text-slate-400 text-center">Nenhuma notificacao.</p>
                 ) : (
                   notificacoes.map((n) => (
                     <Link
                       key={n.id}
                       href={n.link || "#"}
                       onClick={() => setShowNotifs(false)}
-                      className="block p-3 border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs"
+                      className="flex items-start gap-3 p-3 border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs group/notif"
                     >
-                      <p className="font-bold text-slate-800 dark:text-slate-200">{n.titulo}</p>
-                      {n.corpo && <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.corpo}</p>}
+                      <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <Bell className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-slate-200">{n.titulo}</p>
+                        {n.corpo && <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.corpo}</p>}
+                        {n.criado_em && (
+                          <p className="text-[10px] text-slate-400 mt-1">{new Date(n.criado_em).toLocaleString("pt-BR")}</p>
+                        )}
+                      </div>
+                      {n.link && n.link !== "#" && (
+                        <ExternalLink className="h-3.5 w-3.5 text-slate-300 group-hover/notif:text-indigo-500 shrink-0 mt-1" />
+                      )}
                     </Link>
                   ))
                 )}

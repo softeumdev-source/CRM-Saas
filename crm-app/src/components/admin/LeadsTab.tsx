@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Trash2 } from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Trash2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
 
@@ -11,10 +11,13 @@ type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | nu
 
 interface LinhaImportada {
   nome: string;
+  sobrenome?: string;
   empresa?: string;
   email?: string;
   telefone?: string;
+  telefone_comercial?: string;
   cargo?: string;
+  area?: string;
   cidade?: string;
   estado?: string;
   cnpj?: string;
@@ -25,18 +28,32 @@ function normalizarChave(k: string) {
 }
 
 const MAPA_CAMPOS: Record<string, keyof LinhaImportada> = {
+  "nome completo": "nome",
   nome: "nome",
   name: "nome",
   contato: "nome",
+  "first name": "nome",
+  sobrenome: "sobrenome",
+  "last name": "sobrenome",
   empresa: "empresa",
   company: "empresa",
+  conta: "empresa",
+  account: "empresa",
   email: "email",
   "e-mail": "email",
   telefone: "telefone",
   phone: "telefone",
   celular: "telefone",
+  "telefone comercial": "telefone_comercial",
+  "business phone": "telefone_comercial",
+  "tel comercial": "telefone_comercial",
   cargo: "cargo",
   role: "cargo",
+  title: "cargo",
+  area: "area",
+  department: "area",
+  departamento: "area",
+  setor: "area",
   cidade: "cidade",
   city: "cidade",
   estado: "estado",
@@ -79,10 +96,10 @@ export function LeadsTab({
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [vendedorManual, setVendedorManual] = useState("");
   const [distribuindo, setDistribuindo] = useState(false);
-  // reatribuicao de leads que ja tem dono
   const [selComDono, setSelComDono] = useState<Set<string>>(new Set());
   const [filtroVendedor, setFiltroVendedor] = useState("all");
   const [buscaComDono, setBuscaComDono] = useState("");
+  const [buscaSemDono, setBuscaSemDono] = useState("");
   const [novoResp, setNovoResp] = useState("");
   const [reatribuindo, setReatribuindo] = useState(false);
   const [deletando, setDeletando] = useState(false);
@@ -121,7 +138,7 @@ export function LeadsTab({
 
       const contatos = linhasParaContatos(linhas);
       if (contatos.length === 0) {
-        setErro("Nenhuma linha valida encontrada. Verifique se ha uma coluna 'nome'.");
+        setErro("Nenhuma linha valida encontrada. Verifique se ha uma coluna 'Nome' ou 'Nome Completo'.");
         setProcessando(false);
         return;
       }
@@ -165,6 +182,9 @@ export function LeadsTab({
     setDistribuindo(true);
     const supabase = createClient();
     await supabase.from("contatos").update({ responsavel_id: vendedorManual }).in("id", Array.from(selecionados));
+    const movidos = contatosSemDono.filter((c) => selecionados.has(c.id));
+    const dest = vendedores.find((v) => v.id === vendedorManual);
+    setContatosComDono((prev) => [...movidos.map((c) => ({ ...c, responsavel_id: vendedorManual, responsavel: dest ? { id: dest.id, nome: dest.nome } : null })), ...prev]);
     setContatosSemDono((prev) => prev.filter((c) => !selecionados.has(c.id)));
     setSelecionados(new Set());
     setDistribuindo(false);
@@ -176,13 +196,17 @@ export function LeadsTab({
     setDistribuindo(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("distribuir_leads", { p_contato_ids: idsAlvo });
-    setDistribuindo(false);
     if (error) {
       setErro(error.message);
+      setDistribuindo(false);
       return;
     }
-    setContatosSemDono((prev) => prev.filter((c) => !idsAlvo.includes(c.id)));
+    const { data: atualizadosSemDono } = await supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false });
+    const { data: atualizadosComDono } = await supabase.from("contatos").select("*, responsavel:usuarios(id, nome)").not("responsavel_id", "is", null).order("criado_em", { ascending: false }).limit(1000);
+    if (atualizadosSemDono) setContatosSemDono(atualizadosSemDono);
+    if (atualizadosComDono) setContatosComDono(atualizadosComDono as any);
     setSelecionados(new Set());
+    setDistribuindo(false);
   };
 
   const deletarSelecionadosSemDono = async () => {
@@ -211,13 +235,20 @@ export function LeadsTab({
     setSelComDono(new Set());
   };
 
+  const semDonoFiltrados = contatosSemDono.filter((c) => {
+    if (!buscaSemDono.trim()) return true;
+    const termo = buscaSemDono.trim().toLowerCase();
+    return (c.nome + " " + (c.sobrenome || "") + " " + (c.empresa || "") + " " + (c.email || "") + " " + (c.cargo || "")).toLowerCase().includes(termo);
+  });
+
   const selecionarTodosPool = () => {
-    setSelecionados((prev) => (prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id))));
+    const idsFiltrados = semDonoFiltrados.map((c) => c.id);
+    setSelecionados((prev) => (prev.size === idsFiltrados.length && idsFiltrados.every((id) => prev.has(id)) ? new Set() : new Set(idsFiltrados)));
   };
 
   const comDonoFiltrados = contatosComDono.filter((c) => {
     const okVendedor = filtroVendedor === "all" || c.responsavel?.id === filtroVendedor;
-    const okBusca = !buscaComDono.trim() || (c.nome + " " + (c.empresa || "") + " " + (c.email || "")).toLowerCase().includes(buscaComDono.trim().toLowerCase());
+    const okBusca = !buscaComDono.trim() || (c.nome + " " + (c.sobrenome || "") + " " + (c.empresa || "") + " " + (c.email || "") + " " + (c.cargo || "")).toLowerCase().includes(buscaComDono.trim().toLowerCase());
     return okVendedor && okBusca;
   });
 
@@ -254,36 +285,57 @@ export function LeadsTab({
 
   return (
     <div className="space-y-6">
+      {/* Import section */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-3">
         <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Upload className="h-4 w-4 text-indigo-600" /> Importar base de contatos (CSV ou XLSX)
         </h3>
         <p className="text-xs text-slate-500">
-          Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj. Contatos com e-mail
-          repetido sao ignorados automaticamente. Os leads importados entram no pool "sem dono" ate serem distribuidos.
+          Colunas reconhecidas: <span className="font-semibold text-slate-600 dark:text-slate-400">Nome Completo, Nome, Sobrenome, Cargo, Area, E-mail, Telefone Comercial, Conta/Empresa, CNPJ</span>.
+          Contatos com e-mail repetido sao ignorados. Suporta importacao em massa (ate 200 mil registros). Os leads importados entram no pool "sem dono".
         </p>
-        <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
-          {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {processando ? progresso || "Processando..." : "Escolher arquivo"}
-          <input type="file" accept=".csv,.xlsx" className="hidden" onChange={handleArquivo} disabled={processando} />
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
+            {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            {processando ? progresso || "Processando..." : "Escolher arquivo"}
+            <input type="file" accept=".csv,.xlsx" className="hidden" onChange={handleArquivo} disabled={processando} />
+          </label>
+          {processando && <p className="text-xs text-slate-500 animate-pulse">{progresso}</p>}
+        </div>
         {resultado && (
           <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
             <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados (duplicados por e-mail ignorados).
           </p>
         )}
-        {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+        {erro && (
+          <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2 flex items-center gap-1.5">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {erro}
+          </p>
+        )}
       </div>
 
+      {/* Leads sem dono */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length})
-            </h3>
-            <p className="text-xs text-slate-500">{selecionados.size} selecionados</p>
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length})
+              </h3>
+              <p className="text-xs text-slate-500">{selecionados.size} selecionados</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                value={buscaSemDono}
+                onChange={(e) => setBuscaSemDono(e.target.value)}
+                placeholder="Buscar nome/empresa/e-mail..."
+                className="pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-56"
+              />
+            </div>
+            <div className="flex-1" />
             <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <option value="">Escolher vendedor...</option>
               {vendedores.map((v) => (
@@ -303,7 +355,7 @@ export function LeadsTab({
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50"
             >
               {distribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
-              Distribuir automatico (round-robin)
+              Distribuir automatico
             </button>
             <button
               onClick={deletarSelecionadosSemDono}
@@ -311,18 +363,18 @@ export function LeadsTab({
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md disabled:opacity-50"
             >
               {deletando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Deletar selecionados
+              Deletar
             </button>
           </div>
         </div>
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-[480px] overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white dark:bg-slate-900">
+            <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10">
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
-                    checked={contatosSemDono.length > 0 && selecionados.size === contatosSemDono.length}
+                    checked={semDonoFiltrados.length > 0 && semDonoFiltrados.every((c) => selecionados.has(c.id))}
                     onChange={selecionarTodosPool}
                     title="Selecionar todos"
                   />
@@ -330,27 +382,48 @@ export function LeadsTab({
                 <th className="p-3">Nome</th>
                 <th className="p-3">Empresa</th>
                 <th className="p-3">E-mail</th>
+                <th className="p-3">Cargo</th>
+                <th className="p-3">CNPJ</th>
                 <th className="p-3">Origem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {contatosSemDono.map((c) => (
+              {semDonoFiltrados.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <td className="p-3"><input type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
-                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="p-3">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{c.nome}</span>
+                    {c.sobrenome && <span className="text-slate-500"> {c.sobrenome}</span>}
+                  </td>
                   <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
-                  <td className="p-3 text-slate-500">{c.email || "—"}</td>
-                  <td className="p-3 text-slate-400 capitalize">{c.origem}</td>
+                  <td className="p-3 text-slate-500 max-w-[180px] truncate">{c.email || "—"}</td>
+                  <td className="p-3 text-slate-500">{c.cargo || "—"}</td>
+                  <td className="p-3">
+                    {c.cnpj ? (
+                      <span className="text-emerald-600 font-semibold text-[10px]">OK</span>
+                    ) : (
+                      <span className="text-amber-500 font-semibold text-[10px]">—</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-slate-400 capitalize text-[11px]">{c.origem || "—"}</td>
                 </tr>
               ))}
-              {contatosSemDono.length === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-slate-400">Nenhum lead sem dono no momento.</td></tr>
+              {semDonoFiltrados.length === 0 && (
+                <tr><td colSpan={7} className="p-6 text-center text-slate-400">
+                  {buscaSemDono.trim() ? "Nenhum lead encontrado para esta busca." : "Nenhum lead sem dono no momento."}
+                </td></tr>
               )}
             </tbody>
           </table>
         </div>
+        {contatosSemDono.length > 50 && (
+          <div className="p-3 border-t border-slate-100 dark:border-slate-800 text-center">
+            <p className="text-[11px] text-slate-400">Exibindo {semDonoFiltrados.length} de {contatosSemDono.length} leads sem dono</p>
+          </div>
+        )}
       </div>
 
+      {/* Leads com vendedor */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -408,9 +481,9 @@ export function LeadsTab({
             </button>
           </div>
         </div>
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-[480px] overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white dark:bg-slate-900">
+            <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10">
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="p-3 w-8">
                   <input
@@ -425,6 +498,8 @@ export function LeadsTab({
                 </th>
                 <th className="p-3">Nome</th>
                 <th className="p-3">Empresa</th>
+                <th className="p-3">E-mail</th>
+                <th className="p-3">Cargo</th>
                 <th className="p-3">Vendedor</th>
               </tr>
             </thead>
@@ -432,13 +507,18 @@ export function LeadsTab({
               {comDonoFiltrados.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
-                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="p-3">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{c.nome}</span>
+                    {c.sobrenome && <span className="text-slate-500"> {c.sobrenome}</span>}
+                  </td>
                   <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
+                  <td className="p-3 text-slate-500 max-w-[180px] truncate">{c.email || "—"}</td>
+                  <td className="p-3 text-slate-500">{c.cargo || "—"}</td>
                   <td className="p-3 text-indigo-600 dark:text-indigo-400 font-semibold">{c.responsavel?.nome || "—"}</td>
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
-                <tr><td colSpan={4} className="p-6 text-center text-slate-400">Nenhum lead com vendedor neste filtro.</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-slate-400">Nenhum lead com vendedor neste filtro.</td></tr>
               )}
             </tbody>
           </table>

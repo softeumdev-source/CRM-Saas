@@ -18,6 +18,8 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
     .filter((a) => !a.concluida && a.data_agendada)
     .sort((a, b) => new Date(a.data_agendada!).getTime() - new Date(b.data_agendada!).getTime())[0];
 
+  const agendaVencida = proximaAtividade && new Date(proximaAtividade.data_agendada!) < new Date();
+
   return (
     <Link
       href={`/negocios/${negocio.id}`}
@@ -37,16 +39,10 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
               {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
             </h3>
-            {proximaAtividade && <Bell className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium pl-5 mt-0.5 line-clamp-1">
-            {negocio.contato?.nome} {negocio.contato?.cargo ? `• ${negocio.contato.cargo}` : ""}
+            {negocio.contato?.nome}{negocio.contato?.sobrenome ? ` ${negocio.contato.sobrenome}` : ""} {negocio.contato?.cargo ? `· ${negocio.contato.cargo}` : ""}
           </p>
-          {proximaAtividade && (
-            <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold pl-5 mt-0.5 flex items-center gap-1">
-              <CalendarClock className="h-3 w-3" /> {new Date(proximaAtividade.data_agendada!).toLocaleString("pt-BR")}
-            </p>
-          )}
         </div>
         {negocio.prioridade && (
           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border shrink-0 capitalize ${PRIORIDADE_COR[negocio.prioridade]}`}>
@@ -54,6 +50,20 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
           </span>
         )}
       </div>
+
+      {proximaAtividade && (
+        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mb-2.5 text-[11px] font-semibold ${
+          agendaVencida
+            ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
+            : "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"
+        }`}>
+          <Bell className="h-3.5 w-3.5 shrink-0 animate-pulse" />
+          <CalendarClock className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {agendaVencida ? "Atrasado: " : ""}{new Date(proximaAtividade.data_agendada!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </div>
+      )}
 
       <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-2.5 my-3 flex items-center justify-between border border-slate-100 dark:border-slate-800">
         <div>
