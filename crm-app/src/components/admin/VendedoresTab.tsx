@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
+import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
@@ -30,6 +30,7 @@ export function VendedoresTab({
   const [vendedoresState, setVendedoresState] = useState(vendedores);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
+  const [deletandoId, setDeletandoId] = useState<string | null>(null);
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +82,34 @@ export function VendedoresTab({
 
   const toggleAtivo = async (v: Usuario) => {
     const novoAtivo = !v.ativo;
-    if (novoAtivo === false && !confirm(`Remover ${v.nome} do time de vendedores? Os leads dele continuam com ele, mas ele deixa de aparecer para receber novos leads e nao consegue mais acessar o sistema.`)) return;
+    if (novoAtivo === false && !confirm(`Desativar ${v.nome}? Ele nao conseguira mais acessar o sistema, mas os leads dele continuam atribuidos.`)) return;
     setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo: novoAtivo } : u)));
     const supabase = createClient();
     await supabase.from("usuarios").update({ ativo: novoAtivo }).eq("id", v.id);
+  };
+
+  const deletarVendedor = async (v: Usuario) => {
+    const deles = negocios.filter((n) => n.responsavel_id === v.id);
+    const msg = deles.length > 0
+      ? `Excluir permanentemente ${v.nome}? Ele tem ${deles.length} negocio(s) — os leads serao devolvidos ao pool sem dono. Esta acao nao pode ser desfeita.`
+      : `Excluir permanentemente ${v.nome}? Esta acao nao pode ser desfeita.`;
+    if (!confirm(msg)) return;
+    setDeletandoId(v.id);
+    const supabase = createClient();
+    if (deles.length > 0) {
+      await supabase.from("negocios").update({ responsavel_id: null }).eq("responsavel_id", v.id);
+      await supabase.from("contatos").update({ responsavel_id: null }).eq("responsavel_id", v.id);
+    }
+    await supabase.from("usuarios").delete().eq("id", v.id);
+    setVendedoresState((prev) => prev.filter((u) => u.id !== v.id));
+    setDeletandoId(null);
+  };
+
+  const deletarConvite = async (conviteId: string) => {
+    if (!confirm("Cancelar este convite?")) return;
+    const supabase = createClient();
+    await supabase.from("convites").delete().eq("id", conviteId);
+    setConvites((prev) => prev.filter((c) => c.id !== conviteId));
   };
 
   const totalMeta = vendedoresState.filter((v) => v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
@@ -175,6 +200,13 @@ export function VendedoresTab({
                         )}
                         Reenviar
                       </button>
+                      <button
+                        onClick={() => deletarConvite(c.id)}
+                        className="text-rose-500 hover:text-rose-700"
+                        title="Cancelar convite"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -218,10 +250,18 @@ export function VendedoresTab({
                   </div>
                   <button
                     onClick={() => toggleAtivo(v)}
-                    title="Remover vendedor"
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+                    title="Desativar vendedor"
+                    className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl transition-colors"
                   >
                     <UserX className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => deletarVendedor(v)}
+                    disabled={deletandoId === v.id}
+                    title="Excluir vendedor permanentemente"
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {deletandoId === v.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -230,7 +270,7 @@ export function VendedoresTab({
 
           {vendedoresInativos.length > 0 && (
             <div className="col-span-full">
-              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Vendedores removidos ({vendedoresInativos.length})</p>
+              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Vendedores desativados ({vendedoresInativos.length})</p>
               <div className="space-y-2">
                 {vendedoresInativos.map((v) => (
                   <div key={v.id} className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 opacity-70">
@@ -243,13 +283,23 @@ export function VendedoresTab({
                         <p className="text-[11px] text-slate-400 truncate">{v.email}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleAtivo(v)}
-                      title="Reativar vendedor"
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
-                    >
-                      <UserCheck className="h-3.5 w-3.5" /> Reativar
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleAtivo(v)}
+                        title="Reativar vendedor"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
+                      >
+                        <UserCheck className="h-3.5 w-3.5" /> Reativar
+                      </button>
+                      <button
+                        onClick={() => deletarVendedor(v)}
+                        disabled={deletandoId === v.id}
+                        title="Excluir permanentemente"
+                        className="p-1.5 text-rose-400 hover:text-rose-600 rounded-lg"
+                      >
+                        {deletandoId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

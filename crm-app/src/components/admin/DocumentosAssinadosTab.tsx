@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, Download, FileCheck2 } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Download, FileCheck2, Trash2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function DocumentosAssinadosTab({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "concluido" | "aguardando">("todos");
+  const [deletandoId, setDeletandoId] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -29,6 +30,19 @@ export function DocumentosAssinadosTab({ envelopesIniciais }: { envelopesIniciai
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const deletarEnvelope = async (env: any) => {
+    const negocio = env.proposta?.negocio;
+    const nome = negocio?.contato?.empresa || negocio?.contato?.nome || "Sem nome";
+    if (!confirm(`Excluir permanentemente o envelope de "${nome}" (Proposta ${env.proposta?.numero || "?"})?\n\nIsso removerá o envelope e todos os signatários. Esta ação não pode ser desfeita.`)) return;
+
+    setDeletandoId(env.id);
+    const supabase = createClient();
+    await supabase.from("signatarios").delete().eq("envelope_id", env.id);
+    await supabase.from("envelopes").delete().eq("id", env.id);
+    setEnvelopes((prev) => prev.filter((e) => e.id !== env.id));
+    setDeletandoId(null);
+  };
 
   const filtrados = envelopes.filter((e) => {
     if (filtroStatus === "concluido") return e.status === "concluido";
@@ -78,43 +92,57 @@ export function DocumentosAssinadosTab({ envelopesIniciais }: { envelopesIniciai
           const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
           return (
             <div key={env.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40">
-              <Link href={negocio ? `/negocios/${negocio.id}` : "#"} className="block">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {negocio?.contato?.empresa || negocio?.contato?.nome} — Proposta {env.proposta?.numero}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Vendedor: {negocio?.responsavel?.nome || "—"}
-                      {env.criado_em && <> · Enviado em {new Date(env.criado_em).toLocaleDateString("pt-BR")}</>}
-                    </p>
-                  </div>
-                  <span
-                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
-                      env.status === "concluido"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        : env.status === "cancelado"
-                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                    }`}
-                  >
-                    {env.status === "concluido" ? <CheckCircle2 className="h-3.5 w-3.5" /> : env.status === "cancelado" ? <XCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                    {env.status}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {env.signatarios?.map((s: any) => (
+              <div className="flex items-start justify-between gap-3">
+                <Link href={negocio ? `/negocios/${negocio.id}` : "#"} className="block flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {negocio?.contato?.empresa || negocio?.contato?.nome} — Proposta {env.proposta?.numero}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Vendedor: {negocio?.responsavel?.nome || "—"}
+                        {env.criado_em && <> · Enviado em {new Date(env.criado_em).toLocaleDateString("pt-BR")}</>}
+                      </p>
+                    </div>
                     <span
-                      key={s.id}
-                      className={`text-[11px] px-2 py-1 rounded-lg font-semibold ${
-                        s.status === "assinado" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                      className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                        env.status === "concluido"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                          : env.status === "cancelado"
+                            ? "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                       }`}
                     >
-                      {s.nome} ({s.papel}): {s.status}
+                      {env.status === "concluido" ? <CheckCircle2 className="h-3.5 w-3.5" /> : env.status === "cancelado" ? <XCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                      {env.status}
                     </span>
-                  ))}
-                </div>
-              </Link>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {env.signatarios?.map((s: any) => (
+                      <span
+                        key={s.id}
+                        className={`text-[11px] px-2 py-1 rounded-lg font-semibold ${
+                          s.status === "assinado" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                        }`}
+                      >
+                        {s.nome} ({s.papel}): {s.status}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+                <button
+                  onClick={() => deletarEnvelope(env)}
+                  disabled={deletandoId === env.id}
+                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors shrink-0 disabled:opacity-50"
+                  title="Excluir envelope"
+                >
+                  {deletandoId === env.id ? (
+                    <span className="h-4 w-4 block border-2 border-rose-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {(assinadoComercial || assinadoTecnica) && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                   {assinadoComercial && (
