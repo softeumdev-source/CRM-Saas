@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     valorModuloWhatsapp,
     prazoContratoMeses,
     formaPagamento,
+    valorSetup,
   } = body;
 
   if (!negocioId || !planoId) {
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
     .eq("tenant_id", tenantId);
   const numero = `${new Date().getFullYear()}-${String((count ?? 0) + 1).padStart(4, "0")}`;
 
-  const valorSetupTotal = Number(plano.valor_setup_plataforma) + Number(plano.valor_setup_erp) + Number(plano.valor_setup_catalogo);
+  const valorSetupPlano = Number(plano.valor_setup_plataforma) + Number(plano.valor_setup_erp) + Number(plano.valor_setup_catalogo);
+  const valorSetupTotal = valorSetup != null ? Number(valorSetup) : valorSetupPlano;
   const qtdEmail = Number(qtdCaixasEmail ?? 0);
   const qtdWhats = Number(qtdNumerosWhatsapp ?? 0);
   const valorModEmail = Number(valorModuloEmail ?? 0);
@@ -87,9 +89,9 @@ export async function POST(request: Request) {
     data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
     planoNome: plano.nome,
     tetoPedidos: plano.franquia_pedidos,
-    valorSetupPlataforma: Number(plano.valor_setup_plataforma),
-    valorSetupErp: Number(plano.valor_setup_erp),
-    valorSetupCatalogo: Number(plano.valor_setup_catalogo),
+    valorSetupPlataforma: valorSetupTotal,
+    valorSetupErp: 0,
+    valorSetupCatalogo: 0,
     valorSetupTotal,
     valorPlataforma: valorPlataformaFinal,
     valorUso: valorUsoFinal,
@@ -157,9 +159,9 @@ export async function POST(request: Request) {
       versao: 1,
       aviso_previo_dias: Number(avisoPrevioDias ?? 180),
       prazo_contrato_meses: Number(prazoContratoMeses ?? 12),
-      valor_setup_plataforma: dados.valorSetupPlataforma,
-      valor_setup_erp: dados.valorSetupErp,
-      valor_setup_catalogo: dados.valorSetupCatalogo,
+      valor_setup_plataforma: valorSetupTotal,
+      valor_setup_erp: 0,
+      valor_setup_catalogo: 0,
       valor_plataforma: valorPlataformaFinal,
       valor_uso: valorUsoFinal,
       valor_excedente_pedido: dados.valorExcedentePedido,

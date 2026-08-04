@@ -71,6 +71,9 @@ export function PropostaTab({
   const [camposAssinatura, setCamposAssinatura] = useState<CampoAssinatura[]>([]);
   const [documentoEditor, setDocumentoEditor] = useState<"comercial" | "tecnica">("comercial");
 
+  const setupPlano = (plano?.valor_setup_plataforma || 0) + (plano?.valor_setup_erp || 0) + (plano?.valor_setup_catalogo || 0);
+  const [valorSetup, setValorSetup] = useState(setupPlano);
+
   const temCnpj = !!negocio.contato?.cnpj?.trim();
   const valorMensal = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
 
@@ -89,6 +92,7 @@ export function PropostaTab({
         qtdCaixasEmail: 0,
         qtdNumerosWhatsapp: 0,
         prazoContratoMeses,
+        valorSetup,
       }),
     });
     const data = await resp.json();
@@ -211,7 +215,11 @@ export function PropostaTab({
 
         <div>
           <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Plano</label>
-          <select value={planoId} onChange={(e) => setPlanoId(e.target.value)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
+          <select value={planoId} onChange={(e) => {
+            setPlanoId(e.target.value);
+            const p = planos.find((x) => x.id === e.target.value);
+            setValorSetup((p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0));
+          }} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — ate {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mes</option>
             ))}
@@ -223,6 +231,24 @@ export function PropostaTab({
           <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{formatarMoeda(valorMensal)}<span className="text-sm font-semibold text-slate-500">/mes</span></p>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Valor definido pelo plano cadastrado no painel admin. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
+          </p>
+        </div>
+
+        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+          <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobranca unica)</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">R$</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={valorSetup}
+              onChange={(e) => setValorSetup(parseFloat(e.target.value) || 0)}
+              className="flex-1 px-3 py-2 text-lg font-extrabold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+            />
+          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            Valor padrao do plano: {formatarMoeda(setupPlano)}. Deixe 0 para nao cobrar setup.
           </p>
         </div>
 
@@ -271,7 +297,9 @@ export function PropostaTab({
                         Proposta {p.numero} v{p.versao} — {p.plano?.nome}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mes · aviso previo {p.aviso_previo_dias} dias
+                        {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mes
+                        {(p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0) > 0 && ` + ${formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))} setup`}
+                        {" "}· aviso previo {p.aviso_previo_dias} dias
                       </p>
                     </div>
                     <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
