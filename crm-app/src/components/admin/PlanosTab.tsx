@@ -14,7 +14,7 @@ const PLANO_VAZIO = {
   valor_setup_erp: 0,
   valor_setup_catalogo: 0,
   valor_plataforma_base: 690,
-  valor_uso_base: 890,
+  valor_uso_base: 0,
   valor_excedente_pedido: 2,
 };
 
@@ -32,18 +32,19 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
 
   const abrirEdicao = (p: Plano) => {
     setEditando(p);
-    setForm(p);
+    setForm({ ...p, valor_plataforma_base: (p.valor_plataforma_base || 0) + (p.valor_uso_base || 0), valor_uso_base: 0 });
     setModalAberto(true);
   };
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = { ...form, valor_uso_base: 0 };
     const supabase = createClient();
     if (editando) {
-      const { data } = await supabase.from("planos").update(form).eq("id", editando.id).select().single();
+      const { data } = await supabase.from("planos").update(payload).eq("id", editando.id).select().single();
       if (data) setPlanos((prev) => prev.map((p) => (p.id === data.id ? data : p)));
     } else {
-      const { data } = await supabase.from("planos").insert(form).select().single();
+      const { data } = await supabase.from("planos").insert(payload).select().single();
       if (data) setPlanos((prev) => [...prev, data]);
     }
     setModalAberto(false);
@@ -61,7 +62,7 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Planos usados nas propostas</h3>
-          <p className="text-xs text-slate-500">Os vendedores so podem cobrar igual ou acima destes valores base.</p>
+          <p className="text-xs text-slate-500">Os vendedores só podem cobrar igual ou acima destes valores base.</p>
         </div>
         <button onClick={abrirNovo} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-2xl shadow-md flex items-center gap-2">
           <Plus className="h-4 w-4" /> Novo plano
@@ -82,10 +83,10 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
               </div>
             </div>
             <div className="py-2 border-y border-slate-100 dark:border-slate-800 text-xs space-y-1">
-              <div className="flex justify-between"><span className="text-slate-500">Franquia</span><strong>{p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mes</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Plataforma (min)</span><strong className="text-indigo-600">{formatarMoeda(p.valor_plataforma_base)}</strong></div>
-              <div className="flex justify-between"><span className="text-slate-500">Uso (min)</span><strong className="text-indigo-600">{formatarMoeda(p.valor_uso_base)}</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Franquia</span><strong>{p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Mensalidade (mín)</span><strong className="text-indigo-600">{formatarMoeda((p.valor_plataforma_base || 0) + (p.valor_uso_base || 0))}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Excedente/pedido</span><strong>{formatarMoeda(p.valor_excedente_pedido)}</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Setup</span><strong>{formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))}</strong></div>
             </div>
           </div>
         ))}
@@ -100,12 +101,12 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
             </div>
             <form onSubmit={salvar} className="p-5 space-y-3">
               <input required placeholder="Nome do plano" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
-              <textarea placeholder="Descricao" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
+              <textarea placeholder="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Franquia de pedidos/mes" value={form.franquia_pedidos} onChange={(v) => setForm({ ...form, franquia_pedidos: v })} />
+                <Campo label="Franquia de pedidos/mês" value={form.franquia_pedidos} onChange={(v) => setForm({ ...form, franquia_pedidos: v })} />
                 <Campo label="Excedente por pedido (R$)" value={form.valor_excedente_pedido} onChange={(v) => setForm({ ...form, valor_excedente_pedido: v })} step="0.01" />
-                <Campo label="Plataforma base (R$/mes)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
-                <Campo label="Uso base (R$/mes)" value={form.valor_uso_base} onChange={(v) => setForm({ ...form, valor_uso_base: v })} />
+                <Campo label="Mensalidade base (R$/mês)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
+                <Campo label="Setup (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
               </div>
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancelar</button>

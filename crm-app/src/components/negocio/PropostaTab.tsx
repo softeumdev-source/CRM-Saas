@@ -15,6 +15,7 @@ import {
   X,
   Eye,
   FileSignature,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, Plano } from "@/lib/types";
@@ -105,6 +106,22 @@ export function PropostaTab({
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
+  const handleExcluir = async (propostaId: string) => {
+    if (!confirm("Excluir esta proposta? Esta ação não pode ser desfeita.")) return;
+    const supabase = createClient();
+    const proposta = propostas.find((p) => p.id === propostaId);
+    const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter(Boolean);
+    if (paths.length > 0) {
+      await supabase.storage.from("documentos").remove(paths);
+    }
+    const { error } = await supabase.from("propostas").delete().eq("id", propostaId);
+    if (error) {
+      setErro("Falha ao excluir proposta: " + error.message);
+      return;
+    }
+    setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
+  };
+
   const abrirEnvio = (propostaId: string) => {
     setEditandoEnvioId(propostaId);
     setEtapaEnvio("signatarios");
@@ -117,14 +134,14 @@ export function PropostaTab({
   const avancarParaEditor = async () => {
     const signatariosValidos = signatarios.filter((s) => s.nome.trim() && s.email.trim());
     if (signatariosValidos.length === 0) {
-      setErro("Adicione pelo menos um signatario com nome e e-mail.");
+      setErro("Adicione pelo menos um signatário com nome e e-mail.");
       return;
     }
     setErro(null);
 
     const proposta = propostas.find((p) => p.id === editandoEnvioId);
     if (!proposta?.pdf_comercial_path) {
-      setErro("PDF nao encontrado.");
+      setErro("PDF não encontrado.");
       return;
     }
 
@@ -202,9 +219,9 @@ export function PropostaTab({
         <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-2xl flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">CNPJ obrigatorio</p>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">CNPJ obrigatório</p>
             <p className="text-xs text-amber-700 dark:text-amber-400">
-              Este contato ainda nao tem CNPJ cadastrado. Preencha o CNPJ na aba "Visao Geral" antes de gerar a proposta.
+              Este contato ainda não tem CNPJ cadastrado. Preencha o CNPJ na aba &quot;Visão Geral&quot; antes de gerar a proposta.
             </p>
           </div>
         </div>
@@ -221,21 +238,21 @@ export function PropostaTab({
             setValorSetup((p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0));
           }} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome} — ate {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mes</option>
+              <option key={p.id} value={p.id}>{p.nome} — até {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</option>
             ))}
           </select>
         </div>
 
         <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
           <p className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400">Mensalidade do plano</p>
-          <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{formatarMoeda(valorMensal)}<span className="text-sm font-semibold text-slate-500">/mes</span></p>
+          <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{formatarMoeda(valorMensal)}<span className="text-sm font-semibold text-slate-500">/mês</span></p>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Valor definido pelo plano cadastrado no painel admin. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
           </p>
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-          <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobranca unica)</label>
+          <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobrança única)</label>
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">R$</span>
             <input
@@ -248,7 +265,7 @@ export function PropostaTab({
             />
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Valor padrao do plano: {formatarMoeda(setupPlano)}. Deixe 0 para nao cobrar setup.
+            Valor padrão do plano: {formatarMoeda(setupPlano)}. Deixe 0 para não cobrar setup.
           </p>
         </div>
 
@@ -258,10 +275,10 @@ export function PropostaTab({
             <input type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso previo de rescisao</label>
+            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso prévio de rescisão</label>
             <select value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
               {AVISOS_PREVIOS_DIAS.map((d) => (
-                <option key={d} value={d}>{d} dias {d === 180 ? "(padrao)" : ""}</option>
+                <option key={d} value={d}>{d} dias {d === 180 ? "(padrão)" : ""}</option>
               ))}
             </select>
           </div>
@@ -275,7 +292,7 @@ export function PropostaTab({
           className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
         >
           {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-          Gerar proposta (Comercial + Tecnica)
+          Gerar proposta (Comercial + Técnica)
         </button>
       </div>
 
@@ -297,9 +314,9 @@ export function PropostaTab({
                         Proposta {p.numero} v{p.versao} — {p.plano?.nome}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mes
+                        {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mês
                         {(p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0) > 0 && ` + ${formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))} setup`}
-                        {" "}· aviso previo {p.aviso_previo_dias} dias
+                        {" "}· aviso prévio {p.aviso_previo_dias} dias
                       </p>
                     </div>
                     <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
@@ -315,7 +332,7 @@ export function PropostaTab({
                     )}
                     {p.pdf_tecnica_path && (
                       <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
-                        <Eye className="h-3 w-3" /> Tecnica
+                        <Eye className="h-3 w-3" /> Técnica
                       </button>
                     )}
                     {p.pdf_assinado_comercial_path && (
@@ -325,20 +342,27 @@ export function PropostaTab({
                     )}
                     {p.pdf_assinado_tecnica_path && (
                       <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="text-[11px] flex items-center gap-1 text-emerald-600 hover:text-emerald-800 font-bold">
-                        <Download className="h-3 w-3" /> Assinado (tecnica)
+                        <Download className="h-3 w-3" /> Assinado (técnica)
                       </button>
                     )}
                     {p.status === "rascunho" && editandoEnvioId !== p.id && (
-                      <button
-                        onClick={() => abrirEnvio(p.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
-                      >
-                        <Send className="h-3.5 w-3.5" /> Enviar para assinatura
-                      </button>
+                      <>
+                        <button
+                          onClick={() => abrirEnvio(p.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                        >
+                          <Send className="h-3.5 w-3.5" /> Enviar para assinatura
+                        </button>
+                        <button
+                          onClick={() => handleExcluir(p.id)}
+                          className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-rose-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
                     )}
                   </div>
 
-                  {/* Etapa 1: Signatarios */}
                   {editandoEnvioId === p.id && etapaEnvio === "signatarios" && (
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2">
@@ -370,11 +394,11 @@ export function PropostaTab({
                         onClick={() => setSignatarios((prev) => [...prev, { nome: "", email: "" }])}
                         className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
                       >
-                        <Plus className="h-3 w-3" /> Adicionar signatario
+                        <Plus className="h-3 w-3" /> Adicionar signatário
                       </button>
 
                       <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Enviar copia para (opcional)</p>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Enviar cópia para (opcional)</p>
                         {copias.map((c, i) => (
                           <div key={i} className="flex items-center gap-2 mb-2">
                             <input
@@ -392,7 +416,7 @@ export function PropostaTab({
                           onClick={() => setCopias((prev) => [...prev, ""])}
                           className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
                         >
-                          <Plus className="h-3 w-3" /> Adicionar copia
+                          <Plus className="h-3 w-3" /> Adicionar cópia
                         </button>
                       </div>
 
@@ -412,7 +436,6 @@ export function PropostaTab({
                     </div>
                   )}
 
-                  {/* Etapa 2: Editor de campos */}
                   {editandoEnvioId === p.id && etapaEnvio === "editor" && pdfComercialUrl && (
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-3">
                       <div className="flex items-center gap-2 mb-2">
@@ -465,15 +488,15 @@ export function PropostaTab({
                       <p className={`font-bold ${ultimoResultado.emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
                         {ultimoResultado.emailEnviado
                           ? ultimoResultado.remetenteTest
-                            ? "E-mail enviado (remetente de teste — so chega no e-mail da conta Resend)."
+                            ? "E-mail enviado (remetente de teste — só chega no e-mail da conta Resend)."
                             : "E-mail de assinatura enviado aos envolvidos."
                           : ultimoResultado.emailErro
                             ? `Falha ao enviar e-mail: ${ultimoResultado.emailErro}`
-                            : "RESEND_API_KEY nao configurada — copie e envie o link manualmente:"}
+                            : "RESEND_API_KEY não configurada — copie e envie o link manualmente:"}
                       </p>
                       {!ultimoResultado.emailEnviado && (
                         <p className="text-amber-700 dark:text-amber-400 mt-1">
-                          Configure RESEND_API_KEY e RESEND_FROM_EMAIL (dominio verificado) no Vercel.
+                          Configure RESEND_API_KEY e RESEND_FROM_EMAIL (domínio verificado) no Vercel.
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1.5">

@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     clienteCnpj: negocio.contato.cnpj,
     numeroProposta: numero,
     versao: 1,
-    cidade: "Sao Paulo",
+    cidade: "Joinville - SC",
     data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
     planoNome: plano.nome,
     tetoPedidos: plano.franquia_pedidos,
