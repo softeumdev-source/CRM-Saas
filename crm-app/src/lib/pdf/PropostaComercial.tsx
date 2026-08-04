@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Link, renderToBuffer } from "@react-pdf/renderer";
 import { estilos } from "./estilos";
 import { formatarBRL, type DadosProposta } from "./dados";
 
@@ -8,7 +8,7 @@ function Capa({ d }: { d: DadosProposta }) {
       <View style={estilos.capa}>
         <View>
           <Text style={estilos.capaMarca}>SOFTEUM</Text>
-          <Text style={estilos.capaTag}>Automacao de pedidos com IA</Text>
+          <Text style={estilos.capaTag}>Automacao inteligente de pedidos</Text>
         </View>
         <View>
           <Text style={estilos.capaTitulo}>Proposta Comercial</Text>
@@ -50,10 +50,10 @@ function Corpo({ d }: { d: DadosProposta }) {
       <Text style={estilos.p}>
         Este documento apresenta os valores totais e condicoes comerciais a serem investidos na
         contratacao da plataforma Softeum — solucao de automacao do recebimento e processamento
-        de pedidos de compra por e-mail e WhatsApp, com extracao por inteligencia artificial e
-        integracao ao ERP. O detalhamento de escopo da contratacao esta descrito na Proposta
-        Tecnica. Ao dar aceite a presente Proposta Comercial, {d.clienteRazaoSocial} aceita todos
-        os termos da referida Proposta Tecnica.
+        de pedidos de compra por e-mail e WhatsApp, com extracao automatizada e integracao ao
+        ERP. O detalhamento de escopo da contratacao esta descrito na Proposta Tecnica. Ao dar
+        aceite a presente Proposta Comercial, {d.clienteRazaoSocial} aceita todos os termos da
+        referida Proposta Tecnica.
       </Text>
 
       <Text style={estilos.h1}>2. INVESTIMENTO</Text>
@@ -81,12 +81,15 @@ function Corpo({ d }: { d: DadosProposta }) {
       <Text style={estilos.li}>a) As condicoes desta proposta sao validas para aceite em ate {d.validadeDias} dias apos a data de emissao. A partir de sua expiracao, as condicoes poderao ser revistas.</Text>
       <Text style={estilos.li}>b) {d.clienteRazaoSocial} declara que todos os dados cadastrais contidos nesta Proposta Comercial sao verdadeiros e validos, tendo ciencia de que a Softeum procedera com o faturamento nos termos e condicoes indicados nesta Proposta Comercial.</Text>
       <Text style={estilos.li}>c) O contratante e responsavel por manter validas as credenciais de acesso as caixas de e-mail, aos numeros de WhatsApp e ao ERP, incluindo as autorizacoes OAuth necessarias a ingestao sem interrupcao.</Text>
-      <Text style={estilos.li}>d) A integracao ao ERP no modelo self-service e realizada pelo contratante, consumindo a API documentada e a chave gerada no proprio painel (Admin de TI); eventuais desenvolvimentos no ERP sao de responsabilidade de {d.clienteRazaoSocial}. Alternativamente, a Softeum pode entregar o pedido diretamente no endpoint do ERP (push/webhook), conforme configuracao. Os dois modos sao excludentes.</Text>
-      <Text style={estilos.li}>e) A Softeum extrai, normaliza e entrega os pedidos; nenhum item de pedido e criado fora do catalogo cadastrado pelo contratante. A IA sugere e o de-para valida de forma deterministica contra o catalogo.</Text>
+      <Text style={estilos.li}>d) A integracao ao ERP e realizada pelo contratante no modelo self-service, consumindo a API documentada e a chave gerada no proprio painel (Admin de TI); eventuais desenvolvimentos no ERP sao de responsabilidade de {d.clienteRazaoSocial}. Alternativamente, a Softeum pode entregar o pedido diretamente no endpoint do ERP (push/webhook), conforme configuracao. Os dois modos sao excludentes.</Text>
+      <Text style={estilos.li}>e) A Softeum extrai, normaliza e entrega os pedidos; nenhum item de pedido e criado fora do catalogo cadastrado pelo contratante. O de-para valida de forma deterministica contra o catalogo.</Text>
       <Text style={estilos.li}>f) Protecao de dados (LGPD): os dados sao tratados conforme a legislacao aplicavel, com isolamento por cliente (tenant) e criptografia das credenciais em repouso. Segredos e chaves nunca sao expostos ao navegador.</Text>
       <Text style={estilos.li}>g) A presente documentacao e de propriedade da Softeum, tem carater confidencial e nao podera ser objeto de reproducao total ou parcial, nem de cessao de uso, sem o consentimento previo por escrito da Softeum.</Text>
       <Text style={estilos.li}>h) Nivel de servico e disponibilidade conforme {d.sla}. Indisponibilidades de provedores de terceiros (Gmail, Microsoft, Meta, ERP do cliente e gateways de pagamento) nao constituem indisponibilidade da Softeum.</Text>
-      <Text style={estilos.li}>i) Duvidas, chamados e suporte tecnico: {d.linkSuporte}</Text>
+      <Text style={estilos.li}>
+        {"i) Duvidas, chamados e suporte tecnico: "}
+        <Link src={d.linkSuporte} style={estilos.link}>{d.linkSuporte}</Link>
+      </Text>
 
       <Text style={estilos.h1}>5. ACEITE DA PROPOSTA</Text>
       <Text style={estilos.p}>
@@ -101,10 +104,10 @@ function Corpo({ d }: { d: DadosProposta }) {
       </Text>
       <Text style={estilos.small}>{d.data}</Text>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 10 }}>
         <View style={estilos.assinaturaLinha}>
           <Text style={estilos.assinaturaNome}>{d.softeumAssinante}</Text>
-          <Text style={estilos.assinaturaSub}>{d.softeumAssinanteEmail} · Softeum</Text>
+          <Text style={estilos.assinaturaSub}>Softeum Tecnologia</Text>
         </View>
         <View style={estilos.assinaturaLinha}>
           <Text style={estilos.assinaturaNome}>{d.clienteAssinante}</Text>

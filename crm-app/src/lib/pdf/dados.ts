@@ -48,6 +48,8 @@ export interface DadosProposta {
   clienteAssinante: string;
 
   linkSuporte: string;
+  linkArquitetura: string;
+  linkDocumentacaoApi: string;
 }
 
 export function formatarBRL(valor: number): string {

@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
+import { enviarEmail, emailBase } from "@/lib/resend";
 
 interface CampoAssinatura {
   id: string;
@@ -203,6 +204,40 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         const urlComercial = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial-assinado.pdf`;
         const urlTecnica = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica-assinado.pdf`;
         await supabase.rpc("salvar_pdf_assinado", { p_token: token, p_comercial_url: urlComercial, p_tecnica_url: urlTecnica });
+
+        const { data: envelopeRow } = await admin
+          .from("envelopes")
+          .select("copias_emails")
+          .eq("id", signatariosData?.envelope_id || "")
+          .single();
+
+        const destinatarios = new Set<string>();
+        for (const sig of todosSig || []) {
+          if (sig.email) destinatarios.add(sig.email);
+        }
+        for (const cc of (envelopeRow?.copias_emails as string[]) || []) {
+          if (cc?.trim()) destinatarios.add(cc.trim());
+        }
+
+        for (const email of destinatarios) {
+          const sigNome = (todosSig || []).find((s: any) => s.email === email)?.nome || "";
+          await enviarEmail({
+            to: email,
+            subject: `Proposta ${numero} assinada por todos — documentos disponiveis`,
+            html: emailBase(`
+              <h2 style="margin-top:0;">Documentacao assinada disponivel</h2>
+              ${sigNome ? `<p>Ola ${sigNome},</p>` : ""}
+              <p>Todos os signatarios concluiram a assinatura da proposta <strong>${numero}</strong>${titulo ? ` (${titulo})` : ""}. Os documentos assinados estao disponiveis para download nos links abaixo.</p>
+              <p style="margin: 20px 0;">
+                <a href="${urlComercial}" style="background:#4f46e5; color:#fff; padding:10px 20px; border-radius:10px; text-decoration:none; font-weight:700;">Baixar Proposta Comercial</a>
+              </p>
+              <p style="margin: 20px 0;">
+                <a href="${urlTecnica}" style="background:#0f172a; color:#fff; padding:10px 20px; border-radius:10px; text-decoration:none; font-weight:700;">Baixar Proposta Tecnica</a>
+              </p>
+              <p style="font-size:12px; color:#64748b;">Os documentos incluem o certificado de conclusao com os dados de todos os signatarios.</p>
+            `),
+          });
+        }
       }
     } catch (e) {
       console.error("Falha ao gerar PDF assinado", e);

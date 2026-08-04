@@ -115,6 +115,8 @@ export async function POST(request: Request) {
     softeumCnpj: tenant?.slug === "softeum" ? "00.000.000/0001-00" : "00.000.000/0001-00",
     clienteAssinante: negocio.contato.nome,
     linkSuporte: process.env.NEXT_PUBLIC_SUPPORT_URL || "https://www.softeum.com.br/suporte",
+    linkArquitetura: "https://api.softeum.com.br/arquitetura",
+    linkDocumentacaoApi: "https://api.softeum.com.br/docs",
   };
 
   const [comercialBuffer, tecnicaBuffer] = await Promise.all([

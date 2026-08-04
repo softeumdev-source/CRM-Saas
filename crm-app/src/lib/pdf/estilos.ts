@@ -56,7 +56,8 @@ export const estilos = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  assinaturaLinha: { marginTop: 26, borderTopWidth: 1, borderTopColor: "#1e293b", width: 260 },
+  link: { color: "#2563eb", textDecoration: "underline" } as any,
+  assinaturaLinha: { marginTop: 26, borderTopWidth: 1, borderTopColor: "#1e293b", width: 200 },
   assinaturaNome: { fontSize: 9, fontWeight: 700, marginTop: 4 },
-  assinaturaSub: { fontSize: 8, color: CORES.slate },
+  assinaturaSub: { fontSize: 7.5, color: CORES.slate },
 });
