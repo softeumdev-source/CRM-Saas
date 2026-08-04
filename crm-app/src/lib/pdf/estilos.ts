@@ -58,7 +58,7 @@ export const estilos = StyleSheet.create({
     justifyContent: "space-between",
   },
   link: { color: "#2563eb", fontSize: 9, textDecoration: "underline", marginBottom: 6 } as any,
-  assinaturaLinha: { marginTop: 26, borderTopWidth: 1, borderTopColor: "#1e293b", width: 180, paddingTop: 4 },
-  assinaturaNome: { fontSize: 8.5, fontWeight: 700, marginTop: 2 },
+  assinaturaLinha: { marginTop: 44, borderTopWidth: 1, borderTopColor: "#1e293b", width: 140, paddingTop: 4 },
+  assinaturaNome: { fontSize: 8, fontWeight: 700, marginTop: 2 },
   assinaturaSub: { fontSize: 7, color: CORES.slate, marginTop: 1 },
 });

@@ -110,7 +110,7 @@ function Corpo({ d }: { d: DadosProposta }) {
       </Text>
       <Text style={estilos.small}>{d.data}</Text>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 14 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 28, marginBottom: 44 }}>
         <View style={estilos.assinaturaLinha}>
           <Text style={estilos.assinaturaNome}>{d.softeumAssinante}</Text>
           <Text style={estilos.assinaturaSub}>Softeum Tecnologia</Text>
@@ -121,7 +121,7 @@ function Corpo({ d }: { d: DadosProposta }) {
         </View>
       </View>
 
-      <Text style={[estilos.h2, { marginTop: 20 }]}>Informacoes para faturamento</Text>
+      <Text style={[estilos.h2, { marginTop: 10 }]}>Informacoes para faturamento</Text>
       <View style={estilos.tabela}>
         <View style={estilos.linha}><Text style={estilos.celula}>Razao Social</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteRazaoSocial}</Text></View>
         <View style={estilos.linha}><Text style={estilos.celula}>CNPJ</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteCnpj}</Text></View>
