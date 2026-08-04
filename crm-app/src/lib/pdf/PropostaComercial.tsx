@@ -43,6 +43,14 @@ function LinhaTabela({ item, unidade, quantidade, valor, header }: { item: strin
   );
 }
 
+function LinkAzul({ url, label }: { url: string; label?: string }) {
+  return (
+    <Link src={url} style={estilos.link}>
+      {label || url}
+    </Link>
+  );
+}
+
 function Corpo({ d }: { d: DadosProposta }) {
   return (
     <Page size="A4" style={estilos.page}>
@@ -86,10 +94,8 @@ function Corpo({ d }: { d: DadosProposta }) {
       <Text style={estilos.li}>f) Protecao de dados (LGPD): os dados sao tratados conforme a legislacao aplicavel, com isolamento por cliente (tenant) e criptografia das credenciais em repouso. Segredos e chaves nunca sao expostos ao navegador.</Text>
       <Text style={estilos.li}>g) A presente documentacao e de propriedade da Softeum, tem carater confidencial e nao podera ser objeto de reproducao total ou parcial, nem de cessao de uso, sem o consentimento previo por escrito da Softeum.</Text>
       <Text style={estilos.li}>h) Nivel de servico e disponibilidade conforme {d.sla}. Indisponibilidades de provedores de terceiros (Gmail, Microsoft, Meta, ERP do cliente e gateways de pagamento) nao constituem indisponibilidade da Softeum.</Text>
-      <Text style={estilos.li}>
-        {"i) Duvidas, chamados e suporte tecnico: "}
-        <Link src={d.linkSuporte} style={estilos.link}>{d.linkSuporte}</Link>
-      </Text>
+      <Text style={estilos.li}>i) Duvidas, chamados e suporte tecnico:</Text>
+      <LinkAzul url={d.linkSuporte} />
 
       <Text style={estilos.h1}>5. ACEITE DA PROPOSTA</Text>
       <Text style={estilos.p}>
@@ -104,7 +110,7 @@ function Corpo({ d }: { d: DadosProposta }) {
       </Text>
       <Text style={estilos.small}>{d.data}</Text>
 
-      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 10 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 14 }}>
         <View style={estilos.assinaturaLinha}>
           <Text style={estilos.assinaturaNome}>{d.softeumAssinante}</Text>
           <Text style={estilos.assinaturaSub}>Softeum Tecnologia</Text>
@@ -115,10 +121,11 @@ function Corpo({ d }: { d: DadosProposta }) {
         </View>
       </View>
 
-      <Text style={[estilos.h2, { marginTop: 20 }]}>Informacoes para faturamento (preenchimento obrigatorio)</Text>
+      <Text style={[estilos.h2, { marginTop: 20 }]}>Informacoes para faturamento</Text>
       <View style={estilos.tabela}>
         <View style={estilos.linha}><Text style={estilos.celula}>Razao Social</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteRazaoSocial}</Text></View>
         <View style={estilos.linha}><Text style={estilos.celula}>CNPJ</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteCnpj}</Text></View>
+        <View style={estilos.linha}><Text style={estilos.celula}>Email para faturamento</Text><Text style={[estilos.celula, { borderRightWidth: 0, color: "#94a3b8" }]}>Preenchido na assinatura</Text></View>
       </View>
 
       <Rodape d={d} />

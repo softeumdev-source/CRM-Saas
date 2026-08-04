@@ -7,6 +7,7 @@ export const CORES = {
   slateLight: "#94a3b8",
   border: "#e2e8f0",
   bg: "#f8fafc",
+  blue: "#2563eb",
 };
 
 export const estilos = StyleSheet.create({
@@ -56,8 +57,8 @@ export const estilos = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  link: { color: "#2563eb", textDecoration: "underline" } as any,
-  assinaturaLinha: { marginTop: 26, borderTopWidth: 1, borderTopColor: "#1e293b", width: 200 },
-  assinaturaNome: { fontSize: 9, fontWeight: 700, marginTop: 4 },
-  assinaturaSub: { fontSize: 7.5, color: CORES.slate },
+  link: { color: "#2563eb", fontSize: 9, textDecoration: "underline", marginBottom: 6 } as any,
+  assinaturaLinha: { marginTop: 26, borderTopWidth: 1, borderTopColor: "#1e293b", width: 180, paddingTop: 4 },
+  assinaturaNome: { fontSize: 8.5, fontWeight: 700, marginTop: 2 },
+  assinaturaSub: { fontSize: 7, color: CORES.slate, marginTop: 1 },
 });

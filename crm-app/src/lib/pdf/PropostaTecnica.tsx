@@ -1,5 +1,5 @@
 import { Document, Page, Text, View, Link, renderToBuffer } from "@react-pdf/renderer";
-import { estilos } from "./estilos";
+import { estilos, CORES } from "./estilos";
 import type { DadosProposta } from "./dados";
 
 function Capa({ d }: { d: DadosProposta }) {
@@ -35,6 +35,14 @@ function Item({ t }: { t: string }) {
   return <Text style={estilos.li}>• {t}</Text>;
 }
 
+function LinkAzul({ url, label }: { url: string; label?: string }) {
+  return (
+    <Link src={url} style={estilos.link}>
+      {label || url}
+    </Link>
+  );
+}
+
 function Corpo({ d }: { d: DadosProposta }) {
   return (
     <Page size="A4" style={estilos.page}>
@@ -68,10 +76,8 @@ function Corpo({ d }: { d: DadosProposta }) {
       <Item t="Notificacao — o comprador recebe e-mails automaticos: pedido recebido e, depois, aprovado ou reprovado com o motivo." />
 
       <Text style={estilos.h1}>4. ARQUITETURA E INFRAESTRUTURA</Text>
-      <Text style={estilos.p}>
-        {"A documentacao completa da arquitetura da plataforma esta disponivel em: "}
-        <Link src={d.linkArquitetura} style={estilos.link}>{d.linkArquitetura}</Link>
-      </Text>
+      <Text style={estilos.p}>A documentacao completa da arquitetura da plataforma esta disponivel em:</Text>
+      <LinkAzul url={d.linkArquitetura} />
       <View style={estilos.tabela}>
         <View style={estilos.linhaHeader}>
           <Text style={estilos.celulaHeader}>Camada</Text>
@@ -111,10 +117,8 @@ function Corpo({ d }: { d: DadosProposta }) {
         para configurar a integracao. Alternativamente, a Softeum pode entregar o pedido diretamente
         no endpoint do ERP do cliente (push/webhook). Os dois modos sao excludentes.
       </Text>
-      <Text style={estilos.p}>
-        {"Documentacao da API: "}
-        <Link src={d.linkDocumentacaoApi} style={estilos.link}>{d.linkDocumentacaoApi}</Link>
-      </Text>
+      <Text style={estilos.p}>Documentacao da API:</Text>
+      <LinkAzul url={d.linkDocumentacaoApi} />
 
       <Text style={estilos.h1}>7. SEGURANCA E MULTI-TENANCY</Text>
       <Item t="Isolamento por cliente — tenant_id em toda tabela; RLS filtra por cliente em leitura e escrita." />
@@ -134,12 +138,12 @@ function Corpo({ d }: { d: DadosProposta }) {
 
       <Text style={estilos.h1}>9. SUPORTE</Text>
       <Text style={estilos.p}>
-        {"O cliente abre e acompanha chamados pelo site institucional, aba de suporte, com o mesmo e-mail e senha da plataforma. Qualquer usuario cadastrado tem acesso, sem distincao de perfil. Cada chamado recebe protocolo proprio, prioridade (P1/P2/P3) e permite anexos."}
+        O cliente abre e acompanha chamados pelo site institucional, aba de suporte, com o mesmo
+        e-mail e senha da plataforma. Qualquer usuario cadastrado tem acesso, sem distincao de
+        perfil. Cada chamado recebe protocolo proprio, prioridade (P1/P2/P3) e permite anexos.
       </Text>
-      <Text style={estilos.p}>
-        {"Acesse o suporte em: "}
-        <Link src={d.linkSuporte} style={estilos.link}>{d.linkSuporte}</Link>
-      </Text>
+      <Text style={estilos.p}>Acesse o suporte em:</Text>
+      <LinkAzul url={d.linkSuporte} />
 
       <Rodape d={d} />
     </Page>
