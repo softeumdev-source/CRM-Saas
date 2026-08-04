@@ -76,14 +76,29 @@ function Corpo({ d }: { d: DadosProposta }) {
         pedido processado adicional, apurado e faturado mensalmente.
       </Text>
 
+      {d.valorSetupTotal > 0 && (
+        <>
+          <Text style={estilos.h2}>2.2 Investimento unico (setup)</Text>
+          <View style={estilos.tabela}>
+            <LinhaTabela header item="Item" unidade="Unidade" quantidade="Qtd" valor="Valor Total" />
+            <LinhaTabela item="Setup de implantacao" unidade="Unico" quantidade="1" valor={formatarBRL(d.valorSetupTotal)} />
+            <LinhaTabela item="Total unico" unidade="" quantidade="" valor={formatarBRL(d.valorSetupTotal)} />
+          </View>
+          <Text style={estilos.small}>
+            * Investimento cobrado uma unica vez, {d.condicaoSetup}, com vencimento em {d.vencimentoSetup}.
+          </Text>
+        </>
+      )}
+
       <Text style={estilos.h1}>3. CONDICOES COMERCIAIS</Text>
       <Text style={estilos.li}>a) Todos os valores apresentados nesta proposta ja estao acrescidos de impostos, taxas, contribuicoes e quaisquer outros tributos incidentes.</Text>
       <Text style={estilos.li}>b) A presente contratacao entra em vigor na data de sua assinatura ou da sua aceitacao, inclusive por meio de emissao de pedido de compra por parte de {d.clienteRazaoSocial}.</Text>
       <Text style={estilos.li}>c) O prazo de contratacao e de {d.prazoContratoMeses} meses. As Partes poderao rescindir esta contratacao sem justa causa, a qualquer tempo, bastando informar a outra parte por escrito com {d.diasAviso} dias de antecedencia.</Text>
       <Text style={estilos.li}>d) O Investimento Mensal (item 2.1) sera cobrado a partir do momento em que for liberado o acesso a plataforma, com prazo de vencimento de {d.vencimentoMensal} via {d.formaPagamento}, a contar da data de emissao da nota fiscal.</Text>
-      <Text style={estilos.li}>e) A cobranca do investimento mensal acordado na presente proposta ocorrera independentemente da formalizacao ou aprovacao de outros documentos.</Text>
-      <Text style={estilos.li}>f) Os valores recorrentes serao reajustados anualmente pelo indice {d.indiceReajuste}, ou o que vier a substitui-lo.</Text>
-      <Text style={estilos.li}>g) O excedente de pedidos processados alem da franquia contratada sera cobrado a {formatarBRL(d.valorExcedentePedido)} por pedido processado adicional, apurado e faturado mensalmente junto com a mensalidade.</Text>
+      <Text style={estilos.li}>e) O Investimento Unico de setup (item 2.2) sera cobrado {d.condicaoSetup}, com vencimento em {d.vencimentoSetup}, via {d.formaPagamento}.</Text>
+      <Text style={estilos.li}>f) A cobranca dos investimentos acordados na presente proposta ocorrera independentemente da formalizacao ou aprovacao de outros documentos.</Text>
+      <Text style={estilos.li}>g) Os valores recorrentes serao reajustados anualmente pelo indice {d.indiceReajuste}, ou o que vier a substitui-lo.</Text>
+      <Text style={estilos.li}>h) O excedente de pedidos processados alem da franquia contratada sera cobrado a {formatarBRL(d.valorExcedentePedido)} por pedido processado adicional, apurado e faturado mensalmente junto com a mensalidade.</Text>
 
       <Text style={estilos.h1}>4. CONDICOES GERAIS</Text>
       <Text style={estilos.li}>a) As condicoes desta proposta sao validas para aceite em ate {d.validadeDias} dias apos a data de emissao. A partir de sua expiracao, as condicoes poderao ser revistas.</Text>
