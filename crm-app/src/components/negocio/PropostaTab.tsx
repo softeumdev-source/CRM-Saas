@@ -435,7 +435,7 @@ export function PropostaTab({
                           <span className="font-semibold text-slate-700 dark:text-slate-300">{s.nome} <span className="text-slate-400">({s.papel})</span></span>
                           <span className={`flex items-center gap-1 font-bold ${s.status === "assinado" ? "text-emerald-600" : "text-amber-600"}`}>
                             {s.status === "assinado" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                            {s.status === "assinado" ? `Assinado em ${new Date(s.assinado_em).toLocaleDateString("pt-BR")}` : "Aguardando"}
+                            {s.status === "assinado" ? `Assinado em ${s.assinado_em ? new Date(s.assinado_em).toLocaleDateString("pt-BR") : "—"}` : "Aguardando"}
                           </span>
                         </div>
                       ))}

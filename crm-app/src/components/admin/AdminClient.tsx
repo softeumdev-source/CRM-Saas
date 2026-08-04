@@ -89,7 +89,7 @@ export function AdminClient({
 
       {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
-      {aba === "planos" && <PlanosTab planosIniciais={planos} />}
+      {aba === "planos" && <PlanosTab planosIniciais={planos} usuarioAtual={usuarioAtual} />}
       {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
       {aba === "documentos" && <DocumentosAssinadosTab envelopesIniciais={envelopesAssinados || []} />}
     </div>

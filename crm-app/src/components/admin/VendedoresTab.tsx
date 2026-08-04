@@ -226,7 +226,7 @@ export function VendedoresTab({
           </div>
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <p className="text-xs font-bold uppercase text-slate-400">Negocios ativos</p>
-            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => !n.ganho).length}</p>
+            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => n.ganho == null).length}</p>
           </div>
 
           {vendedoresAtivos.map((v) => {

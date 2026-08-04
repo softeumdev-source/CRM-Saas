@@ -211,7 +211,7 @@ export function VisaoGeralTab({
           <div>
             <p className="text-xs text-slate-300">Prioridade</p>
             <select
-              defaultValue={negocio.prioridade || "media"}
+              value={negocio.prioridade || "media"}
               onChange={async (e) => {
                 const supabase = createClient();
                 await supabase.from("negocios").update({ prioridade: e.target.value }).eq("id", negocio.id);

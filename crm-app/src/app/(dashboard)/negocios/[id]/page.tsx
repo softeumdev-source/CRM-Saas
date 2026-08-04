@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
 
@@ -8,6 +8,8 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
 
   const [
     { data: negocio },
@@ -32,7 +34,7 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
       .select("*, plano:planos(*), envelopes(*, signatarios(*))")
       .eq("negocio_id", id)
       .order("criado_em", { ascending: false }),
-    supabase.from("usuarios").select("*").eq("id", user!.id).single(),
+    supabase.from("usuarios").select("*").eq("id", user.id).single(),
   ]);
 
   if (!negocio) notFound();
@@ -45,7 +47,7 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
       planos={planos || []}
       atividadesIniciais={(atividades as any) || []}
       propostasIniciais={(propostas as any) || []}
-      usuarioAtual={usuarioAtual!}
+      usuarioAtual={usuarioAtual || ({} as any)}
     />
   );
 }

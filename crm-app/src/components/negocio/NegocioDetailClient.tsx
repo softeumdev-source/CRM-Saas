@@ -175,7 +175,7 @@ export function NegocioDetailClient({
       </div>
 
       {aba === "geral" && (
-        <VisaoGeralTab negocio={negocio} onAtualizarContato={(campos) => setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))} />
+        <VisaoGeralTab negocio={negocio} onAtualizarContato={(campos) => setNegocio((prev) => ({ ...prev, contato: prev.contato ? { ...prev.contato, ...campos } : prev.contato }))} />
       )}
       {aba === "cadencia" && (
         <CadenciaTab negocioId={negocio.id} atividadesIniciais={atividadesIniciais} usuarioAtual={usuarioAtual} />

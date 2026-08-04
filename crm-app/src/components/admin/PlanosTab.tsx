@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Plano } from "@/lib/types";
+import type { Plano, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 
 const PLANO_VAZIO = {
@@ -18,7 +18,7 @@ const PLANO_VAZIO = {
   valor_excedente_pedido: 2,
 };
 
-export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
+export function PlanosTab({ planosIniciais, usuarioAtual }: { planosIniciais: Plano[]; usuarioAtual: Usuario }) {
   const [planos, setPlanos] = useState(planosIniciais);
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Plano | null>(null);
@@ -43,7 +43,7 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
       const { data } = await supabase.from("planos").update(form).eq("id", editando.id).select().single();
       if (data) setPlanos((prev) => prev.map((p) => (p.id === data.id ? data : p)));
     } else {
-      const { data } = await supabase.from("planos").insert(form).select().single();
+      const { data } = await supabase.from("planos").insert({ ...form, tenant_id: usuarioAtual.tenant_id }).select().single();
       if (data) setPlanos((prev) => [...prev, data]);
     }
     setModalAberto(false);

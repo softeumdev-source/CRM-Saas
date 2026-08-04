@@ -146,12 +146,27 @@ export function LeadsTab({
       const TAMANHO_LOTE = 500;
       const supabase = createClient();
       let inseridos = 0;
-      for (let i = 0; i < contatos.length; i += TAMANHO_LOTE) {
-        const lote = contatos.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
+
+      const contatosComEmail = contatos.filter((c) => c.email);
+      const contatosSemEmail = contatos.filter((c) => !c.email);
+
+      for (let i = 0; i < contatosComEmail.length; i += TAMANHO_LOTE) {
+        const lote = contatosComEmail.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
         setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, contatos.length)} de ${contatos.length}...`);
         const { data, error } = await supabase
           .from("contatos")
           .upsert(lote, { onConflict: "tenant_id,email", ignoreDuplicates: true })
+          .select("id");
+        if (error) throw error;
+        inseridos += data?.length || 0;
+      }
+
+      for (let i = 0; i < contatosSemEmail.length; i += TAMANHO_LOTE) {
+        const lote = contatosSemEmail.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
+        setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, contatos.length)} de ${contatos.length}...`);
+        const { data, error } = await supabase
+          .from("contatos")
+          .insert(lote)
           .select("id");
         if (error) throw error;
         inseridos += data?.length || 0;

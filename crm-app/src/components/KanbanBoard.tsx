@@ -28,6 +28,7 @@ export function KanbanBoard({
         supabase
           .from("negocios")
           .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
+          .order("criado_em", { ascending: false })
           .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
       })
       .subscribe();
