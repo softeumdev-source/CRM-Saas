@@ -73,21 +73,74 @@ async function embutirEmailFaturamento(
   pdfBytes: ArrayBuffer | Uint8Array,
   emailFaturamento: string
 ): Promise<Uint8Array> {
+  const { inflateSync } = await import("zlib");
+  const { PDFName, PDFArray } = await import("pdf-lib");
   const doc = await PDFDocument.load(pdfBytes);
   const font = await doc.embedFont(StandardFonts.Helvetica);
-  const pageCount = doc.getPageCount();
-  if (pageCount < 2) return doc.save();
 
-  const lastContentPage = doc.getPage(pageCount - 1);
-  const { width } = lastContentPage.getSize();
+  for (let i = doc.getPageCount() - 1; i >= 0; i--) {
+    const page = doc.getPage(i);
+    try {
+      const contentsRef = page.node.get(PDFName.of("Contents"));
+      if (!contentsRef) continue;
 
-  lastContentPage.drawText(emailFaturamento, {
-    x: width / 2 + 5,
-    y: 142,
-    size: 8.5,
-    font,
-    color: rgb(0.12, 0.16, 0.23),
-  });
+      const contentsObj = doc.context.lookup(contentsRef);
+      const streams: any[] = [];
+      if (contentsObj instanceof PDFArray) {
+        for (let j = 0; j < contentsObj.size(); j++) {
+          streams.push(doc.context.lookup(contentsObj.get(j)));
+        }
+      } else if (contentsObj) {
+        streams.push(contentsObj);
+      }
+
+      for (const stream of streams) {
+        if (!stream?.contents) continue;
+
+        let decoded: Buffer;
+        try {
+          decoded = inflateSync(Buffer.from(stream.contents));
+        } catch {
+          decoded = Buffer.from(stream.contents);
+        }
+
+        const text = decoded.toString("latin1");
+        if (!text.includes("Preenchido")) continue;
+
+        const ops = text.split("\n");
+        let curX = 0, curY = 0;
+
+        for (const op of ops) {
+          const tm = op.match(/([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+Tm/);
+          if (tm) { curX = parseFloat(tm[5]); curY = parseFloat(tm[6]); }
+
+          const td = op.match(/([-\d.]+)\s+([-\d.]+)\s+Td/);
+          if (td) { curX += parseFloat(td[1]); curY += parseFloat(td[2]); }
+
+          if (op.includes("Preenchido")) {
+            page.drawRectangle({
+              x: curX - 1,
+              y: curY - 3,
+              width: 200,
+              height: 14,
+              color: rgb(1, 1, 1),
+              borderWidth: 0,
+            });
+            page.drawText(emailFaturamento, {
+              x: curX,
+              y: curY,
+              size: 8.5,
+              font,
+              color: rgb(0.12, 0.16, 0.23),
+            });
+            return doc.save();
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Falha ao buscar placeholder para email de faturamento", e);
+    }
+  }
 
   return doc.save();
 }
@@ -187,7 +240,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
         const { data: todosSig } = await admin
           .from("signatarios")
-          .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, assinatura_dados, ordem")
+          .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, assinatura_dados, ordem, email_faturamento")
           .eq("envelope_id", signatariosData?.envelope_id || "");
 
         const assinantes = (todosSig || []).map((s: any) => ({
@@ -200,7 +253,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
         const numero = info?.proposta?.numero || "";
         const titulo = info?.negocio?.titulo || "";
-        const emailFat = email_faturamento?.trim() || "";
+        const emailFat = (todosSig || []).map((s: any) => s.email_faturamento?.trim()).find(Boolean) || email_faturamento?.trim() || "";
 
         const [comercialResp, tecnicaResp] = await Promise.all([
           fetch(`${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial.pdf`),

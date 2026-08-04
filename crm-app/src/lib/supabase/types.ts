@@ -632,6 +632,7 @@ export type Database = {
           assinatura_tipo: string | null
           criado_em: string | null
           email: string
+          email_faturamento: string | null
           envelope_id: string | null
           id: string
           ip_assinatura: string | null
@@ -649,6 +650,7 @@ export type Database = {
           assinatura_tipo?: string | null
           criado_em?: string | null
           email: string
+          email_faturamento?: string | null
           envelope_id?: string | null
           id?: string
           ip_assinatura?: string | null
@@ -666,6 +668,7 @@ export type Database = {
           assinatura_tipo?: string | null
           criado_em?: string | null
           email?: string
+          email_faturamento?: string | null
           envelope_id?: string | null
           id?: string
           ip_assinatura?: string | null
