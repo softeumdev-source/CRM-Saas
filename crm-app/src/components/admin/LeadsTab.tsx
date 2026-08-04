@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search } from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
 
@@ -85,6 +85,7 @@ export function LeadsTab({
   const [buscaComDono, setBuscaComDono] = useState("");
   const [novoResp, setNovoResp] = useState("");
   const [reatribuindo, setReatribuindo] = useState(false);
+  const [deletando, setDeletando] = useState(false);
 
   const handleArquivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -184,6 +185,32 @@ export function LeadsTab({
     setSelecionados(new Set());
   };
 
+  const deletarSelecionadosSemDono = async () => {
+    if (selecionados.size === 0) return;
+    if (!confirm(`Tem certeza que deseja deletar ${selecionados.size} lead(s)? Esta acao nao pode ser desfeita.`)) return;
+    setDeletando(true);
+    const supabase = createClient();
+    const ids = Array.from(selecionados);
+    const { error } = await supabase.from("contatos").delete().in("id", ids);
+    setDeletando(false);
+    if (error) { setErro(error.message); return; }
+    setContatosSemDono((prev) => prev.filter((c) => !selecionados.has(c.id)));
+    setSelecionados(new Set());
+  };
+
+  const deletarSelecionadosComDono = async () => {
+    if (selComDono.size === 0) return;
+    if (!confirm(`Tem certeza que deseja deletar ${selComDono.size} lead(s)? Esta acao nao pode ser desfeita.`)) return;
+    setDeletando(true);
+    const supabase = createClient();
+    const ids = Array.from(selComDono);
+    const { error } = await supabase.from("contatos").delete().in("id", ids);
+    setDeletando(false);
+    if (error) { setErro(error.message); return; }
+    setContatosComDono((prev) => prev.filter((c) => !selComDono.has(c.id)));
+    setSelComDono(new Set());
+  };
+
   const selecionarTodosPool = () => {
     setSelecionados((prev) => (prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id))));
   };
@@ -278,6 +305,14 @@ export function LeadsTab({
               {distribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
               Distribuir automatico (round-robin)
             </button>
+            <button
+              onClick={deletarSelecionadosSemDono}
+              disabled={deletando || selecionados.size === 0}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md disabled:opacity-50"
+            >
+              {deletando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Deletar selecionados
+            </button>
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
@@ -362,6 +397,14 @@ export function LeadsTab({
               className="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl disabled:opacity-50"
             >
               Devolver ao pool
+            </button>
+            <button
+              onClick={deletarSelecionadosComDono}
+              disabled={deletando || selComDono.size === 0}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md disabled:opacity-50"
+            >
+              {deletando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Deletar
             </button>
           </div>
         </div>

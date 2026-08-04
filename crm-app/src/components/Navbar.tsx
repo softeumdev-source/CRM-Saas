@@ -15,6 +15,7 @@ import {
   Bell,
   LogOut,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -64,6 +65,14 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
     const ids = notificacoes.filter((n) => !n.lida).map((n) => n.id);
     await supabase.from("notificacoes").update({ lida: true }).in("id", ids);
     setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
+  };
+
+  const limparNotificacoes = async () => {
+    if (notificacoes.length === 0) return;
+    const supabase = createClient();
+    const ids = notificacoes.map((n) => n.id);
+    await supabase.from("notificacoes").delete().in("id", ids);
+    setNotificacoes([]);
   };
 
   const handleLogout = async () => {
@@ -136,8 +145,17 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             </button>
             {showNotifs && (
               <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Notificacoes
+                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Notificacoes</span>
+                  {notificacoes.length > 0 && (
+                    <button
+                      onClick={limparNotificacoes}
+                      className="flex items-center gap-1 text-[10px] font-semibold text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Limpar todas
+                    </button>
+                  )}
                 </div>
                 {notificacoes.length === 0 ? (
                   <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificacao ainda.</p>
