@@ -52,11 +52,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Plano não encontrado." }, { status: 404 });
   }
 
+  const { data: usuario } = await supabase
+    .from("usuarios")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = usuario?.role === "admin";
+
   const valorPlataformaFinal = Number(valorPlataforma ?? plano.valor_plataforma_base);
   const valorUsoFinal = Number(valorUso ?? plano.valor_uso_base);
-  if (valorPlataformaFinal < plano.valor_plataforma_base || valorUsoFinal < plano.valor_uso_base) {
+  const valorMensalSolicitado = valorPlataformaFinal + valorUsoFinal;
+  const valorMensalBase = Number(plano.valor_plataforma_base) + Number(plano.valor_uso_base);
+
+  if (!isAdmin && valorMensalSolicitado < valorMensalBase) {
     return NextResponse.json(
-      { error: "Os valores da proposta não podem ser menores que os valores base do plano cadastrado pelo admin." },
+      { error: `O valor mensal não pode ser menor que ${valorMensalBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (valor base do plano).` },
+      { status: 422 }
+    );
+  }
+
+  if (!isAdmin && valorSetup != null && Number(valorSetup) < 500) {
+    return NextResponse.json(
+      { error: "O valor de setup mínimo para vendedor é R$ 500,00." },
       { status: 422 }
     );
   }

@@ -21,6 +21,7 @@ export function VisaoGeralTab({
   const [empresa, setEmpresa] = useState(negocio.contato?.empresa || "");
   const [email, setEmail] = useState(negocio.contato?.email || "");
   const [telefone, setTelefone] = useState(negocio.contato?.telefone || "");
+  const [whatsapp, setWhatsapp] = useState(negocio.contato?.whatsapp || "");
   const [erroContato, setErroContato] = useState<string | null>(null);
 
   const salvarContato = async (campos: Record<string, any>) => {
@@ -48,7 +49,21 @@ export function VisaoGeralTab({
   return (
     <div className="grid md:grid-cols-2 gap-5">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Dados do contato</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Dados do contato</h3>
+          <div className="flex items-center gap-1.5 h-5">
+            {salvando && (
+              <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+              </span>
+            )}
+            {salvo && (
+              <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
+                <Check className="h-3.5 w-3.5" /> Salvo
+              </span>
+            )}
+          </div>
+        </div>
 
         {erroContato && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erroContato}</p>}
 
@@ -90,6 +105,16 @@ export function VisaoGeralTab({
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
+          <div>
+            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">WhatsApp</label>
+            <input
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              onBlur={() => salvarContato({ whatsapp: whatsapp.trim() || null })}
+              placeholder="(00) 00000-0000"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+            />
+          </div>
         </div>
 
         <div>
@@ -106,8 +131,6 @@ export function VisaoGeralTab({
                 cnpj.trim() ? "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" : "border-amber-300 bg-amber-50 dark:bg-amber-950/30"
               }`}
             />
-            {salvando && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
-            {salvo && <Check className="h-4 w-4 text-emerald-500" />}
           </div>
           {!cnpj.trim() && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
