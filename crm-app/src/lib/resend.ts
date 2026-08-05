@@ -18,8 +18,8 @@ export interface EmailResult {
 
 export async function enviarEmail(params: { to: string; subject: string; html: string }): Promise<EmailResult> {
   if (!process.env.RESEND_API_KEY) {
-    console.warn("[resend] RESEND_API_KEY nao configurada - e-mail nao enviado:", params.subject, "->", params.to);
-    return { sent: false, skipped: true, error: "RESEND_API_KEY nao configurada no servidor." };
+    console.warn("[resend] RESEND_API_KEY não configurada - e-mail não enviado:", params.subject, "->", params.to);
+    return { sent: false, skipped: true, error: "RESEND_API_KEY não configurada no servidor." };
   }
 
   const from = process.env.RESEND_FROM_EMAIL || "Softeum <onboarding@resend.dev>";

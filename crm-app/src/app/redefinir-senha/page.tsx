@@ -20,7 +20,7 @@ export default function RedefinirSenhaPage() {
       return;
     }
     if (senha !== confirmar) {
-      setErro("As senhas nao coincidem.");
+      setErro("As senhas não coincidem.");
       return;
     }
     setLoading(true);

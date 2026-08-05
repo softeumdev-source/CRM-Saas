@@ -4,13 +4,13 @@ import { gerarJson, temGeminiConfigurado } from "@/lib/ai/gemini";
 
 export async function POST(request: Request) {
   if (!temGeminiConfigurado()) {
-    return NextResponse.json({ error: "IA nao configurada. Peca ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
+    return NextResponse.json({ error: "IA não configurada. Peça ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
   }
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { negocioId } = await request.json();
   const { data: negocio } = await supabase
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     .select("*, contato:contatos(*)")
     .eq("id", negocioId)
     .single();
-  if (!negocio) return NextResponse.json({ error: "Negocio nao encontrado." }, { status: 404 });
+  if (!negocio) return NextResponse.json({ error: "Negócio não encontrado." }, { status: 404 });
 
   const { data: atividades } = await supabase
     .from("atividades")
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     .order("criado_em", { ascending: false })
     .limit(10);
 
-  const prompt = `Voce e um especialista em vendas B2B da Softeum, empresa que automatiza recebimento e
+  const prompt = `Você é um especialista em vendas B2B da Softeum, empresa que automatiza recebimento e
 processamento de pedidos de compra via e-mail e WhatsApp com IA. Analise o lead abaixo e retorne um
 JSON com o schema exato:
 {
@@ -40,11 +40,11 @@ JSON com o schema exato:
 }
 
 Empresa: ${negocio.contato?.empresa || negocio.contato?.nome}
-Cargo do contato: ${negocio.contato?.cargo || "nao informado"}
-Titulo do negocio: ${negocio.titulo}
+Cargo do contato: ${negocio.contato?.cargo || "não informado"}
+Título do negócio: ${negocio.titulo}
 Valor estimado: R$ ${negocio.valor}
 Origem do lead: ${negocio.contato?.origem}
-Ultimas atividades: ${atividades?.map((a) => `${a.tipo}: ${a.titulo}`).join("; ") || "nenhuma"}
+Últimas atividades: ${atividades?.map((a) => `${a.tipo}: ${a.titulo}`).join("; ") || "nenhuma"}
 `;
 
   try {

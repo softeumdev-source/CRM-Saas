@@ -25,7 +25,7 @@ export function ListaClient({ negocios, etapas }: { negocios: NegocioComRelacoes
   return (
     <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Lista de Negocios ({filtrados.length})</h1>
+        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Lista de Negócios ({filtrados.length})</h1>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

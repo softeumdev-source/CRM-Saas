@@ -233,7 +233,7 @@ export function LeadsTab({
         </h3>
         <p className="text-xs text-slate-500">
           Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj. Contatos com e-mail
-          repetido sao ignorados automaticamente. Os leads importados entram no pool "sem dono" ate serem distribuidos.
+          repetido são ignorados automaticamente. Os leads importados entram no pool "sem dono" até serem distribuídos.
         </p>
         <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
           {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}

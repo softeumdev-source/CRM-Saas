@@ -26,7 +26,7 @@ export default function AceitarConvitePage({
       return;
     }
     if (senha !== confirmar) {
-      setErro("As senhas nao coincidem.");
+      setErro("As senhas não coincidem.");
       return;
     }
     setLoading(true);
@@ -37,7 +37,7 @@ export default function AceitarConvitePage({
     });
     if (error || !data || data.length === 0) {
       setLoading(false);
-      setErro(error?.message || "Convite invalido ou expirado.");
+      setErro(error?.message || "Convite inválido ou expirado.");
       return;
     }
     const emailAceito = data[0].email;

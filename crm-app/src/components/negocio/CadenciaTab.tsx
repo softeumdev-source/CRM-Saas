@@ -31,14 +31,14 @@ const ICONES: Record<string, any> = {
 };
 
 const ROTULOS: Record<string, string> = {
-  ligacao: "Ligacao",
+  ligacao: "Ligação",
   email: "E-mail",
-  demo: "Demonstracao",
+  demo: "Demonstração",
   proposta: "Proposta",
   nota: "Nota interna",
   whatsapp: "WhatsApp",
-  reuniao: "Reuniao",
-  mudanca_etapa: "Mudanca de etapa",
+  reuniao: "Reunião",
+  mudanca_etapa: "Mudança de etapa",
 };
 
 type AtividadeComUsuario = Atividade & { usuario: Usuario | null };
@@ -105,7 +105,7 @@ export function CadenciaTab({
   return (
     <div className="grid lg:grid-cols-[1.1fr_1.6fr] gap-5">
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4 h-fit">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Registrar passo de cadencia</h3>
+        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Registrar passo de cadência</h3>
         <form onSubmit={handleAdicionar} className="space-y-3">
           <select
             value={tipo}
@@ -120,7 +120,7 @@ export function CadenciaTab({
             required
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Titulo (ex: Ligar para follow-up)"
+            placeholder="Título (ex: Ligar para follow-up)"
             className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
           />
           <textarea
@@ -132,7 +132,7 @@ export function CadenciaTab({
           />
           <div>
             <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 mb-1">
-              <Bell className="h-3.5 w-3.5 text-indigo-600" /> Proxima acao agendada para
+              <Bell className="h-3.5 w-3.5 text-indigo-600" /> Próxima ação agendada para
             </label>
             <input
               type="datetime-local"
@@ -141,7 +141,7 @@ export function CadenciaTab({
               className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Voce sera notificado automaticamente pelo sino do sistema nesta data/hora.
+              Você será notificado automaticamente pelo sino do sistema nesta data/hora.
             </p>
           </div>
 
@@ -150,7 +150,7 @@ export function CadenciaTab({
             disabled={salvando}
             className="w-full py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" /> Registrar na cadencia
+            <Plus className="h-4 w-4" /> Registrar na cadência
           </button>
         </form>
       </div>
@@ -158,7 +158,7 @@ export function CadenciaTab({
       <div className="space-y-5">
         {proximosPassos.length > 0 && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">Proximos passos</h3>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">Próximos passos</h3>
             <div className="space-y-2">
               {proximosPassos.map((a) => {
                 const Icon = ICONES[a.tipo] || MessageSquare;
@@ -173,7 +173,7 @@ export function CadenciaTab({
                         <Clock className="h-3 w-3" />
                         {a.data_agendada && new Date(a.data_agendada).toLocaleString("pt-BR")}
                         <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold ml-2">
-                          <Bell className="h-3 w-3" /> alerta automatico
+                          <Bell className="h-3 w-3" /> alerta automático
                         </span>
                         {(a as any).confirmada && (
                           <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold ml-2">
@@ -206,7 +206,7 @@ export function CadenciaTab({
         )}
 
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">Historico ({historico.length})</h3>
+          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">Histórico ({historico.length})</h3>
           <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
             {historico.map((a) => {
               const Icon = ICONES[a.tipo] || MessageSquare;

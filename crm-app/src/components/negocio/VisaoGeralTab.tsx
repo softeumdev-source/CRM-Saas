@@ -33,9 +33,9 @@ export function VisaoGeralTab({
     if (error) {
       setErroContato(
         error.message.includes("dominio") || error.message.includes("concorrentes")
-          ? "Nao e permitido cadastrar e-mails deste dominio."
+          ? "Não é permitido cadastrar e-mails deste domínio."
           : error.message.includes("duplicate") || error.code === "23505"
-            ? "Ja existe um contato com este e-mail."
+            ? "Já existe um contato com este e-mail."
             : error.message
       );
       return;
@@ -94,7 +94,7 @@ export function VisaoGeralTab({
 
         <div>
           <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-            CNPJ <span className="text-rose-500">(obrigatorio para gerar proposta)</span>
+            CNPJ <span className="text-rose-500">(obrigatório para gerar proposta)</span>
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -111,7 +111,7 @@ export function VisaoGeralTab({
           </div>
           {!cnpj.trim() && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
-              Sem CNPJ nao e possivel gerar a proposta para este cliente.
+              Sem CNPJ não é possível gerar a proposta para este cliente.
             </p>
           )}
         </div>
@@ -154,7 +154,7 @@ export function VisaoGeralTab({
       </div>
 
       <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-3xl p-5 shadow-lg">
-        <p className="text-xs font-medium text-indigo-300 uppercase tracking-wider mb-1">Resumo do negocio</p>
+        <p className="text-xs font-medium text-indigo-300 uppercase tracking-wider mb-1">Resumo do negócio</p>
         <p className="text-2xl font-extrabold mt-1">{negocio.titulo}</p>
         <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-indigo-800/60">
           <div>
@@ -172,7 +172,7 @@ export function VisaoGeralTab({
               className="bg-indigo-950/60 border border-indigo-700/60 rounded-lg px-2 py-1 text-sm font-bold mt-1"
             >
               <option value="alta">Alta</option>
-              <option value="media">Media</option>
+              <option value="media">Média</option>
               <option value="baixa">Baixa</option>
             </select>
           </div>

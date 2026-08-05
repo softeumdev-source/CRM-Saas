@@ -56,7 +56,7 @@ export function FunilTab({
               onChange={(e) => setFiltro(e.target.value)}
               className="px-4 py-2.5 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full"
             >
-              <option value="all">Visao geral (todos os vendedores)</option>
+              <option value="all">Visão geral (todos os vendedores)</option>
               <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
               {vendedoresFiltrados.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
@@ -67,12 +67,12 @@ export function FunilTab({
         <div className="text-right">
           <p className="text-xs text-slate-500">Valor total no filtro</p>
           <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(totalValor)}</p>
-          <p className="text-[11px] text-slate-400">{negociosFiltrados.length} negocios</p>
+          <p className="text-[11px] text-slate-400">{negociosFiltrados.length} negócios</p>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base">Distribuicao por etapa</h3>
+        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base">Distribuição por etapa</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {etapas.map((etapa) => {
             const doEtapa = negociosFiltrados.filter((n) => n.etapa_id === etapa.id);
