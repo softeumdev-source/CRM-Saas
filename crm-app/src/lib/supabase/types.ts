@@ -89,6 +89,7 @@ export type Database = {
           tags: string[] | null
           telefone: string | null
           tenant_id: string | null
+          whatsapp: string | null
         }
         Insert: {
           atualizado_em?: string | null
@@ -106,6 +107,7 @@ export type Database = {
           tags?: string[] | null
           telefone?: string | null
           tenant_id?: string | null
+          whatsapp?: string | null
         }
         Update: {
           atualizado_em?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           tags?: string[] | null
           telefone?: string | null
           tenant_id?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {

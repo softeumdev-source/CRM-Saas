@@ -169,7 +169,7 @@ export function NegocioDetailClient({
         <CadenciaTab negocioId={negocio.id} atividadesIniciais={atividadesIniciais} usuarioAtual={usuarioAtual} />
       )}
       {aba === "proposta" && (
-        <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostasIniciais} />
+        <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostasIniciais} usuarioAtual={usuarioAtual} />
       )}
       {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
     </div>

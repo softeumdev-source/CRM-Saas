@@ -18,7 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { NegocioComRelacoes, Plano } from "@/lib/types";
+import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 
@@ -40,11 +40,14 @@ export function PropostaTab({
   negocio,
   planos,
   propostasIniciais,
+  usuarioAtual,
 }: {
   negocio: NegocioComRelacoes;
   planos: Plano[];
   propostasIniciais: any[];
+  usuarioAtual: Usuario;
 }) {
+  const isAdmin = usuarioAtual.role === "admin";
   const [propostas, setPropostas] = useState(propostasIniciais);
   const [planoId, setPlanoId] = useState(planos[0]?.id || "");
   const plano = planos.find((p) => p.id === planoId);
@@ -73,10 +76,13 @@ export function PropostaTab({
   const [documentoEditor, setDocumentoEditor] = useState<"comercial" | "tecnica">("comercial");
 
   const setupPlano = (plano?.valor_setup_plataforma || 0) + (plano?.valor_setup_erp || 0) + (plano?.valor_setup_catalogo || 0);
-  const [valorSetup, setValorSetup] = useState(setupPlano);
+  const minSetup = isAdmin ? 0 : 500;
+  const [valorSetup, setValorSetup] = useState(Math.max(setupPlano, minSetup));
 
   const temCnpj = !!negocio.contato?.cnpj?.trim();
-  const valorMensal = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
+  const valorMensalBase = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
+  const [valorMensal, setValorMensal] = useState(valorMensalBase);
+  const minMensal = isAdmin ? 0 : valorMensalBase;
 
   const handleGerar = async () => {
     setErro(null);
@@ -88,8 +94,8 @@ export function PropostaTab({
         negocioId: negocio.id,
         planoId,
         avisoPrevioDias,
-        valorPlataforma: plano?.valor_plataforma_base,
-        valorUso: plano?.valor_uso_base,
+        valorPlataforma: valorMensal,
+        valorUso: 0,
         qtdCaixasEmail: 0,
         qtdNumerosWhatsapp: 0,
         prazoContratoMeses,
@@ -235,7 +241,10 @@ export function PropostaTab({
           <select value={planoId} onChange={(e) => {
             setPlanoId(e.target.value);
             const p = planos.find((x) => x.id === e.target.value);
-            setValorSetup((p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0));
+            const newSetup = (p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0);
+            setValorSetup(Math.max(newSetup, minSetup));
+            const newMensal = (p?.valor_plataforma_base || 0) + (p?.valor_uso_base || 0);
+            setValorMensal(newMensal);
           }} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — até {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</option>
@@ -244,11 +253,29 @@ export function PropostaTab({
         </div>
 
         <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
-          <p className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400">Mensalidade do plano</p>
-          <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{formatarMoeda(valorMensal)}<span className="text-sm font-semibold text-slate-500">/mês</span></p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Valor definido pelo plano cadastrado no painel admin. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
-          </p>
+          <label className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400 block mb-1">Mensalidade do plano</label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-indigo-500">R$</span>
+            <input
+              type="number"
+              min={minMensal}
+              step={0.01}
+              value={valorMensal}
+              onChange={(e) => setValorMensal(parseFloat(e.target.value) || 0)}
+              className="flex-1 px-3 py-2 text-lg font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded-xl"
+            />
+            <span className="text-sm font-semibold text-slate-500">/mês</span>
+          </div>
+          {!isAdmin && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              Valor mínimo do plano: {formatarMoeda(valorMensalBase)}. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
+            </p>
+          )}
+          {isAdmin && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              Valor base do plano: {formatarMoeda(valorMensalBase)}. Admin pode definir qualquer valor. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)}/pedido.
+            </p>
+          )}
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
@@ -257,7 +284,7 @@ export function PropostaTab({
             <span className="text-sm text-slate-500">R$</span>
             <input
               type="number"
-              min={0}
+              min={minSetup}
               step={0.01}
               value={valorSetup}
               onChange={(e) => setValorSetup(parseFloat(e.target.value) || 0)}
@@ -265,7 +292,8 @@ export function PropostaTab({
             />
           </div>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Valor padrão do plano: {formatarMoeda(setupPlano)}. Deixe 0 para não cobrar setup.
+            Valor padrão do plano: {formatarMoeda(setupPlano)}.{" "}
+            {isAdmin ? "Admin pode definir qualquer valor, inclusive R$ 0." : "Mínimo para vendedor: R$ 500,00."}
           </p>
         </div>
 
