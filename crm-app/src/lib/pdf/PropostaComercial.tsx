@@ -1,32 +1,13 @@
 import { Document, Page, Text, View, Link, renderToBuffer } from "@react-pdf/renderer";
 import { estilos } from "./estilos";
 import { formatarBRL, type DadosProposta } from "./dados";
-
-function Capa({ d }: { d: DadosProposta }) {
-  return (
-    <Page size="A4" style={{ padding: 0 }}>
-      <View style={estilos.capa}>
-        <View>
-          <Text style={estilos.capaMarca}>SOFTEUM</Text>
-          <Text style={estilos.capaTag}>Automação inteligente de pedidos</Text>
-        </View>
-        <View>
-          <Text style={estilos.capaTitulo}>Proposta Comercial</Text>
-          <Text style={estilos.capaCliente}>{d.clienteRazaoSocial}</Text>
-          <Text style={estilos.capaMeta}>Proposta {d.numeroProposta} · Versão {d.versao}</Text>
-          <Text style={estilos.capaMeta}>{d.cidade}, {d.data}</Text>
-        </View>
-        <Text style={estilos.capaRodape}>Softeum Tecnologia · CNPJ {d.softeumCnpj}</Text>
-      </View>
-    </Page>
-  );
-}
+import { combinarCapaComConteudo } from "./capaPdf";
 
 function Rodape({ d }: { d: DadosProposta }) {
   return (
     <View style={estilos.rodape} fixed>
       <Text>Softeum · CNPJ {d.softeumCnpj} · Proposta {d.numeroProposta} v{d.versao}</Text>
-      <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+      <Text render={({ pageNumber, totalPages }) => `${pageNumber + 1} / ${totalPages + 1}`} />
     </View>
   );
 }
@@ -148,15 +129,16 @@ function Corpo({ d }: { d: DadosProposta }) {
   );
 }
 
-export function PropostaComercialDocument({ d }: { d: DadosProposta }) {
+function ConteudoDocument({ d }: { d: DadosProposta }) {
   return (
     <Document title={`Proposta Comercial ${d.numeroProposta}`}>
-      <Capa d={d} />
       <Corpo d={d} />
     </Document>
   );
 }
 
 export async function renderPropostaComercialPdf(d: DadosProposta): Promise<Buffer> {
-  return renderToBuffer(<PropostaComercialDocument d={d} />);
+  const conteudo = await renderToBuffer(<ConteudoDocument d={d} />);
+  const resultado = await combinarCapaComConteudo("comercial", d, conteudo);
+  return Buffer.from(resultado);
 }
