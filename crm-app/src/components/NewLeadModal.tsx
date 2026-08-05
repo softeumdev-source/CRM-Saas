@@ -27,7 +27,6 @@ export function NewLeadModal({
   const [telefone, setTelefone] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [titulo, setTitulo] = useState("");
-  const [valor, setValor] = useState(0);
   const [etapaId, setEtapaId] = useState(etapas[0]?.id || "");
   const [responsavelId, setResponsavelId] = useState(
     usuarioAtual.role === "vendedor" ? usuarioAtual.id : ""
@@ -67,7 +66,7 @@ export function NewLeadModal({
       .insert({
         tenant_id: usuarioAtual.tenant_id,
         titulo: titulo.trim(),
-        valor,
+        valor: 0,
         contato_id: contato.id,
         responsavel_id: responsavelId || null,
         etapa_id: etapaId || null,
@@ -124,19 +123,13 @@ export function NewLeadModal({
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Título do negócio *</label>
               <input required value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Automação de pedidos - Acme Ltda" className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Valor estimado (R$)</label>
-                <input type="number" min={0} value={valor} onChange={(e) => setValor(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-indigo-600" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Etapa</label>
-                <select value={etapaId} onChange={(e) => setEtapaId(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-                  {etapas.map((et) => (
-                    <option key={et.id} value={et.id}>{et.nome}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Etapa</label>
+              <select value={etapaId} onChange={(e) => setEtapaId(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+                {etapas.map((et) => (
+                  <option key={et.id} value={et.id}>{et.nome}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Vendedor responsável</label>

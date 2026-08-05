@@ -99,7 +99,7 @@ export function NegocioDetailClient({
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-3 mt-4">
+        <div className="grid sm:grid-cols-2 gap-3 mt-4">
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
             <p className="text-[10px] font-bold uppercase text-slate-400">Etapa</p>
             <select
@@ -114,15 +114,6 @@ export function NegocioDetailClient({
                 <option key={et.id} value={et.id}>{et.nome}</option>
               ))}
             </select>
-          </div>
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <p className="text-[10px] font-bold uppercase text-slate-400">Valor</p>
-            <input
-              type="number"
-              defaultValue={negocio.valor ?? 0}
-              onBlur={(e) => atualizarNegocio({ valor: parseFloat(e.target.value) || 0 })}
-              className="w-full mt-1 text-sm font-extrabold text-indigo-600 bg-transparent focus:outline-hidden"
-            />
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
             <p className="text-[10px] font-bold uppercase text-slate-400">Vendedor responsável</p>
@@ -140,6 +131,12 @@ export function NegocioDetailClient({
               ))}
             </select>
           </div>
+          {(negocio.valor ?? 0) > 0 && (
+            <div className="sm:col-span-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3">
+              <p className="text-[10px] font-bold uppercase text-indigo-500">Valor da proposta</p>
+              <p className="mt-1 text-sm font-extrabold text-indigo-600">{formatarMoeda(negocio.valor)}<span className="text-xs font-semibold text-slate-500">/mês</span></p>
+            </div>
+          )}
         </div>
       </div>
 
