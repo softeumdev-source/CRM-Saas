@@ -12,7 +12,7 @@ import { SUPABASE_URL } from "@/lib/supabase/config";
 export function createAdminClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY nao configurada.");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY não configurada.");
   }
   return createJsClient<Database>(SUPABASE_URL, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

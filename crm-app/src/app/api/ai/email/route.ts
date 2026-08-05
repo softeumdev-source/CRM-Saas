@@ -5,13 +5,13 @@ import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
 
 export async function POST(request: Request) {
   if (!temGeminiConfigurado()) {
-    return NextResponse.json({ error: "IA nao configurada. Peca ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
+    return NextResponse.json({ error: "IA não configurada. Peça ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
   }
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { negocioId, objetivo, tom, enviar } = await request.json();
   const { data: negocio } = await supabase
@@ -19,16 +19,16 @@ export async function POST(request: Request) {
     .select("*, contato:contatos(*)")
     .eq("id", negocioId)
     .single();
-  if (!negocio) return NextResponse.json({ error: "Negocio nao encontrado." }, { status: 404 });
+  if (!negocio) return NextResponse.json({ error: "Negócio não encontrado." }, { status: 404 });
 
-  const prompt = `Voce e um vendedor B2B da Softeum (automacao de pedidos com IA via e-mail/WhatsApp).
-Escreva um e-mail de vendas em portugues do Brasil, objetivo "${objetivo}", tom "${tom}", para o lead abaixo.
+  const prompt = `Você é um vendedor B2B da Softeum (automação de pedidos com IA via e-mail/WhatsApp).
+Escreva um e-mail de vendas em português do Brasil, objetivo "${objetivo}", tom "${tom}", para o lead abaixo.
 Retorne JSON no schema exato: {"assunto": string, "corpo": string, "callToAction": string}
-O corpo deve estar em HTML simples (paragrafos <p>), sem saudacoes genericas demais, mencionando o nome do contato.
+O corpo deve estar em HTML simples (parágrafos <p>), sem saudações genéricas demais, mencionando o nome do contato.
 
 Contato: ${negocio.contato?.nome} (${negocio.contato?.cargo || "sem cargo"})
 Empresa: ${negocio.contato?.empresa}
-Negocio: ${negocio.titulo}
+Negócio: ${negocio.titulo}
 `;
 
   try {

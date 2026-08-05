@@ -97,7 +97,7 @@ export function KanbanBoard({
                   <button
                     onClick={onNovoNegocio}
                     className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-all"
-                    title="Adicionar negocio nesta etapa"
+                    title="Adicionar negócio nesta etapa"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -112,7 +112,7 @@ export function KanbanBoard({
                 {doEtapa.length === 0 ? (
                   <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 text-center">
                     <Layers className="h-6 w-6 text-slate-300 dark:text-slate-600 mb-1" />
-                    <p className="text-xs text-slate-400 font-medium">Nenhum negocio nesta etapa</p>
+                    <p className="text-xs text-slate-400 font-medium">Nenhum negócio nesta etapa</p>
                   </div>
                 ) : (
                   doEtapa.map((negocio) => (

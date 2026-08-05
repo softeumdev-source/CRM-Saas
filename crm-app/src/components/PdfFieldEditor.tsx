@@ -207,7 +207,7 @@ export function PdfFieldEditor({
             <FileSignature className="h-4 w-4" /> Assinatura
           </button>
           <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-            Clique no botao ou clique diretamente no documento para posicionar o campo de assinatura.
+            Clique no botão ou clique diretamente no documento para posicionar o campo de assinatura.
           </p>
         </div>
 

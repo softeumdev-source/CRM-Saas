@@ -78,7 +78,7 @@ export function NewLeadModal({
 
     setLoading(false);
     if (erroNegocio || !negocio) {
-      setErro(erroNegocio?.message || "Erro ao criar negocio.");
+      setErro(erroNegocio?.message || "Erro ao criar negócio.");
       return;
     }
     router.push(`/negocios/${negocio.id}`);
@@ -89,7 +89,7 @@ export function NewLeadModal({
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex items-center justify-between shrink-0">
-          <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base">Novo Negocio</h3>
+          <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base">Novo Negócio</h3>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl">
             <X className="h-5 w-5" />
           </button>
@@ -114,15 +114,15 @@ export function NewLeadModal({
               <input value={telefone} onChange={(e) => setTelefone(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
             </div>
             <div className="col-span-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">CNPJ (necessario para gerar proposta)</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">CNPJ (necessário para gerar proposta)</label>
               <input value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
             </div>
           </div>
 
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Titulo do negocio *</label>
-              <input required value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Automacao de pedidos - Acme Ltda" className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Título do negócio *</label>
+              <input required value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Automação de pedidos - Acme Ltda" className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -139,7 +139,7 @@ export function NewLeadModal({
               </div>
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Vendedor responsavel</label>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">Vendedor responsável</label>
               <select value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)} className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
                 <option value="">Sem dono (pool)</option>
                 {vendedores.map((v) => (
@@ -157,7 +157,7 @@ export function NewLeadModal({
             </button>
             <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center gap-2 disabled:opacity-60">
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Criar negocio
+              Criar negócio
             </button>
           </div>
         </form>

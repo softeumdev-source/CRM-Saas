@@ -4,13 +4,13 @@ import { gerarJson, temGeminiConfigurado } from "@/lib/ai/gemini";
 
 export async function POST(request: Request) {
   if (!temGeminiConfigurado()) {
-    return NextResponse.json({ error: "IA nao configurada. Peca ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
+    return NextResponse.json({ error: "IA não configurada. Peça ao administrador para definir GEMINI_API_KEY." }, { status: 503 });
   }
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { negocioId, objetivo } = await request.json();
   const { data: negocio } = await supabase
@@ -18,15 +18,15 @@ export async function POST(request: Request) {
     .select("*, contato:contatos(*)")
     .eq("id", negocioId)
     .single();
-  if (!negocio) return NextResponse.json({ error: "Negocio nao encontrado." }, { status: 404 });
+  if (!negocio) return NextResponse.json({ error: "Negócio não encontrado." }, { status: 404 });
 
-  const prompt = `Voce e um vendedor B2B da Softeum (automacao de pedidos com IA via e-mail/WhatsApp).
+  const prompt = `Você é um vendedor B2B da Softeum (automação de pedidos com IA via e-mail/WhatsApp).
 Escreva uma mensagem curta de WhatsApp (max 3 frases, tom direto e humano, sem emojis em excesso) com
 objetivo "${objetivo}" para o lead abaixo. Retorne JSON no schema exato: {"mensagem": string}
 
 Contato: ${negocio.contato?.nome}
 Empresa: ${negocio.contato?.empresa}
-Negocio: ${negocio.titulo}
+Negócio: ${negocio.titulo}
 `;
 
   try {

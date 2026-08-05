@@ -19,7 +19,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const { data: usuarioAtual } = await supabase.from("usuarios").select("*").eq("id", user.id).single();
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .eq("id", id)
     .single();
 
-  if (!proposta) return NextResponse.json({ error: "Proposta nao encontrada." }, { status: 404 });
+  if (!proposta) return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
   if (!proposta.pdf_comercial_path || !proposta.pdf_tecnica_path) {
     return NextResponse.json({ error: "Gere os PDFs da proposta antes de enviar." }, { status: 422 });
   }
@@ -134,12 +134,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
       html: emailBase(`
         <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
-        <p>Ola ${sig.nome},</p>
-        <p>A Softeum preparou a proposta comercial e tecnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
+        <p>Olá ${sig.nome},</p>
+        <p>A Softeum preparou a proposta comercial e técnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
         <p style="text-align:center; margin: 28px 0;">
           <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
         </p>
-        <p style="font-size:12px; color:#64748b;">Se o botao nao funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
+        <p style="font-size:12px; color:#64748b;">Se o botão não funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
       `),
     });
     if (resultado.sent) algumEmailEnviado = true;
@@ -151,10 +151,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   for (const email of copias) {
     await enviarEmail({
       to: email,
-      subject: `Copia: Proposta Softeum ${proposta.numero}`,
+      subject: `Cópia: Proposta Softeum ${proposta.numero}`,
       html: emailBase(`
-        <h2 style="margin-top:0;">Copia da proposta enviada para assinatura</h2>
-        <p>Voce esta recebendo uma copia da proposta ${proposta.numero} enviada para assinatura.</p>
+        <h2 style="margin-top:0;">Cópia da proposta enviada para assinatura</h2>
+        <p>Você está recebendo uma cópia da proposta ${proposta.numero} enviada para assinatura.</p>
         <p style="text-align:center; margin: 28px 0;">
           <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
         </p>

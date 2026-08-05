@@ -72,7 +72,7 @@ export function PdfSignViewer({
         if (cancelado) return;
         console.error("Erro ao carregar PDF", e);
         setCarregando(false);
-        setErro(e?.message || "Nao foi possivel carregar o documento.");
+        setErro(e?.message || "Não foi possível carregar o documento.");
       }
     })();
     return () => { cancelado = true; };
@@ -105,7 +105,7 @@ export function PdfSignViewer({
       <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2 text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="text-xs font-bold">Nao foi possivel carregar o documento no visualizador.</p>
+          <p className="text-xs font-bold">Não foi possível carregar o documento no visualizador.</p>
         </div>
         <a
           href={pdfUrl}
@@ -130,7 +130,7 @@ export function PdfSignViewer({
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="text-xs font-bold text-slate-600">
-          Pagina {paginaAtual} / {totalPaginas}
+          Página {paginaAtual} / {totalPaginas}
         </span>
         <button
           onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
@@ -157,7 +157,7 @@ export function PdfSignViewer({
               borderColor: "#94a3b8",
             }}
           >
-            <span className="text-[8px] font-bold text-slate-400">Outro signatario</span>
+            <span className="text-[8px] font-bold text-slate-400">Outro signatário</span>
           </div>
         ))}
 

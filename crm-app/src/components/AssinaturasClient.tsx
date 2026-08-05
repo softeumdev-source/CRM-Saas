@@ -52,7 +52,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
           <p className="text-2xl font-extrabold text-emerald-600">{contadores.concluido}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Concluidas</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase">Concluídas</p>
         </div>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
           <p className="text-2xl font-extrabold text-slate-400">{contadores.cancelado}</p>
@@ -111,7 +111,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                   )}
                   {assinadoTecnica && (
                     <a href={assinadoTecnica} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
-                      <Download className="h-3.5 w-3.5" /> Baixar tecnica assinada
+                      <Download className="h-3.5 w-3.5" /> Baixar técnica assinada
                     </a>
                   )}
                 </div>

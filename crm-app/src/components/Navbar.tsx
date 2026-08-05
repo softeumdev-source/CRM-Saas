@@ -137,10 +137,10 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             {showNotifs && (
               <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
                 <div className="p-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Notificacoes
+                  Notificações
                 </div>
                 {notificacoes.length === 0 ? (
-                  <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificacao ainda.</p>
+                  <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificação ainda.</p>
                 ) : (
                   notificacoes.map((n) => (
                     <Link

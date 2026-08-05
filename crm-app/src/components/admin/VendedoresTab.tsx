@@ -81,7 +81,7 @@ export function VendedoresTab({
 
   const toggleAtivo = async (v: Usuario) => {
     const novoAtivo = !v.ativo;
-    if (novoAtivo === false && !confirm(`Remover ${v.nome} do time de vendedores? Os leads dele continuam com ele, mas ele deixa de aparecer para receber novos leads e nao consegue mais acessar o sistema.`)) return;
+    if (novoAtivo === false && !confirm(`Remover ${v.nome} do time de vendedores? Os leads dele continuam com ele, mas ele deixa de aparecer para receber novos leads e não consegue mais acessar o sistema.`)) return;
     setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo: novoAtivo } : u)));
     const supabase = createClient();
     await supabase.from("usuarios").update({ ativo: novoAtivo }).eq("id", v.id);
@@ -131,15 +131,15 @@ export function VendedoresTab({
               <p className={`font-bold mb-1.5 ${emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
                 {emailEnviado
                   ? remetenteTest
-                    ? "E-mail enviado (remetente de teste — so chega no e-mail da conta Resend). Link de apoio:"
+                    ? "E-mail enviado (remetente de teste — só chega no e-mail da conta Resend). Link de apoio:"
                     : "E-mail de convite enviado! Link de apoio:"
                   : emailErro
                     ? `Falha ao enviar e-mail: ${emailErro}`
-                    : "RESEND_API_KEY nao configurada — envie este link manualmente:"}
+                    : "RESEND_API_KEY não configurada — envie este link manualmente:"}
               </p>
               {!emailEnviado && (
                 <p className="text-amber-700 dark:text-amber-400 mb-2">
-                  Configure as variaveis RESEND_API_KEY e RESEND_FROM_EMAIL (com dominio verificado no Resend) nas variaveis de ambiente do Vercel.
+                  Configure as variáveis RESEND_API_KEY e RESEND_FROM_EMAIL (com domínio verificado no Resend) nas variáveis de ambiente do Vercel.
                 </p>
               )}
               <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export function VendedoresTab({
             <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">{formatarMoeda(totalMeta)}</p>
           </div>
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <p className="text-xs font-bold uppercase text-slate-400">Negocios ativos</p>
+            <p className="text-xs font-bold uppercase text-slate-400">Negócios ativos</p>
             <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => !n.ganho).length}</p>
           </div>
 
@@ -214,7 +214,7 @@ export function VendedoresTab({
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
                     <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
-                    <p className="text-[11px] text-slate-400">{deles.length} negocios</p>
+                    <p className="text-[11px] text-slate-400">{deles.length} negócios</p>
                   </div>
                   <button
                     onClick={() => toggleAtivo(v)}

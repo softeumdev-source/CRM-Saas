@@ -56,7 +56,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       .then(({ data, error }: any) => {
         setCarregando(false);
         if (error || !data) {
-          setErro(error?.message || "Link invalido ou expirado.");
+          setErro(error?.message || "Link inválido ou expirado.");
           return;
         }
         setDados(data as EnvelopePublico);
@@ -84,7 +84,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         }),
       });
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Erro de conexao." }));
+        const err = await resp.json().catch(() => ({ error: "Erro de conexão." }));
         setErro(err.error || "Falha ao registrar assinatura.");
         setEnviando(false);
         return;
@@ -92,7 +92,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       setModalAssinatura(false);
       setConcluido(true);
     } catch (e: any) {
-      setErro("Erro de conexao. Verifique sua internet e tente novamente.");
+      setErro("Erro de conexão. Verifique sua internet e tente novamente.");
     }
     setEnviando(false);
   };
@@ -169,9 +169,9 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       <label className="flex items-start gap-2 text-xs text-slate-600">
         <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
         <span>
-          Declaro que li e concordo com os termos das propostas Comercial e Tecnica acima, e que esta
-          assinatura eletronica tem validade juridica nos termos do art. 10, par. 2 da Medida Provisoria
-          no 2.200-2/2001.
+          Declaro que li e concordo com os termos das propostas Comercial e Técnica acima, e que esta
+          assinatura eletrônica tem validade jurídica nos termos do art. 10, §2º da Medida Provisória
+          nº 2.200-2/2001.
         </span>
       </label>
 
@@ -193,7 +193,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       <header className="bg-slate-900 text-white px-6 py-4 flex items-center gap-3">
         <FileSignature className="h-5 w-5 text-indigo-400" />
         <div>
-          <p className="font-extrabold text-sm">SOFTEUM · Assinatura Eletronica</p>
+          <p className="font-extrabold text-sm">SOFTEUM · Assinatura Eletrônica</p>
           <p className="text-[11px] text-slate-400">Proposta {dados.proposta.numero} · v{dados.proposta.versao}</p>
         </div>
       </header>
@@ -204,7 +204,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
             <CheckCircle2 className="h-14 w-14 text-emerald-500 mx-auto mb-4" />
             <h1 className="text-lg font-extrabold text-slate-900">Assinatura registrada com sucesso!</h1>
             <p className="text-sm text-slate-500 mt-2">
-              Obrigado, {dados.signatario.nome}. A Softeum e o vendedor responsavel foram notificados.
+              Obrigado, {dados.signatario.nome}. A Softeum e o vendedor responsável foram notificados.
             </p>
           </div>
         ) : (
@@ -215,7 +215,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 <h1 className="font-extrabold text-slate-900">{dados.contato.empresa || dados.contato.nome}</h1>
               </div>
               <p className="text-xs text-slate-500">
-                {dados.negocio.titulo} · CNPJ {dados.contato.cnpj} · Aviso previo de{" "}
+                {dados.negocio.titulo} · CNPJ {dados.contato.cnpj} · Aviso prévio de{" "}
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 
@@ -250,7 +250,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] font-bold uppercase text-slate-400">Proposta Tecnica</p>
+                    <p className="text-[11px] font-bold uppercase text-slate-400">Proposta Técnica</p>
                     <a
                       href={tecnicaUrl}
                       target="_blank"
@@ -271,7 +271,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     />
                   ) : (
                     <div className="rounded-xl overflow-hidden border border-slate-200">
-                      <iframe src={tecnicaUrl} className="w-full h-[500px]" title="Proposta Tecnica" />
+                      <iframe src={tecnicaUrl} className="w-full h-[500px]" title="Proposta Técnica" />
                     </div>
                   )}
                 </div>

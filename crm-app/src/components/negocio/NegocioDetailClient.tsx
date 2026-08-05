@@ -49,7 +49,7 @@ export function NegocioDetailClient({
   const handleExcluir = async () => {
     const etapaPerdido = etapas.find((e) => e.nome.trim().toLowerCase() === "perdido");
     if (!etapaPerdido) return;
-    if (!confirm("Este negocio sera movido para a etapa Perdido. Deseja continuar?")) return;
+    if (!confirm("Este negócio será movido para a etapa Perdido. Deseja continuar?")) return;
     const motivo = window.prompt("Motivo da perda (opcional):") || null;
     const supabase = createClient();
     await supabase
@@ -125,7 +125,7 @@ export function NegocioDetailClient({
             />
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <p className="text-[10px] font-bold uppercase text-slate-400">Vendedor responsavel</p>
+            <p className="text-[10px] font-bold uppercase text-slate-400">Vendedor responsável</p>
             <select
               value={negocio.responsavel_id || ""}
               onChange={(e) => {
@@ -145,8 +145,8 @@ export function NegocioDetailClient({
 
       <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1 w-fit">
         {[
-          { id: "geral", label: "Visao Geral" },
-          { id: "cadencia", label: "Cadencia" },
+          { id: "geral", label: "Visão Geral" },
+          { id: "cadencia", label: "Cadência" },
           { id: "proposta", label: "Proposta & Assinatura" },
           { id: "ia", label: "Mensagens" },
         ].map((t) => (

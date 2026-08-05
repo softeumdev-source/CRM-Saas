@@ -163,15 +163,15 @@ async function gerarPdfComCertificado(
   const { height } = page.getSize();
   let y = height - 60;
 
-  page.drawText("CERTIFICADO DE CONCLUSAO", { x: 50, y, size: 18, font: fontBold, color: rgb(0.31, 0.27, 0.9) });
+  page.drawText("CERTIFICADO DE CONCLUSÃO", { x: 50, y, size: 18, font: fontBold, color: rgb(0.31, 0.27, 0.9) });
   y -= 12;
-  page.drawText("Assinatura eletronica - Softeum", { x: 50, y: y - 8, size: 10, font, color: rgb(0.4, 0.4, 0.45) });
+  page.drawText("Assinatura eletrônica - Softeum", { x: 50, y: y - 8, size: 10, font, color: rgb(0.4, 0.4, 0.45) });
   y -= 40;
   page.drawText(`Documento: ${info.titulo}`, { x: 50, y, size: 11, font: fontBold });
   y -= 18;
   page.drawText(`Proposta: ${info.numero}`, { x: 50, y, size: 11, font });
   y -= 30;
-  page.drawText("Signatarios:", { x: 50, y, size: 12, font: fontBold });
+  page.drawText("Signatários:", { x: 50, y, size: 12, font: fontBold });
   y -= 22;
 
   for (const a of info.assinantes) {
@@ -191,7 +191,7 @@ async function gerarPdfComCertificado(
 
   y -= 10;
   page.drawText(
-    "Documento assinado eletronicamente nos termos do art. 10, par. 2 da MP no 2.200-2/2001.",
+    "Documento assinado eletronicamente nos termos do art. 10, §2º da MP nº 2.200-2/2001.",
     { x: 50, y, size: 8, font, color: rgb(0.4, 0.4, 0.45) }
   );
 
@@ -330,10 +330,10 @@ export async function POST(request: Request, context: { params: Promise<{ token:
               to: emailDest,
               subject: `Proposta ${numero} assinada por todos — documentos para download`,
               html: emailBase(`
-                <h2 style="margin-top:0;">Documentacao assinada disponivel para download</h2>
-                ${sigNome ? `<p>Ola ${sigNome},</p>` : ""}
-                <p>Todos os signatarios concluiram a assinatura da proposta <strong>${numero}</strong>${titulo ? ` — ${titulo}` : ""}.</p>
-                <p>Os documentos assinados, com certificado de conclusao, estao disponiveis para download:</p>
+                <h2 style="margin-top:0;">Documentação assinada disponível para download</h2>
+                ${sigNome ? `<p>Olá ${sigNome},</p>` : ""}
+                <p>Todos os signatários concluíram a assinatura da proposta <strong>${numero}</strong>${titulo ? ` — ${titulo}` : ""}.</p>
+                <p>Os documentos assinados, com certificado de conclusão, estão disponíveis para download:</p>
                 <table style="width:100%; margin: 20px 0; border-collapse:collapse;">
                   <tr>
                     <td style="padding:12px; text-align:center;">
@@ -342,11 +342,11 @@ export async function POST(request: Request, context: { params: Promise<{ token:
                   </tr>
                   <tr>
                     <td style="padding:12px; text-align:center;">
-                      <a href="${urlTecnica}" style="display:inline-block; background:#0f172a; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700; font-size:13px;">Proposta Tecnica</a>
+                      <a href="${urlTecnica}" style="display:inline-block; background:#0f172a; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700; font-size:13px;">Proposta Técnica</a>
                     </td>
                   </tr>
                 </table>
-                <p style="font-size:12px; color:#64748b;">Os documentos incluem o certificado de conclusao com os dados de todos os signatarios.</p>
+                <p style="font-size:12px; color:#64748b;">Os documentos incluem o certificado de conclusão com os dados de todos os signatários.</p>
               `),
             });
           }

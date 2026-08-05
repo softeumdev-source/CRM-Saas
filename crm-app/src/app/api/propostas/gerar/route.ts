@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const body = await request.json();
   const {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   } = body;
 
   if (!negocioId || !planoId) {
-    return NextResponse.json({ error: "negocioId e planoId sao obrigatorios." }, { status: 400 });
+    return NextResponse.json({ error: "negocioId e planoId são obrigatórios." }, { status: 400 });
   }
 
   const { data: negocio } = await supabase
@@ -38,32 +38,32 @@ export async function POST(request: Request) {
     .single();
 
   if (!negocio) {
-    return NextResponse.json({ error: "Negocio nao encontrado." }, { status: 404 });
+    return NextResponse.json({ error: "Negócio não encontrado." }, { status: 404 });
   }
   if (!negocio.contato?.cnpj || !negocio.contato.cnpj.trim()) {
     return NextResponse.json(
-      { error: "Este contato nao tem CNPJ cadastrado. Preencha o CNPJ antes de gerar a proposta." },
+      { error: "Este contato não tem CNPJ cadastrado. Preencha o CNPJ antes de gerar a proposta." },
       { status: 422 }
     );
   }
 
   const { data: plano } = await supabase.from("planos").select("*").eq("id", planoId).single();
   if (!plano) {
-    return NextResponse.json({ error: "Plano nao encontrado." }, { status: 404 });
+    return NextResponse.json({ error: "Plano não encontrado." }, { status: 404 });
   }
 
   const valorPlataformaFinal = Number(valorPlataforma ?? plano.valor_plataforma_base);
   const valorUsoFinal = Number(valorUso ?? plano.valor_uso_base);
   if (valorPlataformaFinal < plano.valor_plataforma_base || valorUsoFinal < plano.valor_uso_base) {
     return NextResponse.json(
-      { error: "Os valores da proposta nao podem ser menores que os valores base do plano cadastrado pelo admin." },
+      { error: "Os valores da proposta não podem ser menores que os valores base do plano cadastrado pelo admin." },
       { status: 422 }
     );
   }
 
   const tenantId = negocio.tenant_id;
   if (!tenantId) {
-    return NextResponse.json({ error: "Negocio sem tenant associado." }, { status: 500 });
+    return NextResponse.json({ error: "Negócio sem tenant associado." }, { status: 500 });
   }
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", tenantId).single();
   const { count } = await supabase
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     clienteCnpj: negocio.contato.cnpj,
     numeroProposta: numero,
     versao: 1,
-    cidade: "Sao Paulo",
+    cidade: "Joinville - SC",
     data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
     planoNome: plano.nome,
     tetoPedidos: plano.franquia_pedidos,
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     emailMonitorado1: negocio.contato.email || undefined,
     prazoContratoMeses: Number(prazoContratoMeses ?? 12),
     diasAviso: Number(avisoPrevioDias ?? 180),
-    vencimentoSetup: "15 dias apos emissao",
+    vencimentoSetup: "15 dias após emissão",
     formaPagamento: formaPagamento || "Pix ou Boleto",
     condicaoSetup: "100% no aceite da proposta",
     vencimentoMensal: "todo dia 10",
