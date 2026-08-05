@@ -22,6 +22,15 @@ import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 
+function parseMoeda(texto: string): number {
+  const limpo = texto.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  return parseFloat(limpo) || 0;
+}
+
+function exibirMoeda(valor: number): string {
+  return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 const STATUS_COR: Record<string, string> = {
   rascunho: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
   enviada: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
@@ -77,12 +86,15 @@ export function PropostaTab({
 
   const setupPlano = (plano?.valor_setup_plataforma || 0) + (plano?.valor_setup_erp || 0) + (plano?.valor_setup_catalogo || 0);
   const minSetup = isAdmin ? 0 : 500;
-  const [valorSetup, setValorSetup] = useState(Math.max(setupPlano, minSetup));
+  const [valorSetupTexto, setValorSetupTexto] = useState(exibirMoeda(Math.max(setupPlano, minSetup)));
 
   const temCnpj = !!negocio.contato?.cnpj?.trim();
   const valorMensalBase = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
-  const [valorMensal, setValorMensal] = useState(valorMensalBase);
+  const [valorMensalTexto, setValorMensalTexto] = useState(exibirMoeda(valorMensalBase));
   const minMensal = isAdmin ? 0 : valorMensalBase;
+
+  const valorMensal = parseMoeda(valorMensalTexto);
+  const valorSetup = parseMoeda(valorSetupTexto);
 
   const handleGerar = async () => {
     setErro(null);
@@ -109,6 +121,8 @@ export function PropostaTab({
       return;
     }
     setPropostas((prev) => [{ ...data.proposta, plano, envelopes: [] }, ...prev]);
+    const supabaseClient = createClient();
+    await supabaseClient.from("negocios").update({ valor: valorMensal }).eq("id", negocio.id);
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
@@ -242,9 +256,9 @@ export function PropostaTab({
             setPlanoId(e.target.value);
             const p = planos.find((x) => x.id === e.target.value);
             const newSetup = (p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0);
-            setValorSetup(Math.max(newSetup, minSetup));
+            setValorSetupTexto(exibirMoeda(Math.max(newSetup, minSetup)));
             const newMensal = (p?.valor_plataforma_base || 0) + (p?.valor_uso_base || 0);
-            setValorMensal(newMensal);
+            setValorMensalTexto(exibirMoeda(newMensal));
           }} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — até {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</option>
@@ -257,11 +271,15 @@ export function PropostaTab({
           <div className="flex items-center gap-2">
             <span className="text-sm text-indigo-500">R$</span>
             <input
-              type="number"
-              min={minMensal}
-              step={0.01}
-              value={valorMensal}
-              onChange={(e) => setValorMensal(parseFloat(e.target.value) || 0)}
+              type="text"
+              inputMode="decimal"
+              value={valorMensalTexto}
+              onChange={(e) => setValorMensalTexto(e.target.value)}
+              onBlur={() => {
+                const v = parseMoeda(valorMensalTexto);
+                const final_ = Math.max(v, minMensal);
+                setValorMensalTexto(exibirMoeda(final_));
+              }}
               className="flex-1 px-3 py-2 text-lg font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded-xl"
             />
             <span className="text-sm font-semibold text-slate-500">/mês</span>
@@ -283,11 +301,15 @@ export function PropostaTab({
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">R$</span>
             <input
-              type="number"
-              min={minSetup}
-              step={0.01}
-              value={valorSetup}
-              onChange={(e) => setValorSetup(parseFloat(e.target.value) || 0)}
+              type="text"
+              inputMode="decimal"
+              value={valorSetupTexto}
+              onChange={(e) => setValorSetupTexto(e.target.value)}
+              onBlur={() => {
+                const v = parseMoeda(valorSetupTexto);
+                const final_ = Math.max(v, minSetup);
+                setValorSetupTexto(exibirMoeda(final_));
+              }}
               className="flex-1 px-3 py-2 text-lg font-extrabold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
           </div>
