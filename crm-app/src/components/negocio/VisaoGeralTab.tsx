@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes } from "@/lib/types";
 
@@ -43,7 +43,20 @@ export function VisaoGeralTab({
     }
     setSalvo(true);
     onAtualizarContato(campos);
-    setTimeout(() => setSalvo(false), 1500);
+    setTimeout(() => setSalvo(false), 2000);
+  };
+
+  const salvarTudo = () => {
+    salvarContato({
+      nome: nome.trim(),
+      empresa: empresa.trim() || null,
+      email: email.trim() || null,
+      telefone: telefone.trim() || null,
+      whatsapp: whatsapp.trim() || null,
+      cnpj: cnpj.trim() || null,
+      cargo: cargo.trim() || null,
+      estado: industria.trim() || null,
+    });
   };
 
   return (
@@ -73,7 +86,6 @@ export function VisaoGeralTab({
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              onBlur={() => nome.trim() && salvarContato({ nome: nome.trim() })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
@@ -82,7 +94,6 @@ export function VisaoGeralTab({
             <input
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
-              onBlur={() => salvarContato({ empresa: empresa.trim() || null })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
@@ -92,7 +103,6 @@ export function VisaoGeralTab({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => salvarContato({ email: email.trim() || null })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
@@ -101,7 +111,6 @@ export function VisaoGeralTab({
             <input
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
-              onBlur={() => salvarContato({ telefone: telefone.trim() || null })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
@@ -110,7 +119,6 @@ export function VisaoGeralTab({
             <input
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              onBlur={() => salvarContato({ whatsapp: whatsapp.trim() || null })}
               placeholder="(00) 00000-0000"
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
@@ -121,17 +129,14 @@ export function VisaoGeralTab({
           <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
             CNPJ <span className="text-rose-500">(obrigatório para gerar proposta)</span>
           </label>
-          <div className="flex items-center gap-2">
-            <input
-              value={cnpj}
-              onChange={(e) => setCnpj(e.target.value)}
-              onBlur={() => salvarContato({ cnpj: cnpj.trim() || null })}
-              placeholder="00.000.000/0000-00"
-              className={`flex-1 px-3 py-2 text-sm rounded-xl border ${
-                cnpj.trim() ? "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" : "border-amber-300 bg-amber-50 dark:bg-amber-950/30"
-              }`}
-            />
-          </div>
+          <input
+            value={cnpj}
+            onChange={(e) => setCnpj(e.target.value)}
+            placeholder="00.000.000/0000-00"
+            className={`w-full px-3 py-2 text-sm rounded-xl border ${
+              cnpj.trim() ? "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" : "border-amber-300 bg-amber-50 dark:bg-amber-950/30"
+            }`}
+          />
           {!cnpj.trim() && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
               Sem CNPJ não é possível gerar a proposta para este cliente.
@@ -145,7 +150,6 @@ export function VisaoGeralTab({
             <input
               value={cargo}
               onChange={(e) => setCargo(e.target.value)}
-              onBlur={() => salvarContato({ cargo: cargo.trim() || null })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
@@ -154,11 +158,19 @@ export function VisaoGeralTab({
             <input
               value={industria}
               onChange={(e) => setIndustria(e.target.value)}
-              onBlur={() => salvarContato({ estado: industria.trim() || null })}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
         </div>
+
+        <button
+          onClick={salvarTudo}
+          disabled={salvando || !nome.trim()}
+          className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl shadow-md flex items-center justify-center gap-2 transition-colors"
+        >
+          {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Salvar alterações
+        </button>
 
         <div>
           <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Origem</label>
