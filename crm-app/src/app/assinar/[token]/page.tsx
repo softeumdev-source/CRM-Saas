@@ -15,6 +15,8 @@ import {
   Building2,
   Mail,
   X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface EnvelopePublico {
@@ -48,6 +50,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [concluido, setConcluido] = useState(false);
   const [modalAssinatura, setModalAssinatura] = useState(false);
   const [emailFaturamento, setEmailFaturamento] = useState("");
+  const [tecnicaAberta, setTecnicaAberta] = useState(false);
 
   useEffect(() => {
     const supabase = createAnonClient();
@@ -219,47 +222,67 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 
-              <div className="mt-4 space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] font-bold uppercase text-slate-400">Proposta Comercial</p>
-                    <a
-                      href={comercialUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
-                    >
-                      <FileText className="h-3 w-3" /> Abrir em nova aba
-                    </a>
-                  </div>
-                  {temCamposPosicionados ? (
-                    <PdfSignViewer
-                      pdfUrl={comercialUrl}
-                      documento="comercial"
-                      campos={campos}
-                      signatarioOrdem={signatarioOrdem}
-                      assinado={concluido}
-                      onCampoClick={() => setModalAssinatura(true)}
-                    />
-                  ) : (
-                    <div className="rounded-xl overflow-hidden border border-slate-200">
-                      <iframe src={comercialUrl} className="w-full h-[500px]" title="Proposta Comercial" />
-                    </div>
-                  )}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-bold uppercase text-indigo-600">Proposta Comercial — documento para assinatura</p>
+                  <a
+                    href={comercialUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                  >
+                    <FileText className="h-3 w-3" /> Abrir em nova aba
+                  </a>
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] font-bold uppercase text-slate-400">Proposta Técnica</p>
-                    <a
-                      href={tecnicaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
-                    >
-                      <FileText className="h-3 w-3" /> Abrir em nova aba
-                    </a>
+                {temCamposPosicionados ? (
+                  <PdfSignViewer
+                    pdfUrl={comercialUrl}
+                    documento="comercial"
+                    campos={campos}
+                    signatarioOrdem={signatarioOrdem}
+                    assinado={concluido}
+                    onCampoClick={() => setModalAssinatura(true)}
+                  />
+                ) : (
+                  <div className="rounded-xl overflow-hidden border border-slate-200">
+                    <iframe src={comercialUrl} className="w-full h-[500px]" title="Proposta Comercial" />
                   </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl border border-indigo-200 shadow-xs p-6 space-y-4">
+              <h2 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <FileSignature className="h-4 w-4 text-indigo-600" />
+                Assinar Proposta Comercial como {dados.signatario.nome}
+              </h2>
+              {painelAssinatura}
+            </div>
+
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+              <button
+                onClick={() => setTecnicaAberta(!tecnicaAberta)}
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-slate-400" />
+                  <p className="text-xs font-bold text-slate-600">Proposta Técnica (referência)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={tecnicaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                  >
+                    <FileText className="h-3 w-3" /> Abrir em nova aba
+                  </a>
+                  {tecnicaAberta ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                </div>
+              </button>
+              {tecnicaAberta && (
+                <div className="px-6 pb-6">
                   {temCamposPosicionados && campos.some((c) => c.documento === "tecnica") ? (
                     <PdfSignViewer
                       pdfUrl={tecnicaUrl}
@@ -275,12 +298,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-4">
-              <h2 className="font-bold text-sm text-slate-900">Assinar como {dados.signatario.nome}</h2>
-              {painelAssinatura}
+              )}
             </div>
           </>
         )}
