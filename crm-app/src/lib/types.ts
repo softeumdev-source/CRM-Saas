@@ -13,6 +13,7 @@ export type Envelope = Tables<"envelopes">;
 export type Signatario = Tables<"signatarios">;
 export type Convite = Tables<"convites">;
 export type RegraDistribuicao = Tables<"regras_distribuicao">;
+export type NegocioEtapaHistorico = Tables<"negocio_etapa_historico">;
 
 export type NegocioComRelacoes = Negocio & {
   contato: Contato | null;
