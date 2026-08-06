@@ -102,6 +102,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // Piso efetivo que ESTA proposta respeita: base do plano, ou o piso rebaixado por
+  // um desconto aprovado (0 para admin, que precifica livre). É o valor gravado nos
+  // snapshots, e a CHECK do banco compara valor_plataforma >= snapshot — então o
+  // snapshot PRECISA refletir o desconto aprovado; do contrário a constraint rejeita
+  // um desconto que o admin já autorizou e a proposta nunca é gerada.
+  const pisoPlataformaSnapshot = isAdmin ? 0 : Math.min(Number(plano.valor_plataforma_base), pisoMensal);
+  const pisoUsoSnapshot = isAdmin ? 0 : Number(plano.valor_uso_base);
+
   const tenantId = negocio.tenant_id;
   if (!tenantId) {
     return NextResponse.json({ error: "Negócio sem tenant associado." }, { status: 500 });
@@ -206,8 +214,8 @@ export async function POST(request: Request) {
       valor_plataforma: valorPlataformaFinal,
       valor_uso: valorUsoFinal,
       valor_excedente_pedido: dados.valorExcedentePedido,
-      valor_plataforma_base_snapshot: plano.valor_plataforma_base,
-      valor_uso_base_snapshot: plano.valor_uso_base,
+      valor_plataforma_base_snapshot: pisoPlataformaSnapshot,
+      valor_uso_base_snapshot: pisoUsoSnapshot,
       qtd_caixas_email: qtdEmail,
       valor_modulo_email: valorModEmail,
       qtd_numeros_whatsapp: qtdWhats,
