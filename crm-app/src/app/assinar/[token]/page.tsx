@@ -2,7 +2,6 @@
 
 import { use, useEffect, useState } from "react";
 import { createAnonClient } from "@/lib/supabase/anon";
-import { SUPABASE_URL } from "@/lib/supabase/config";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PdfSignViewer } from "@/components/PdfSignViewer";
 import type { CampoAssinatura } from "@/components/PdfFieldEditor";
@@ -121,8 +120,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   if (!dados) return null;
 
-  const comercialUrl = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial.pdf`;
-  const tecnicaUrl = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica.pdf`;
+  const comercialUrl = `/api/pdf-publico/${token}/comercial.pdf`;
+  const tecnicaUrl = `/api/pdf-publico/${token}/tecnica.pdf`;
   const campos: CampoAssinatura[] = dados.envelope.campos_assinatura || [];
   const temCamposPosicionados = campos.length > 0;
   const signatarioOrdem = dados.signatario.ordem ?? 2;
