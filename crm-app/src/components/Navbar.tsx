@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Usuario, Notificacao } from "@/lib/types";
 import { iniciais } from "@/lib/types";
 import {
@@ -41,18 +42,17 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
     }
     carregar();
 
-    const channel = supabase
-      .channel("notificacoes-realtime")
-      .on(
+    const limpar = assinarRealtime("notificacoes-realtime", (canal) =>
+      canal.on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notificacoes", filter: `usuario_id=eq.${usuario.id}` },
         (payload) => setNotificacoes((prev) => [payload.new as Notificacao, ...prev])
       )
-      .subscribe();
+    );
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
+      limpar();
     };
   }, [usuario.id]);
 

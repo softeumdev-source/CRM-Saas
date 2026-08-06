@@ -4,33 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("envelopes-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, () => {
-        supabase
-          .from("envelopes")
-          .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))")
-          .order("criado_em", { ascending: false })
-          .then(({ data }) => data && setEnvelopes(data));
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "signatarios" }, () => {
-        supabase
-          .from("envelopes")
-          .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))")
-          .order("criado_em", { ascending: false })
-          .then(({ data }) => data && setEnvelopes(data));
-      })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
+    const recarregar = () => {
+      createClient()
+        .from("envelopes")
+        .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))")
+        .order("criado_em", { ascending: false })
+        .then(({ data }) => data && setEnvelopes(data));
     };
+    return assinarRealtime("envelopes-realtime", (canal) =>
+      canal
+        .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, recarregar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "signatarios" }, recarregar)
+    );
   }, []);
 
   const contadores = {
