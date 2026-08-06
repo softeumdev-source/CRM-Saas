@@ -18,33 +18,53 @@ const PLANO_VAZIO = {
   valor_excedente_pedido: 2,
 };
 
-export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
+export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[]; tenantId: string | null }) {
   const [planos, setPlanos] = useState(planosIniciais);
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState<Plano | null>(null);
   const [form, setForm] = useState<any>(PLANO_VAZIO);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
   const abrirNovo = () => {
     setEditando(null);
     setForm(PLANO_VAZIO);
+    setErro(null);
     setModalAberto(true);
   };
 
   const abrirEdicao = (p: Plano) => {
     setEditando(p);
     setForm({ ...p, valor_plataforma_base: (p.valor_plataforma_base || 0) + (p.valor_uso_base || 0), valor_uso_base: 0 });
+    setErro(null);
     setModalAberto(true);
   };
 
   const salvar = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...form, valor_uso_base: 0 };
+    setErro(null);
+    setSalvando(true);
     const supabase = createClient();
     if (editando) {
-      const { data } = await supabase.from("planos").update(payload).eq("id", editando.id).select().single();
+      // Não sobrescreve tenant_id nem id na atualização
+      const { id: _id, tenant_id: _tid, criado_em: _ce, ...campos } = form;
+      const payload = { ...campos, valor_uso_base: 0 };
+      const { data, error } = await supabase.from("planos").update(payload).eq("id", editando.id).select().single();
+      setSalvando(false);
+      if (error) {
+        setErro("Falha ao salvar plano: " + error.message);
+        return;
+      }
       if (data) setPlanos((prev) => prev.map((p) => (p.id === data.id ? data : p)));
     } else {
-      const { data } = await supabase.from("planos").insert(payload).select().single();
+      const { id: _id, tenant_id: _tid, criado_em: _ce, ...campos } = form;
+      const payload = { ...campos, valor_uso_base: 0, tenant_id: tenantId };
+      const { data, error } = await supabase.from("planos").insert(payload).select().single();
+      setSalvando(false);
+      if (error) {
+        setErro("Falha ao criar plano: " + error.message);
+        return;
+      }
       if (data) setPlanos((prev) => [...prev, data]);
     }
     setModalAberto(false);
@@ -53,7 +73,11 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
   const excluir = async (id: string) => {
     if (!confirm("Excluir este plano?")) return;
     const supabase = createClient();
-    await supabase.from("planos").delete().eq("id", id);
+    const { error } = await supabase.from("planos").delete().eq("id", id);
+    if (error) {
+      alert("Falha ao excluir plano: " + error.message);
+      return;
+    }
     setPlanos((prev) => prev.filter((p) => p.id !== id));
   };
 
@@ -108,9 +132,10 @@ export function PlanosTab({ planosIniciais }: { planosIniciais: Plano[] }) {
                 <Campo label="Mensalidade base (R$/mês)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
                 <Campo label="Setup (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
               </div>
+              {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
                 <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">Cancelar</button>
-                <button type="submit" className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md">Salvar plano</button>
+                <button type="submit" disabled={salvando} className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-60">{salvando ? "Salvando..." : "Salvar plano"}</button>
               </div>
             </form>
           </div>

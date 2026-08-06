@@ -693,6 +693,65 @@ export type Database = {
           },
         ]
       }
+      solicitacoes_desconto: {
+        Row: {
+          criado_em: string | null
+          decidido_em: string | null
+          decidido_por: string | null
+          id: string
+          motivo: string | null
+          negocio_id: string
+          plano_id: string | null
+          resposta_admin: string | null
+          status: string
+          tenant_id: string
+          valor_mensal_base: number
+          valor_mensal_solicitado: number
+          valor_setup_solicitado: number
+          vendedor_id: string | null
+        }
+        Insert: {
+          criado_em?: string | null
+          decidido_em?: string | null
+          decidido_por?: string | null
+          id?: string
+          motivo?: string | null
+          negocio_id: string
+          plano_id?: string | null
+          resposta_admin?: string | null
+          status?: string
+          tenant_id: string
+          valor_mensal_base?: number
+          valor_mensal_solicitado?: number
+          valor_setup_solicitado?: number
+          vendedor_id?: string | null
+        }
+        Update: {
+          criado_em?: string | null
+          decidido_em?: string | null
+          decidido_por?: string | null
+          id?: string
+          motivo?: string | null
+          negocio_id?: string
+          plano_id?: string | null
+          resposta_admin?: string | null
+          status?: string
+          tenant_id?: string
+          valor_mensal_base?: number
+          valor_mensal_solicitado?: number
+          valor_setup_solicitado?: number
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_desconto_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           cor_primaria: string | null
@@ -781,6 +840,24 @@ export type Database = {
           convite_id: string
           token: string
         }[]
+      }
+      decidir_desconto: {
+        Args: {
+          p_aprovar: boolean
+          p_resposta?: string
+          p_solicitacao_id: string
+        }
+        Returns: Database["public"]["Tables"]["solicitacoes_desconto"]["Row"]
+      }
+      solicitar_desconto: {
+        Args: {
+          p_motivo: string
+          p_negocio_id: string
+          p_plano_id: string
+          p_valor_mensal: number
+          p_valor_setup: number
+        }
+        Returns: Database["public"]["Tables"]["solicitacoes_desconto"]["Row"]
       }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
       obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
