@@ -64,16 +64,40 @@ export async function POST(request: Request) {
   const valorMensalSolicitado = valorPlataformaFinal + valorUsoFinal;
   const valorMensalBase = Number(plano.valor_plataforma_base) + Number(plano.valor_uso_base);
 
-  if (!isAdmin && valorMensalSolicitado < valorMensalBase) {
+  // Piso padrão: valor base do plano (mensal) e R$ 500 (setup) para vendedor.
+  // Um desconto aprovado pelo admin para este negócio rebaixa o piso ao valor liberado.
+  let pisoMensal = valorMensalBase;
+  let pisoSetup = 500;
+  if (!isAdmin) {
+    const { data: aprovacao } = await supabase
+      .from("solicitacoes_desconto")
+      .select("valor_mensal_solicitado, valor_setup_solicitado")
+      .eq("negocio_id", negocioId)
+      .eq("status", "aprovado")
+      .order("decidido_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (aprovacao) {
+      pisoMensal = Math.min(pisoMensal, Number(aprovacao.valor_mensal_solicitado));
+      pisoSetup = Math.min(pisoSetup, Number(aprovacao.valor_setup_solicitado));
+    }
+  }
+
+  if (!isAdmin && valorMensalSolicitado < pisoMensal) {
     return NextResponse.json(
-      { error: `O valor mensal não pode ser menor que ${valorMensalBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (valor base do plano).` },
+      {
+        error:
+          pisoMensal < valorMensalBase
+            ? `O valor mensal aprovado para este negócio é ${pisoMensal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}. Não é possível cobrar abaixo disso.`
+            : `O valor mensal não pode ser menor que ${valorMensalBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} (valor base do plano). Solicite aprovação de desconto ao admin.`,
+      },
       { status: 422 }
     );
   }
 
-  if (!isAdmin && valorSetup != null && Number(valorSetup) < 500) {
+  if (!isAdmin && valorSetup != null && Number(valorSetup) < pisoSetup) {
     return NextResponse.json(
-      { error: "O valor de setup mínimo para vendedor é R$ 500,00." },
+      { error: `O valor de setup mínimo para este negócio é ${pisoSetup.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.` },
       { status: 422 }
     );
   }

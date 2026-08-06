@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   FileText,
@@ -16,6 +16,9 @@ import {
   Eye,
   FileSignature,
   Trash2,
+  BadgePercent,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
@@ -85,16 +88,90 @@ export function PropostaTab({
   const [documentoEditor, setDocumentoEditor] = useState<"comercial" | "tecnica">("comercial");
 
   const setupPlano = (plano?.valor_setup_plataforma || 0) + (plano?.valor_setup_erp || 0) + (plano?.valor_setup_catalogo || 0);
-  const minSetup = isAdmin ? 0 : 500;
-  const [valorSetupTexto, setValorSetupTexto] = useState(exibirMoeda(Math.max(setupPlano, minSetup)));
 
   const temCnpj = !!negocio.contato?.cnpj?.trim();
   const valorMensalBase = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
+
+  // Solicitação de desconto (vendedor pede abaixo do plano; admin aprova)
+  const [solicitacao, setSolicitacao] = useState<any>(null);
+  const [motivoDesconto, setMotivoDesconto] = useState("");
+  const [enviandoSolic, setEnviandoSolic] = useState(false);
+  const [decidindo, setDecidindo] = useState(false);
+  const [respostaAdmin, setRespostaAdmin] = useState("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("solicitacoes_desconto")
+      .select("*")
+      .eq("negocio_id", negocio.id)
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setSolicitacao(data));
+  }, [negocio.id]);
+
+  const descontoAprovado = solicitacao?.status === "aprovado" ? solicitacao : null;
+  // Piso do vendedor: base do plano, rebaixado pelo desconto aprovado (se houver).
+  const minMensal = isAdmin
+    ? 0
+    : descontoAprovado
+      ? Math.min(valorMensalBase, Number(descontoAprovado.valor_mensal_solicitado))
+      : valorMensalBase;
+  const minSetup = isAdmin
+    ? 0
+    : descontoAprovado
+      ? Math.min(500, Number(descontoAprovado.valor_setup_solicitado))
+      : 500;
+
+  const [valorSetupTexto, setValorSetupTexto] = useState(exibirMoeda(Math.max(setupPlano, isAdmin ? 0 : 500)));
   const [valorMensalTexto, setValorMensalTexto] = useState(exibirMoeda(valorMensalBase));
-  const minMensal = isAdmin ? 0 : valorMensalBase;
 
   const valorMensal = parseMoeda(valorMensalTexto);
   const valorSetup = parseMoeda(valorSetupTexto);
+
+  // Vendedor abaixo do piso permitido → precisa de aprovação antes de gerar
+  const abaixoDoMinimo = !isAdmin && (valorMensal < minMensal - 0.001 || valorSetup < minSetup - 0.001);
+  const solicPendente = solicitacao?.status === "pendente";
+
+  const solicitarDesconto = async () => {
+    setEnviandoSolic(true);
+    setErro(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("solicitar_desconto", {
+      p_negocio_id: negocio.id,
+      p_plano_id: planoId,
+      p_valor_mensal: valorMensal,
+      p_valor_setup: valorSetup,
+      p_motivo: motivoDesconto.trim() || null,
+    } as any);
+    setEnviandoSolic(false);
+    if (error) {
+      setErro("Falha ao solicitar desconto: " + error.message);
+      return;
+    }
+    setSolicitacao(data);
+    setMotivoDesconto("");
+  };
+
+  const decidirDesconto = async (aprovar: boolean) => {
+    if (!solicitacao) return;
+    setDecidindo(true);
+    setErro(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("decidir_desconto", {
+      p_solicitacao_id: solicitacao.id,
+      p_aprovar: aprovar,
+      p_resposta: respostaAdmin.trim() || null,
+    } as any);
+    setDecidindo(false);
+    if (error) {
+      setErro("Falha ao decidir: " + error.message);
+      return;
+    }
+    setSolicitacao(data);
+    setRespostaAdmin("");
+  };
 
   const handleGerar = async () => {
     setErro(null);
@@ -275,18 +352,17 @@ export function PropostaTab({
               inputMode="decimal"
               value={valorMensalTexto}
               onChange={(e) => setValorMensalTexto(e.target.value)}
-              onBlur={() => {
-                const v = parseMoeda(valorMensalTexto);
-                const final_ = Math.max(v, minMensal);
-                setValorMensalTexto(exibirMoeda(final_));
-              }}
+              onBlur={() => setValorMensalTexto(exibirMoeda(parseMoeda(valorMensalTexto)))}
               className="flex-1 px-3 py-2 text-lg font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded-xl"
             />
             <span className="text-sm font-semibold text-slate-500">/mês</span>
           </div>
           {!isAdmin && (
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-              Valor mínimo do plano: {formatarMoeda(valorMensalBase)}. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
+              {descontoAprovado
+                ? `Desconto aprovado: pode cobrar a partir de ${formatarMoeda(minMensal)}.`
+                : `Valor mínimo do plano: ${formatarMoeda(valorMensalBase)}.`}{" "}
+              Excedente de {formatarMoeda(plano?.valor_excedente_pedido)} por pedido acima da franquia.
             </p>
           )}
           {isAdmin && (
@@ -305,11 +381,7 @@ export function PropostaTab({
               inputMode="decimal"
               value={valorSetupTexto}
               onChange={(e) => setValorSetupTexto(e.target.value)}
-              onBlur={() => {
-                const v = parseMoeda(valorSetupTexto);
-                const final_ = Math.max(v, minSetup);
-                setValorSetupTexto(exibirMoeda(final_));
-              }}
+              onBlur={() => setValorSetupTexto(exibirMoeda(parseMoeda(valorSetupTexto)))}
               className="flex-1 px-3 py-2 text-lg font-extrabold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
           </div>
@@ -334,11 +406,103 @@ export function PropostaTab({
           </div>
         </div>
 
+        {/* Aprovação de desconto */}
+        {isAdmin && solicPendente && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <BadgePercent className="h-4 w-4 text-amber-600" />
+              <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Pedido de desconto aguardando sua aprovação</p>
+            </div>
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              Mensalidade pedida: <strong>{formatarMoeda(Number(solicitacao.valor_mensal_solicitado))}</strong> (base do plano {formatarMoeda(Number(solicitacao.valor_mensal_base))})
+              {Number(solicitacao.valor_setup_solicitado) > 0 && <> · Setup: <strong>{formatarMoeda(Number(solicitacao.valor_setup_solicitado))}</strong></>}
+            </p>
+            {solicitacao.motivo && <p className="text-[11px] text-amber-700 dark:text-amber-400">Motivo: {solicitacao.motivo}</p>}
+            <input
+              value={respostaAdmin}
+              onChange={(e) => setRespostaAdmin(e.target.value)}
+              placeholder="Resposta ao vendedor (opcional)"
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-lg"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => decidirDesconto(true)}
+                disabled={decidindo}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
+              >
+                {decidindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
+              </button>
+              <button
+                onClick={() => decidirDesconto(false)}
+                disabled={decidindo}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg disabled:opacity-60"
+              >
+                <ThumbsDown className="h-3.5 w-3.5" /> Recusar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isAdmin && solicPendente && (
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              Desconto de <strong>{formatarMoeda(Number(solicitacao.valor_mensal_solicitado))}</strong> aguardando aprovação do admin. Você será notificado da decisão.
+            </p>
+          </div>
+        )}
+
+        {!isAdmin && solicitacao?.status === "recusado" && (
+          <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 rounded-xl p-3">
+            <p className="text-[11px] text-rose-700 dark:text-rose-400">
+              Último pedido de desconto foi recusado{solicitacao.resposta_admin ? ` — ${solicitacao.resposta_admin}` : ""}. Ajuste o valor ou solicite novamente.
+            </p>
+          </div>
+        )}
+
+        {!isAdmin && descontoAprovado && (
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 rounded-xl p-3 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+              Desconto aprovado: mensalidade a partir de <strong>{formatarMoeda(minMensal)}</strong>
+              {Number(descontoAprovado.valor_setup_solicitado) < 500 && <> e setup a partir de <strong>{formatarMoeda(minSetup)}</strong></>}.
+            </p>
+          </div>
+        )}
+
+        {abaixoDoMinimo && !solicPendente && (
+          <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-800 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <BadgePercent className="h-4 w-4 text-indigo-600" />
+              <p className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Valor abaixo do mínimo do plano</p>
+            </div>
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-400">
+              Para cobrar {formatarMoeda(valorMensal)}/mês{valorSetup < 500 ? ` e setup de ${formatarMoeda(valorSetup)}` : ""} você precisa de aprovação do admin.
+            </p>
+            <textarea
+              value={motivoDesconto}
+              onChange={(e) => setMotivoDesconto(e.target.value)}
+              placeholder="Justifique o desconto para o admin (ex.: concorrência, volume, relacionamento)"
+              rows={2}
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg"
+            />
+            <button
+              onClick={solicitarDesconto}
+              disabled={enviandoSolic}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60"
+            >
+              {enviandoSolic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgePercent className="h-3.5 w-3.5" />}
+              Solicitar aprovação de desconto
+            </button>
+          </div>
+        )}
+
         {erro && !editandoEnvioId && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
         <button
           onClick={handleGerar}
-          disabled={gerando || !temCnpj}
+          disabled={gerando || !temCnpj || abaixoDoMinimo}
+          title={abaixoDoMinimo ? "Valor abaixo do mínimo — solicite aprovação de desconto." : undefined}
           className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
         >
           {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
