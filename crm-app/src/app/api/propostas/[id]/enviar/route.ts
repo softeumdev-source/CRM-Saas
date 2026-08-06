@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
+import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
+import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
 interface SignatarioEntrada {
   nome: string;
@@ -106,6 +108,24 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const comercialBuffer = await comercialFile.data.arrayBuffer();
   const tecnicaBuffer = await tecnicaFile.data.arrayBuffer();
 
+  // O documento que vai para ASSINATURA não leva a nota de validade (a validade de
+  // 30 dias é da proposta ENVIADA para aceite, não do contrato que será assinado).
+  // Regenera o comercial com validadeDias=0 (definido em montarDadosDaProposta).
+  // Como a nota fica fora do fluxo, o layout é idêntico ao gerado e as posições dos
+  // campos de assinatura permanecem válidas. Em falha, cai no PDF original.
+  let comercialParaAssinar: ArrayBuffer | Uint8Array = comercialBuffer;
+  try {
+    const { data: plano } = proposta.plano_id
+      ? await admin.from("planos").select("nome, franquia_pedidos").eq("id", proposta.plano_id).single()
+      : { data: null };
+    if (plano && contato) {
+      const dados = montarDadosDaProposta(proposta as any, plano as any, contato as any);
+      comercialParaAssinar = await renderPropostaComercialPdf(dados);
+    }
+  } catch (e) {
+    console.error("Falha ao regerar comercial sem validade para assinatura; usando o original", e);
+  }
+
   const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
 
   let algumEmailEnviado = false;
@@ -114,7 +134,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   for (const sig of signatariosCriados) {
     const token = sig.token;
     const [upComercial, upTecnica] = await Promise.all([
-      admin.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialBuffer, {
+      admin.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialParaAssinar, {
         contentType: "application/pdf",
         upsert: true,
       }),
