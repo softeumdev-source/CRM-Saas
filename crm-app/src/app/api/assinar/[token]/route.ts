@@ -4,6 +4,8 @@ import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 import { enviarEmail, emailBase } from "@/lib/resend";
+import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
+import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
 interface CampoAssinatura {
   id: string;
@@ -63,82 +65,6 @@ async function embutirAssinaturasNoPdf(
         font,
         color: rgb(0.1, 0.1, 0.3),
       });
-    }
-  }
-
-  return doc.save();
-}
-
-async function embutirEmailFaturamento(
-  pdfBytes: ArrayBuffer | Uint8Array,
-  emailFaturamento: string
-): Promise<Uint8Array> {
-  const { inflateSync } = await import("zlib");
-  const { PDFName, PDFArray } = await import("pdf-lib");
-  const doc = await PDFDocument.load(pdfBytes);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-
-  for (let i = doc.getPageCount() - 1; i >= 0; i--) {
-    const page = doc.getPage(i);
-    try {
-      const contentsRef = page.node.get(PDFName.of("Contents"));
-      if (!contentsRef) continue;
-
-      const contentsObj = doc.context.lookup(contentsRef);
-      const streams: any[] = [];
-      if (contentsObj instanceof PDFArray) {
-        for (let j = 0; j < contentsObj.size(); j++) {
-          streams.push(doc.context.lookup(contentsObj.get(j)));
-        }
-      } else if (contentsObj) {
-        streams.push(contentsObj);
-      }
-
-      for (const stream of streams) {
-        if (!stream?.contents) continue;
-
-        let decoded: Buffer;
-        try {
-          decoded = inflateSync(Buffer.from(stream.contents));
-        } catch {
-          decoded = Buffer.from(stream.contents);
-        }
-
-        const text = decoded.toString("latin1");
-        if (!text.includes("Preenchido")) continue;
-
-        const ops = text.split("\n");
-        let curX = 0, curY = 0;
-
-        for (const op of ops) {
-          const tm = op.match(/([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+Tm/);
-          if (tm) { curX = parseFloat(tm[5]); curY = parseFloat(tm[6]); }
-
-          const td = op.match(/([-\d.]+)\s+([-\d.]+)\s+Td/);
-          if (td) { curX += parseFloat(td[1]); curY += parseFloat(td[2]); }
-
-          if (op.includes("Preenchido")) {
-            page.drawRectangle({
-              x: curX - 1,
-              y: curY - 3,
-              width: 200,
-              height: 14,
-              color: rgb(1, 1, 1),
-              borderWidth: 0,
-            });
-            page.drawText(emailFaturamento, {
-              x: curX,
-              y: curY,
-              size: 8.5,
-              font,
-              color: rgb(0.12, 0.16, 0.23),
-            });
-            return doc.save();
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Falha ao buscar placeholder para email de faturamento", e);
     }
   }
 
@@ -253,7 +179,18 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
         const numero = info?.proposta?.numero || "";
         const titulo = info?.negocio?.titulo || "";
-        const emailFat = (todosSig || []).map((s: any) => s.email_faturamento?.trim()).find(Boolean) || email_faturamento?.trim() || "";
+
+        // E-mails de faturamento preenchidos pelos signatários, SEM duplicar:
+        // se 3 pessoas da empresa assinam e digitam o mesmo e-mail, ele aparece
+        // uma vez só (dedup sem diferenciar maiúsculas/minúsculas).
+        const emailsFatMap = new Map<string, string>();
+        for (const s of todosSig || []) {
+          const e = (s.email_faturamento || "").trim();
+          if (e) emailsFatMap.set(e.toLowerCase(), e);
+        }
+        const eAtual = (email_faturamento || "").trim();
+        if (eAtual) emailsFatMap.set(eAtual.toLowerCase(), eAtual);
+        const emailFat = [...emailsFatMap.values()].join(", ");
 
         const [comercialResp, tecnicaResp] = await Promise.all([
           fetch(`${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial.pdf`),
@@ -261,8 +198,39 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         ]);
 
         if (comercialResp.ok && tecnicaResp.ok) {
+          // Regera o comercial com o(s) e-mail(s) de faturamento preenchido(s),
+          // renderizando nativamente (react-pdf) em vez de "carimbar" texto no
+          // PDF pronto — o que dependia do encoding e falhava silenciosamente.
+          // Layout idêntico ao original → posições de assinatura preservadas.
+          // Em qualquer falha, cai no PDF original já enviado.
           let comercialBuf: ArrayBuffer | Uint8Array = await comercialResp.arrayBuffer();
           let tecnicaBuf: ArrayBuffer | Uint8Array = await tecnicaResp.arrayBuffer();
+
+          if (emailFat) {
+            try {
+              const { data: envRow } = await admin
+                .from("envelopes")
+                .select("proposta_id")
+                .eq("id", signatariosData?.envelope_id || "")
+                .single();
+              const { data: prop } = await admin
+                .from("propostas")
+                .select("*")
+                .eq("id", envRow?.proposta_id || "")
+                .single();
+              const [{ data: pl }, { data: neg }] = await Promise.all([
+                admin.from("planos").select("nome, franquia_pedidos").eq("id", prop?.plano_id || "").single(),
+                admin.from("negocios").select("contato:contatos(nome, empresa, cnpj, email)").eq("id", prop?.negocio_id || "").single(),
+              ]);
+              const contato = (neg as any)?.contato;
+              if (prop && pl && contato) {
+                const dados = montarDadosDaProposta(prop as any, pl as any, contato, { emailFaturamento: emailFat });
+                comercialBuf = await renderPropostaComercialPdf(dados);
+              }
+            } catch (e) {
+              console.error("Falha ao regerar comercial com email de faturamento; usando o original", e);
+            }
+          }
 
           if (camposAssinatura.length > 0 && todosSig) {
             for (const sig of todosSig) {
@@ -277,10 +245,6 @@ export async function POST(request: Request, context: { params: Promise<{ token:
                 }
               }
             }
-          }
-
-          if (emailFat) {
-            comercialBuf = await embutirEmailFaturamento(comercialBuf, emailFat);
           }
 
           const comercialAssinado = await gerarPdfComCertificado(comercialBuf, {

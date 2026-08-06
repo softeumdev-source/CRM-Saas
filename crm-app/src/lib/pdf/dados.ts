@@ -25,6 +25,8 @@ export interface DadosProposta {
 
   emailMonitorado1?: string;
   providerEmail1?: string;
+  /** Preenchido pelo cliente na assinatura. Vazio na proposta original. */
+  emailFaturamento?: string;
   emailMonitorado2?: string;
   providerEmail2?: string;
   whatsapp1?: string;

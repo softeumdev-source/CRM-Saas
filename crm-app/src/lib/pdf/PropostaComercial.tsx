@@ -121,7 +121,7 @@ function Corpo({ d }: { d: DadosProposta }) {
       <View style={estilos.tabela}>
         <View style={estilos.linha}><Text style={estilos.celula}>Razão Social</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteRazaoSocial}</Text></View>
         <View style={estilos.linha}><Text style={estilos.celula}>CNPJ</Text><Text style={[estilos.celula, { borderRightWidth: 0 }]}>{d.clienteCnpj}</Text></View>
-        <View style={estilos.linha}><Text style={estilos.celula}>E-mail para faturamento</Text><Text style={[estilos.celula, { borderRightWidth: 0, color: "#94a3b8" }]}>Preenchido na assinatura</Text></View>
+        <View style={estilos.linha}><Text style={estilos.celula}>E-mail para faturamento</Text><Text style={[estilos.celula, { borderRightWidth: 0, color: d.emailFaturamento ? "#1e293b" : "#94a3b8" }]}>{d.emailFaturamento || "Preenchido na assinatura"}</Text></View>
       </View>
 
       <Rodape d={d} />
