@@ -20,7 +20,7 @@ export function KanbanPageClient({
   const [modalAberto, setModalAberto] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 pt-5 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Pipeline de Vendas</h1>

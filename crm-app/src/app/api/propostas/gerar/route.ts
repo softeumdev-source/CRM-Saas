@@ -158,7 +158,7 @@ export async function POST(request: Request) {
     condicaoSetup: "100% no aceite da proposta",
     vencimentoMensal: "todo dia 10",
     indiceReajuste: "IPCA",
-    validadeDias: 15,
+    validadeDias: 30,
     sla: "99% de disponibilidade mensal",
     softeumAssinante: "Softeum Tecnologia",
     softeumAssinanteEmail: "contato@softeum.com.br",

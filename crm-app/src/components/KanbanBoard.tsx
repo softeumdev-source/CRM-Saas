@@ -57,8 +57,8 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="flex-1 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
-      <div className="flex gap-4 min-w-max">
+    <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
+      <div className="flex gap-4 min-w-max h-full">
         {etapas.map((etapa) => {
           const hoje = new Date().toDateString();
           const doEtapa = negocios
@@ -77,7 +77,7 @@ export function KanbanBoard({
               key={etapa.id}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, etapa.id)}
-              className="w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 min-h-[70vh]"
+              className="w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full"
               style={{
                 borderColor: (etapa.cor || "#6366f1") + "40",
                 background: (etapa.cor || "#6366f1") + "0a",
@@ -108,7 +108,7 @@ export function KanbanBoard({
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
                 {doEtapa.length === 0 ? (
                   <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 text-center">
                     <Layers className="h-6 w-6 text-slate-300 dark:text-slate-600 mb-1" />

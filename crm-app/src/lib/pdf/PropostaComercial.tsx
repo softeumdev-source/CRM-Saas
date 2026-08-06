@@ -35,6 +35,14 @@ function LinkAzul({ url, label }: { url: string; label?: string }) {
 function Corpo({ d }: { d: DadosProposta }) {
   return (
     <Page size="A4" style={estilos.page}>
+      {/* Validade renderizada FORA do fluxo (position:absolute + fixed): aparece na
+          proposta gerada e some na versão de assinatura (validadeDias=0) SEM deslocar
+          o conteúdo, preservando as coordenadas dos campos de assinatura. */}
+      {d.validadeDias > 0 && (
+        <Text fixed style={estilos.validadeNota}>
+          Proposta válida para aceite por {d.validadeDias} dias a partir da emissão ({d.data})
+        </Text>
+      )}
       <Text style={estilos.h1}>1. INTRODUÇÃO</Text>
       <Text style={estilos.p}>
         Este documento apresenta os valores totais e condições comerciais a serem investidos na
@@ -82,15 +90,14 @@ function Corpo({ d }: { d: DadosProposta }) {
       <Text style={estilos.li}>h) O excedente de pedidos processados além da franquia contratada será cobrado a {formatarBRL(d.valorExcedentePedido)} por pedido processado adicional, apurado e faturado mensalmente junto com a mensalidade.</Text>
 
       <Text style={estilos.h1}>4. CONDIÇÕES GERAIS</Text>
-      <Text style={estilos.li}>a) As condições desta proposta são válidas para aceite em até {d.validadeDias} dias após a data de emissão. A partir de sua expiração, as condições poderão ser revistas.</Text>
-      <Text style={estilos.li}>b) {d.clienteRazaoSocial} declara que todos os dados cadastrais contidos nesta Proposta Comercial são verdadeiros e válidos, tendo ciência de que a Softeum procederá com o faturamento nos termos e condições indicados nesta Proposta Comercial.</Text>
-      <Text style={estilos.li}>c) O contratante é responsável por manter válidas as credenciais de acesso às caixas de e-mail, aos números de WhatsApp e ao ERP, incluindo as autorizações OAuth necessárias à ingestão sem interrupção.</Text>
-      <Text style={estilos.li}>d) A integração ao ERP é realizada pelo contratante no modelo self-service, consumindo a API documentada e a chave gerada no próprio painel (Admin de TI); eventuais desenvolvimentos no ERP são de responsabilidade de {d.clienteRazaoSocial}. Alternativamente, a Softeum pode entregar o pedido diretamente no endpoint do ERP (push/webhook), conforme configuração. Os dois modos são excludentes.</Text>
-      <Text style={estilos.li}>e) A Softeum extrai, normaliza e entrega os pedidos; nenhum item de pedido é criado fora do catálogo cadastrado pelo contratante. O de-para valida de forma determinística contra o catálogo.</Text>
-      <Text style={estilos.li}>f) Proteção de dados (LGPD): os dados são tratados conforme a legislação aplicável, com isolamento por cliente (tenant) e criptografia das credenciais em repouso. Segredos e chaves nunca são expostos ao navegador.</Text>
-      <Text style={estilos.li}>g) A presente documentação é de propriedade da Softeum, tem caráter confidencial e não poderá ser objeto de reprodução total ou parcial, nem de cessão de uso, sem o consentimento prévio por escrito da Softeum.</Text>
-      <Text style={estilos.li}>h) Nível de serviço e disponibilidade conforme {d.sla}. Indisponibilidades de provedores de terceiros (Gmail, Microsoft, Meta, ERP do cliente e gateways de pagamento) não constituem indisponibilidade da Softeum.</Text>
-      <Text style={estilos.li}>i) Dúvidas, chamados e suporte técnico:</Text>
+      <Text style={estilos.li}>a) {d.clienteRazaoSocial} declara que todos os dados cadastrais contidos nesta Proposta Comercial são verdadeiros e válidos, tendo ciência de que a Softeum procederá com o faturamento nos termos e condições indicados nesta Proposta Comercial.</Text>
+      <Text style={estilos.li}>b) O contratante é responsável por manter válidas as credenciais de acesso às caixas de e-mail, aos números de WhatsApp e ao ERP, incluindo as autorizações OAuth necessárias à ingestão sem interrupção.</Text>
+      <Text style={estilos.li}>c) A integração ao ERP é realizada pelo contratante no modelo self-service, consumindo a API documentada e a chave gerada no próprio painel (Admin de TI); eventuais desenvolvimentos no ERP são de responsabilidade de {d.clienteRazaoSocial}. Alternativamente, a Softeum pode entregar o pedido diretamente no endpoint do ERP (push/webhook), conforme configuração. Os dois modos são excludentes.</Text>
+      <Text style={estilos.li}>d) A Softeum extrai, normaliza e entrega os pedidos; nenhum item de pedido é criado fora do catálogo cadastrado pelo contratante. O de-para valida de forma determinística contra o catálogo.</Text>
+      <Text style={estilos.li}>e) Proteção de dados (LGPD): os dados são tratados conforme a legislação aplicável, com isolamento por cliente (tenant) e criptografia das credenciais em repouso. Segredos e chaves nunca são expostos ao navegador.</Text>
+      <Text style={estilos.li}>f) A presente documentação é de propriedade da Softeum, tem caráter confidencial e não poderá ser objeto de reprodução total ou parcial, nem de cessão de uso, sem o consentimento prévio por escrito da Softeum.</Text>
+      <Text style={estilos.li}>g) Nível de serviço e disponibilidade conforme {d.sla}. Indisponibilidades de provedores de terceiros (Gmail, Microsoft, Meta, ERP do cliente e gateways de pagamento) não constituem indisponibilidade da Softeum.</Text>
+      <Text style={estilos.li}>h) Dúvidas, chamados e suporte técnico:</Text>
       <LinkAzul url={d.linkSuporte} />
 
       <Text style={estilos.h1}>5. ACEITE DA PROPOSTA</Text>

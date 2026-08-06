@@ -27,9 +27,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+    <div className="h-screen overflow-hidden bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
       <Navbar usuario={usuario} />
-      <main className="flex-1 flex flex-col overflow-y-auto">{children}</main>
+      <main className="flex-1 min-h-0 flex flex-col overflow-y-auto">{children}</main>
     </div>
   );
 }

@@ -206,7 +206,12 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           let comercialBuf: ArrayBuffer | Uint8Array = await comercialResp.arrayBuffer();
           let tecnicaBuf: ArrayBuffer | Uint8Array = await tecnicaResp.arrayBuffer();
 
-          if (emailFat) {
+          // Sempre regenera o comercial para assinatura (mesmo sem e-mail de
+          // faturamento): é assim que a NOTA DE VALIDADE sai do documento assinado
+          // (montarDados usa validadeDias=0). Como a nota fica fora do fluxo, o
+          // layout é idêntico ao original e as posições de assinatura se mantêm.
+          // Em qualquer falha, cai no PDF original já enviado.
+          {
             try {
               const { data: envRow } = await admin
                 .from("envelopes")
