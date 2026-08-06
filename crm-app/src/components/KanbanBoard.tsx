@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Layers } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { LeadCard } from "@/components/LeadCard";
@@ -23,19 +24,14 @@ export function KanbanBoard({
   useEffect(() => setNegocios(negociosIniciais), [negociosIniciais]);
 
   useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("negocios-kanban")
-      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, () => {
-        supabase
+    return assinarRealtime("negocios-kanban", (canal) =>
+      canal.on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, () => {
+        createClient()
           .from("negocios")
           .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
           .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
       })
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    );
   }, []);
 
   const handleDrop = async (e: React.DragEvent, etapaId: string) => {

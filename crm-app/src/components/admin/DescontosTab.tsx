@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BadgePercent, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import { formatarMoeda } from "@/lib/types";
 
 const SELECT =
@@ -27,21 +28,16 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
     const recarregar = () => {
-      supabase
+      createClient()
         .from("solicitacoes_desconto")
         .select(SELECT)
         .order("criado_em", { ascending: false })
         .then(({ data }) => data && setSolicitacoes(data));
     };
-    const channel = supabase
-      .channel("descontos-admin")
-      .on("postgres_changes", { event: "*", schema: "public", table: "solicitacoes_desconto" }, recarregar)
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return assinarRealtime("descontos-admin", (canal) =>
+      canal.on("postgres_changes", { event: "*", schema: "public", table: "solicitacoes_desconto" }, recarregar)
+    );
   }, []);
 
   const ordenadas = useMemo(() => {
