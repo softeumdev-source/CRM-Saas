@@ -15,6 +15,7 @@ import {
   Bell,
   LogOut,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -64,6 +65,19 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
     const ids = notificacoes.filter((n) => !n.lida).map((n) => n.id);
     await supabase.from("notificacoes").update({ lida: true }).in("id", ids);
     setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
+  };
+
+  const [limpando, setLimpando] = useState(false);
+  const limparNotificacoes = async () => {
+    if (notificacoes.length === 0 || limpando) return;
+    setLimpando(true);
+    const supabase = createClient();
+    const ids = notificacoes.map((n) => n.id);
+    const anteriores = notificacoes;
+    setNotificacoes([]);
+    const { error } = await supabase.from("notificacoes").delete().in("id", ids);
+    if (error) setNotificacoes(anteriores);
+    setLimpando(false);
   };
 
   const handleLogout = async () => {
@@ -136,8 +150,18 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             </button>
             {showNotifs && (
               <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Notificações
+                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Notificações</span>
+                  {notificacoes.length > 0 && (
+                    <button
+                      onClick={limparNotificacoes}
+                      disabled={limpando}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-rose-600 disabled:opacity-50"
+                    >
+                      {limpando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      Limpar
+                    </button>
+                  )}
                 </div>
                 {notificacoes.length === 0 ? (
                   <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificação ainda.</p>
