@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, FileSignature, Download } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
+  const [busca, setBusca] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -38,6 +39,26 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
     cancelado: envelopes.filter((e) => e.status === "cancelado").length,
   };
 
+  const termo = busca.trim().toLowerCase();
+  const termoDigitos = termo.replace(/\D/g, "");
+  const envelopesFiltrados = !termo
+    ? envelopes
+    : envelopes.filter((env) => {
+        const contato = env.proposta?.negocio?.contato;
+        const cnpjDigitos = (contato?.cnpj || "").replace(/\D/g, "");
+        if (termoDigitos.length >= 3 && cnpjDigitos.includes(termoDigitos)) return true;
+        const campos = [
+          contato?.empresa,
+          contato?.nome,
+          contato?.cnpj,
+          contato?.email,
+          env.proposta?.numero,
+          env.proposta?.negocio?.responsavel?.nome,
+          ...(env.signatarios || []).flatMap((s: any) => [s.nome, s.email]),
+        ];
+        return campos.some((v) => v && String(v).toLowerCase().includes(termo));
+      });
+
   return (
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
       <div className="flex items-center gap-2">
@@ -60,9 +81,22 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
         </div>
       </div>
 
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por empresa, nome, CNPJ, e-mail, nº da proposta ou signatário..."
+          className="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+        />
+      </div>
+
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
         {envelopes.length === 0 && <p className="p-6 text-xs text-slate-400 text-center">Nenhum envelope de assinatura ainda.</p>}
-        {envelopes.map((env) => {
+        {envelopes.length > 0 && envelopesFiltrados.length === 0 && (
+          <p className="p-6 text-xs text-slate-400 text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
+        )}
+        {envelopesFiltrados.map((env) => {
           const negocio = env.proposta?.negocio;
           const assinadoComercial = env.proposta?.pdf_assinado_comercial_path;
           const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
