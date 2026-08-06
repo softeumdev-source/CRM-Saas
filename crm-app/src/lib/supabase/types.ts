@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
@@ -74,6 +76,7 @@ export type Database = {
       }
       contatos: {
         Row: {
+          area: string | null
           atualizado_em: string | null
           cargo: string | null
           cidade: string | null
@@ -86,12 +89,15 @@ export type Database = {
           nome: string
           origem: string | null
           responsavel_id: string | null
+          sobrenome: string | null
           tags: string[] | null
           telefone: string | null
+          telefone_comercial: string | null
           tenant_id: string | null
           whatsapp: string | null
         }
         Insert: {
+          area?: string | null
           atualizado_em?: string | null
           cargo?: string | null
           cidade?: string | null
@@ -104,12 +110,15 @@ export type Database = {
           nome: string
           origem?: string | null
           responsavel_id?: string | null
+          sobrenome?: string | null
           tags?: string[] | null
           telefone?: string | null
+          telefone_comercial?: string | null
           tenant_id?: string | null
           whatsapp?: string | null
         }
         Update: {
+          area?: string | null
           atualizado_em?: string | null
           cargo?: string | null
           cidade?: string | null
@@ -122,8 +131,10 @@ export type Database = {
           nome?: string
           origem?: string | null
           responsavel_id?: string | null
+          sobrenome?: string | null
           tags?: string[] | null
           telefone?: string | null
+          telefone_comercial?: string | null
           tenant_id?: string | null
           whatsapp?: string | null
         }
@@ -197,6 +208,7 @@ export type Database = {
       }
       envelopes: {
         Row: {
+          campos_assinatura: Json | null
           concluido_em: string | null
           copias_emails: string[] | null
           criado_em: string | null
@@ -206,6 +218,7 @@ export type Database = {
           tenant_id: string | null
         }
         Insert: {
+          campos_assinatura?: Json | null
           concluido_em?: string | null
           copias_emails?: string[] | null
           criado_em?: string | null
@@ -215,6 +228,7 @@ export type Database = {
           tenant_id?: string | null
         }
         Update: {
+          campos_assinatura?: Json | null
           concluido_em?: string | null
           copias_emails?: string[] | null
           criado_em?: string | null
@@ -275,6 +289,48 @@ export type Database = {
           },
         ]
       }
+      negocio_etapa_historico: {
+        Row: {
+          entrou_em: string
+          etapa_id: string | null
+          id: string
+          negocio_id: string
+          saiu_em: string | null
+          tenant_id: string
+        }
+        Insert: {
+          entrou_em?: string
+          etapa_id?: string | null
+          id?: string
+          negocio_id: string
+          saiu_em?: string | null
+          tenant_id: string
+        }
+        Update: {
+          entrou_em?: string
+          etapa_id?: string | null
+          id?: string
+          negocio_id?: string
+          saiu_em?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negocio_etapa_historico_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "etapas_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negocio_etapa_historico_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       negocios: {
         Row: {
           atualizado_em: string | null
@@ -282,6 +338,7 @@ export type Database = {
           criado_em: string | null
           data_fechamento_prevista: string | null
           etapa_id: string | null
+          fechado_em: string | null
           ganho: boolean | null
           id: string
           motivo_perda: string | null
@@ -299,6 +356,7 @@ export type Database = {
           criado_em?: string | null
           data_fechamento_prevista?: string | null
           etapa_id?: string | null
+          fechado_em?: string | null
           ganho?: boolean | null
           id?: string
           motivo_perda?: string | null
@@ -316,6 +374,7 @@ export type Database = {
           criado_em?: string | null
           data_fechamento_prevista?: string | null
           etapa_id?: string | null
+          fechado_em?: string | null
           ganho?: boolean | null
           id?: string
           motivo_perda?: string | null
@@ -744,10 +803,38 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "solicitacoes_desconto_decidido_por_fkey"
+            columns: ["decidido_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "solicitacoes_desconto_negocio_id_fkey"
             columns: ["negocio_id"]
             isOneToOne: false
             referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_desconto_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_desconto_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_desconto_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -847,21 +934,32 @@ export type Database = {
           p_resposta?: string
           p_solicitacao_id: string
         }
-        Returns: Database["public"]["Tables"]["solicitacoes_desconto"]["Row"]
-      }
-      solicitar_desconto: {
-        Args: {
-          p_motivo: string
-          p_negocio_id: string
-          p_plano_id: string
-          p_valor_mensal: number
-          p_valor_setup: number
+        Returns: {
+          criado_em: string | null
+          decidido_em: string | null
+          decidido_por: string | null
+          id: string
+          motivo: string | null
+          negocio_id: string
+          plano_id: string | null
+          resposta_admin: string | null
+          status: string
+          tenant_id: string
+          valor_mensal_base: number
+          valor_mensal_solicitado: number
+          valor_setup_solicitado: number
+          vendedor_id: string | null
         }
-        Returns: Database["public"]["Tables"]["solicitacoes_desconto"]["Row"]
+        SetofOptions: {
+          from: "*"
+          to: "solicitacoes_desconto"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
       obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
-      processar_lembretes: { Args: Record<string, never>; Returns: number }
+      processar_lembretes: { Args: never; Returns: number }
       registrar_assinatura: {
         Args: {
           p_dados: string
@@ -881,8 +979,39 @@ export type Database = {
         }
         Returns: undefined
       }
-      usuario_role: { Args: Record<string, never>; Returns: string }
-      usuario_tenant_id: { Args: Record<string, never>; Returns: string }
+      solicitar_desconto: {
+        Args: {
+          p_motivo: string
+          p_negocio_id: string
+          p_plano_id: string
+          p_valor_mensal: number
+          p_valor_setup: number
+        }
+        Returns: {
+          criado_em: string | null
+          decidido_em: string | null
+          decidido_por: string | null
+          id: string
+          motivo: string | null
+          negocio_id: string
+          plano_id: string | null
+          resposta_admin: string | null
+          status: string
+          tenant_id: string
+          valor_mensal_base: number
+          valor_mensal_solicitado: number
+          valor_setup_solicitado: number
+          vendedor_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "solicitacoes_desconto"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      usuario_role: { Args: never; Returns: string }
+      usuario_tenant_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never

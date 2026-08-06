@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Users, BarChart3, Package, UserSquare2 } from "lucide-react";
+import { Users, BarChart3, Package, UserSquare2, LineChart } from "lucide-react";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
 import { LeadsTab } from "@/components/admin/LeadsTab";
+import { DesempenhoTab } from "@/components/admin/DesempenhoTab";
 
 export function AdminClient({
   usuarios,
@@ -16,6 +17,7 @@ export function AdminClient({
   etapas,
   contatosSemDono,
   contatosComDono,
+  historicoEtapas,
   usuarioAtual,
 }: {
   usuarios: Usuario[];
@@ -25,9 +27,10 @@ export function AdminClient({
   etapas: EtapaPipeline[];
   contatosSemDono: Contato[];
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
+  historicoEtapas?: { negocio_id: string; etapa_id: string | null }[];
   usuarioAtual: Usuario;
 }) {
-  const [aba, setAba] = useState<"vendedores" | "funil" | "planos" | "leads">("vendedores");
+  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads">("desempenho");
   const vendedores = usuarios.filter((u) => u.role === "vendedor");
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
 
@@ -46,6 +49,7 @@ export function AdminClient({
 
         <div className="flex flex-wrap items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shrink-0">
           {[
+            { id: "desempenho", label: "Desempenho", icon: LineChart },
             { id: "vendedores", label: `Vendedores (${vendedoresAtivos.length})`, icon: Users },
             { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
@@ -68,6 +72,7 @@ export function AdminClient({
         </div>
       </div>
 
+      {aba === "desempenho" && <DesempenhoTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} historicoEtapas={historicoEtapas || []} />}
       {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}

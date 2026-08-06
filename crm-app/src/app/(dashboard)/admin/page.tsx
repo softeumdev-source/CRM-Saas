@@ -13,7 +13,7 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, { data: etapas }, { data: contatosSemDono }, { data: contatosComDono }] = await Promise.all([
+  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, { data: etapas }, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }] = await Promise.all([
     supabase.from("usuarios").select("*").order("criado_em"),
     supabase.from("convites").select("*").order("criado_em", { ascending: false }),
     supabase.from("planos").select("*").order("valor_plataforma_base"),
@@ -21,6 +21,7 @@ export default async function AdminPage() {
     supabase.from("etapas_pipeline").select("*").order("ordem"),
     supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }),
     supabase.from("contatos").select("*, responsavel:usuarios(id, nome)").not("responsavel_id", "is", null).order("criado_em", { ascending: false }).limit(1000),
+    supabase.from("negocio_etapa_historico").select("negocio_id, etapa_id"),
   ]);
 
   return (
@@ -32,6 +33,7 @@ export default async function AdminPage() {
       etapas={etapas || []}
       contatosSemDono={contatosSemDono || []}
       contatosComDono={(contatosComDono as any) || []}
+      historicoEtapas={historicoEtapas || []}
       usuarioAtual={usuarioAtual}
     />
   );
