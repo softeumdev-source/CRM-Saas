@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FileSignature, ChevronLeft, ChevronRight, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { FileSignature, ChevronLeft, ChevronRight, Loader2, CheckCircle2 } from "lucide-react";
 import type { CampoAssinatura } from "./PdfFieldEditor";
 
 const CORES = [
@@ -46,17 +46,32 @@ export function PdfSignViewer({
       await page.render({ canvasContext: ctx, viewport }).promise;
     } catch (e: any) {
       console.error("Erro ao renderizar pagina", e);
+      // Desenhar no canvas falhou (deixaria a tela em branco sem aviso) —
+      // cai no fallback nativo para o cliente não ficar sem a proposta.
+      setErro((atual) => atual ?? "Não foi possível desenhar o documento.");
     }
   }, []);
 
   useEffect(() => {
     let cancelado = false;
+    let carregou = false;
+    // Rede lenta ou browser sem suporte a worker de módulo (ex.: alguns
+    // celulares) podem travar o pdf.js no "carregando" para sempre. O timeout
+    // garante que caímos no visualizador nativo (iframe) em vez de tela vazia.
+    const timeout = setTimeout(() => {
+      if (cancelado || carregou) return;
+      setErro("O visualizador demorou a responder.");
+      setCarregando(false);
+    }, 8000);
+
     (async () => {
       try {
         const pdfjsLib = await import("pdfjs-dist");
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
         const doc = await pdfjsLib.getDocument({ url: pdfUrl, withCredentials: false }).promise;
         if (cancelado) return;
+        carregou = true;
+        clearTimeout(timeout);
         pdfDocRef.current = doc;
         setTotalPaginas(doc.numPages);
         setCarregando(false);
@@ -70,12 +85,13 @@ export function PdfSignViewer({
         }
       } catch (e: any) {
         if (cancelado) return;
+        clearTimeout(timeout);
         console.error("Erro ao carregar PDF", e);
         setCarregando(false);
         setErro(e?.message || "Não foi possível carregar o documento.");
       }
     })();
-    return () => { cancelado = true; };
+    return () => { cancelado = true; clearTimeout(timeout); };
   }, [pdfUrl, renderizarPagina, campos, documento, signatarioOrdem]);
 
   useEffect(() => {
@@ -101,20 +117,26 @@ export function PdfSignViewer({
   }
 
   if (erro) {
+    // Fallback universal: o visualizador com campos clicáveis (pdf.js) falhou,
+    // mas o cliente PRECISA ver a proposta. Mostramos o PDF nativo do navegador
+    // (iframe) — que funciona sem pdf.js — e um botão para abrir em tela cheia,
+    // essencial no celular, onde o iframe às vezes não renderiza inline.
     return (
-      <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2 text-amber-800">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="text-xs font-bold">Não foi possível carregar o documento no visualizador.</p>
+      <div className="space-y-3">
+        <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+          <iframe src={pdfUrl} className="w-full h-[500px]" title="Proposta" />
         </div>
         <a
           href={pdfUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md"
         >
-          Abrir PDF diretamente
+          <FileSignature className="h-4 w-4" /> Abrir proposta em tela cheia
         </a>
+        <p className="text-[11px] text-slate-500 text-center">
+          Você pode ler a proposta acima e assinar no painel abaixo normalmente.
+        </p>
       </div>
     );
   }
