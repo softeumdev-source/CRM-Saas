@@ -41,6 +41,19 @@ const STATUS_COR: Record<string, string> = {
   cancelada: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
 };
 
+// A proposta vale 30 dias para aceite (a partir da emissão). Passado esse prazo,
+// e ainda não assinada, sinaliza que é preciso gerar uma nova.
+const VALIDADE_PROPOSTA_DIAS = 30;
+function diasDesde(iso?: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+function propostaVencida(p: { status?: string; criado_em?: string | null }): boolean {
+  if (!p || !["rascunho", "enviada"].includes(p.status || "")) return false;
+  const dias = diasDesde(p.criado_em);
+  return dias != null && dias > VALIDADE_PROPOSTA_DIAS;
+}
+
 interface Signatario {
   nome: string;
   email: string;
@@ -533,9 +546,16 @@ export function PropostaTab({
                         {" "}· aviso prévio {p.aviso_previo_dias} dias
                       </p>
                     </div>
-                    <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
-                      {p.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {propostaVencida(p) && (
+                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-1" title={`Emitida há ${diasDesde(p.criado_em)} dias — validade de ${VALIDADE_PROPOSTA_DIAS} dias expirada.`}>
+                          <AlertTriangle className="h-3 w-3" /> Vencida · gere nova
+                        </span>
+                      )}
+                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
+                        {p.status}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

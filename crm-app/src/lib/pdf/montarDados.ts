@@ -87,7 +87,10 @@ export function montarDadosDaProposta(
     condicaoSetup: "100% no aceite da proposta",
     vencimentoMensal: "todo dia 10",
     indiceReajuste: "IPCA",
-    validadeDias: 15,
+    // 0 = sem cláusula/nota de validade: este é o documento que vai para ASSINATURA,
+    // e a validade de aceite não faz sentido no contrato executado. Como a nota é
+    // renderizada fora do fluxo, omiti-la não desloca as posições de assinatura.
+    validadeDias: 0,
     sla: "99% de disponibilidade mensal",
     softeumAssinante: "Softeum Tecnologia",
     softeumAssinanteEmail: "contato@softeum.com.br",

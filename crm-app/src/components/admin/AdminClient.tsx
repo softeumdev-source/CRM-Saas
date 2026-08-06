@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Users, BarChart3, Package, UserSquare2, LineChart } from "lucide-react";
+import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
 import { LeadsTab } from "@/components/admin/LeadsTab";
 import { DesempenhoTab } from "@/components/admin/DesempenhoTab";
+import { DescontosTab } from "@/components/admin/DescontosTab";
 
 export function AdminClient({
   usuarios,
@@ -18,6 +19,7 @@ export function AdminClient({
   contatosSemDono,
   contatosComDono,
   historicoEtapas,
+  solicitacoesDesconto,
   usuarioAtual,
 }: {
   usuarios: Usuario[];
@@ -28,11 +30,13 @@ export function AdminClient({
   contatosSemDono: Contato[];
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   historicoEtapas?: { negocio_id: string; etapa_id: string | null }[];
+  solicitacoesDesconto?: any[];
   usuarioAtual: Usuario;
 }) {
-  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads">("desempenho");
+  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos">("desempenho");
   const vendedores = usuarios.filter((u) => u.role === "vendedor");
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
+  const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
 
   return (
     <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -54,6 +58,7 @@ export function AdminClient({
             { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
             { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
+            { id: "descontos", label: descontosPendentes > 0 ? `Descontos (${descontosPendentes})` : "Descontos", icon: BadgePercent },
           ].map((t) => {
             const Icon = t.icon;
             return (
@@ -77,6 +82,7 @@ export function AdminClient({
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}
       {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
+      {aba === "descontos" && <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />}
     </div>
   );
 }
