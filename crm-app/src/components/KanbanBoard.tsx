@@ -10,10 +10,12 @@ import { LeadCard } from "@/components/LeadCard";
 export function KanbanBoard({
   etapas,
   negociosIniciais,
+  busca = "",
   onNovoNegocio,
 }: {
   etapas: EtapaPipeline[];
   negociosIniciais: NegocioComRelacoes[];
+  busca?: string;
   onNovoNegocio: () => void;
 }) {
   const [negocios, setNegocios] = useState(negociosIniciais);
@@ -56,12 +58,26 @@ export function KanbanBoard({
     });
   };
 
+  const termo = busca.trim().toLowerCase();
+  const termoDigitos = termo.replace(/\D/g, "");
+  const negociosFiltrados = !termo
+    ? negocios
+    : negocios.filter((n) => {
+        const c = n.contato;
+        if (termoDigitos.length >= 3) {
+          const docs = [c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp].map((v) => (v || "").replace(/\D/g, ""));
+          if (docs.some((d) => d && d.includes(termoDigitos))) return true;
+        }
+        const campos = [c?.empresa, c?.nome, c?.email, c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp, n.titulo];
+        return campos.some((v) => v && String(v).toLowerCase().includes(termo));
+      });
+
   return (
     <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
       <div className="flex gap-4 min-w-max h-full">
         {etapas.map((etapa) => {
           const hoje = new Date().toDateString();
-          const doEtapa = negocios
+          const doEtapa = negociosFiltrados
             .filter((n) => n.etapa_id === etapa.id)
             .slice()
             .sort((a, b) => {
