@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PhoneCall,
   Mail,
@@ -54,6 +54,9 @@ export function CadenciaTab({
 }) {
   const [atividades, setAtividades] = useState(atividadesIniciais);
   const [tipo, setTipo] = useState<TipoAtividade>("ligacao");
+
+  // O pai assina o Realtime de atividades e repassa a lista viva por props.
+  useEffect(() => setAtividades(atividadesIniciais), [atividadesIniciais]);
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [dataAgendada, setDataAgendada] = useState("");

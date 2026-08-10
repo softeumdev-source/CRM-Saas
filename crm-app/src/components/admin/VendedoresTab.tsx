@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
@@ -30,6 +30,10 @@ export function VendedoresTab({
   const [vendedoresState, setVendedoresState] = useState(vendedores);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
+
+  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
+  useEffect(() => setVendedoresState(vendedores), [vendedores]);
+  useEffect(() => setConvites(convitesIniciais), [convitesIniciais]);
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();

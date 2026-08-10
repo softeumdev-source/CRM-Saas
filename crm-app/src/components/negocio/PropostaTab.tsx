@@ -21,6 +21,7 @@ import {
   ThumbsDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
@@ -75,6 +76,10 @@ export function PropostaTab({
   const isAdmin = usuarioAtual.role === "admin";
   const [propostas, setPropostas] = useState(propostasIniciais);
   const [planoId, setPlanoId] = useState(planos[0]?.id || "");
+
+  // O pai assina o Realtime de propostas/envelopes/signatários e repassa a
+  // lista viva por props — o status de assinatura abaixo atualiza sozinho.
+  useEffect(() => setPropostas(propostasIniciais), [propostasIniciais]);
   const plano = planos.find((p) => p.id === planoId);
 
   const [avisoPrevioDias, setAvisoPrevioDias] = useState(180);
@@ -114,14 +119,25 @@ export function PropostaTab({
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("solicitacoes_desconto")
-      .select("*")
-      .eq("negocio_id", negocio.id)
-      .order("criado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setSolicitacao(data));
+    const carregar = () => {
+      supabase
+        .from("solicitacoes_desconto")
+        .select("*")
+        .eq("negocio_id", negocio.id)
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setSolicitacao(data));
+    };
+    carregar();
+    // Vendedor vê a decisão do admin (aprovado/recusado) na hora, sem recarregar.
+    return assinarRealtime(`descontos-negocio-${negocio.id}`, (canal) =>
+      canal.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "solicitacoes_desconto", filter: `negocio_id=eq.${negocio.id}` },
+        carregar
+      )
+    );
   }, [negocio.id]);
 
   const descontoAprovado = solicitacao?.status === "aprovado" ? solicitacao : null;
@@ -704,16 +720,36 @@ export function PropostaTab({
 
                   {envelope && (
                     <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 space-y-1.5">
-                      <p className="text-[10px] font-bold uppercase text-slate-400">Status da assinatura (tempo real)</p>
-                      {envelope.signatarios?.map((s: any) => (
-                        <div key={s.id} className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">{s.nome} <span className="text-slate-400">({s.papel})</span></span>
-                          <span className={`flex items-center gap-1 font-bold ${s.status === "assinado" ? "text-emerald-600" : "text-amber-600"}`}>
-                            {s.status === "assinado" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                            {s.status === "assinado" ? `Assinado em ${new Date(s.assinado_em).toLocaleDateString("pt-BR")}` : "Aguardando"}
-                          </span>
-                        </div>
-                      ))}
+                      <p className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                        </span>
+                        Status da assinatura (tempo real)
+                      </p>
+                      {[...(envelope.signatarios || [])]
+                        .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
+                        .map((s: any) => (
+                          <div key={s.id} className="flex items-center justify-between text-xs gap-2 flex-wrap">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{s.nome} <span className="text-slate-400">({s.papel})</span></span>
+                            {s.status === "assinado" ? (
+                              <span className="flex items-center gap-1 font-bold text-emerald-600">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Assinado em {new Date(s.assinado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            ) : s.status === "visualizado" ? (
+                              <span className="flex items-center gap-1 font-bold text-sky-600">
+                                <Eye className="h-3.5 w-3.5" />
+                                Visualizou{s.visualizado_em ? ` em ${new Date(s.visualizado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""} · aguardando assinatura
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 font-bold text-amber-600">
+                                <Clock className="h-3.5 w-3.5" />
+                                Enviado · ainda não visualizou
+                              </span>
+                            )}
+                          </div>
+                        ))}
                     </div>
                   )}
 

@@ -32,6 +32,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     .single();
 
   if (!proposta) return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
+  if (proposta.status !== "rascunho") {
+    return NextResponse.json({ error: "Esta proposta já foi enviada para assinatura. Gere uma nova versão para reenviar." }, { status: 422 });
+  }
   if (!proposta.pdf_comercial_path || !proposta.pdf_tecnica_path) {
     return NextResponse.json({ error: "Gere os PDFs da proposta antes de enviar." }, { status: 422 });
   }

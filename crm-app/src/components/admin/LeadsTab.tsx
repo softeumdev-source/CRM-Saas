@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, X, AlertTriangle } from "lucide-react";
@@ -47,6 +47,10 @@ export function LeadsTab({
 }) {
   const [contatosSemDono, setContatosSemDono] = useState(contatosSemDonoIniciais);
   const [contatosComDono, setContatosComDono] = useState<ContatoComDono[]>(contatosComDonoIniciais);
+
+  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
+  useEffect(() => setContatosSemDono(contatosSemDonoIniciais), [contatosSemDonoIniciais]);
+  useEffect(() => setContatosComDono(contatosComDonoIniciais), [contatosComDonoIniciais]);
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ inseridos: number; total: number } | null>(null);

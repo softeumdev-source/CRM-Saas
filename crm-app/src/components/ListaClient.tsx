@@ -1,14 +1,34 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 
-export function ListaClient({ negocios, etapas }: { negocios: NegocioComRelacoes[]; etapas: EtapaPipeline[] }) {
+export function ListaClient({ negocios: negociosIniciais, etapas }: { negocios: NegocioComRelacoes[]; etapas: EtapaPipeline[] }) {
+  const [negocios, setNegocios] = useState(negociosIniciais);
   const [busca, setBusca] = useState("");
   const [etapaFiltro, setEtapaFiltro] = useState("all");
+
+  useEffect(() => setNegocios(negociosIniciais), [negociosIniciais]);
+
+  useEffect(() => {
+    const recarregar = () => {
+      createClient()
+        .from("negocios")
+        .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+        .order("criado_em", { ascending: false })
+        .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
+    };
+    return assinarRealtime("negocios-lista", (canal) =>
+      canal
+        .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, recarregar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "contatos" }, recarregar)
+    );
+  }, []);
 
   const filtrados = useMemo(() => {
     return negocios.filter((n) => {

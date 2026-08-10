@@ -151,6 +151,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    let documentosAssinados: { comercial: string; tecnica: string } | null = null;
+
     if (data && (data as any).envelope_concluido && temServiceRole()) {
       try {
         const admin = createAdminClient();
@@ -277,6 +279,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
           const urlComercial = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial-assinado.pdf`;
           const urlTecnica = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica-assinado.pdf`;
+          documentosAssinados = { comercial: urlComercial, tecnica: urlTecnica };
           await supabase.rpc("salvar_pdf_assinado", { p_token: token, p_comercial_url: urlComercial, p_tecnica_url: urlTecnica });
 
           const { data: envelopeRow } = await admin
@@ -325,7 +328,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       }
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...(data as Record<string, unknown>), documentos_assinados: documentosAssinados });
   } catch (e: any) {
     console.error("Erro na rota /api/assinar:", e);
     return NextResponse.json({ error: e?.message || "Erro interno ao processar assinatura." }, { status: 500 });

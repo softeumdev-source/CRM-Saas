@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
@@ -34,6 +36,31 @@ export function AdminClient({
   usuarioAtual: Usuario;
 }) {
   const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos">("desempenho");
+  const router = useRouter();
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Qualquer mudança nas tabelas do painel dispara um refresh do server
+  // component (com debounce), que devolve props frescas para todas as abas.
+  useEffect(() => {
+    const agendarRefresh = () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => router.refresh(), 500);
+    };
+    const limpar = assinarRealtime("admin-realtime", (canal) =>
+      canal
+        .on("postgres_changes", { event: "*", schema: "public", table: "usuarios" }, agendarRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "convites" }, agendarRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "planos" }, agendarRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, agendarRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "contatos" }, agendarRefresh)
+        .on("postgres_changes", { event: "*", schema: "public", table: "etapas_pipeline" }, agendarRefresh)
+    );
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      limpar();
+    };
+  }, [router]);
+
   const vendedores = usuarios.filter((u) => u.role === "vendedor");
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
   const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
