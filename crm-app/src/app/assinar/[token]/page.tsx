@@ -18,10 +18,16 @@ import {
   ChevronUp,
 } from "lucide-react";
 
+interface DocumentosAssinados {
+  comercial: string;
+  tecnica: string;
+}
+
 interface EnvelopePublico {
   signatario: { id: string; nome: string; email: string; papel: string; status: string; ordem: number };
   envelope: { id: string; status: string; campos_assinatura: CampoAssinatura[] | null };
   outros_signatarios: { nome: string; papel: string; status: string }[];
+  documentos_assinados?: DocumentosAssinados | null;
   proposta: {
     numero: string;
     versao: number;
@@ -50,6 +56,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [modalAssinatura, setModalAssinatura] = useState(false);
   const [emailFaturamento, setEmailFaturamento] = useState("");
   const [tecnicaAberta, setTecnicaAberta] = useState(false);
+  const [docsAssinados, setDocsAssinados] = useState<DocumentosAssinados | null>(null);
 
   useEffect(() => {
     const supabase = createAnonClient();
@@ -65,6 +72,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         setNomeDigitado(data.signatario.nome);
         setEmailFaturamento("");
         if (data.signatario.status === "assinado") setConcluido(true);
+        if (data.documentos_assinados) setDocsAssinados(data.documentos_assinados);
       });
   }, [token]);
 
@@ -91,6 +99,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         setEnviando(false);
         return;
       }
+      const resultado = await resp.json().catch(() => null);
+      if (resultado?.documentos_assinados) setDocsAssinados(resultado.documentos_assinados);
       setModalAssinatura(false);
       setConcluido(true);
     } catch (e: any) {
@@ -208,6 +218,33 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
             <p className="text-sm text-slate-500 mt-2">
               Obrigado, {dados.signatario.nome}. A Softeum e o vendedor responsável foram notificados.
             </p>
+            {docsAssinados ? (
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <p className="text-xs font-bold uppercase text-slate-400 mb-3">Baixe seus documentos assinados (com certificado de conclusão)</p>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <a
+                    href={docsAssinados.comercial}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md"
+                  >
+                    <FileText className="h-4 w-4" /> Proposta Comercial
+                  </a>
+                  <a
+                    href={docsAssinados.tecnica}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md"
+                  >
+                    <FileText className="h-4 w-4" /> Proposta Técnica
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 mt-4">
+                Assim que todos os signatários concluírem, você receberá por e-mail os documentos assinados com o certificado de conclusão.
+              </p>
+            )}
           </div>
         ) : (
           <>

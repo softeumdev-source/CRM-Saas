@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
@@ -21,6 +21,9 @@ const PLANO_VAZIO = {
 export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[]; tenantId: string | null }) {
   const [planos, setPlanos] = useState(planosIniciais);
   const [modalAberto, setModalAberto] = useState(false);
+
+  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
+  useEffect(() => setPlanos(planosIniciais), [planosIniciais]);
   const [editando, setEditando] = useState<Plano | null>(null);
   const [form, setForm] = useState<any>(PLANO_VAZIO);
   const [erro, setErro] = useState<string | null>(null);

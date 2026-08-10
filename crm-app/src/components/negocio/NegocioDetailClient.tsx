@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Building2, Mail, Phone, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
@@ -34,7 +35,49 @@ export function NegocioDetailClient({
 }) {
   const router = useRouter();
   const [negocio, setNegocio] = useState(negocioInicial);
+  const [atividades, setAtividades] = useState(atividadesIniciais);
+  const [propostas, setPropostas] = useState(propostasIniciais);
   const [aba, setAba] = useState<"geral" | "cadencia" | "proposta" | "ia">("geral");
+
+  // Tudo desta tela atualiza em tempo real: o negócio em si, a cadência de
+  // atividades e as propostas com seus envelopes/signatários (status de
+  // visualização e assinatura do cliente chegam ao vivo).
+  useEffect(() => {
+    const supabase = createClient();
+    const recarregarNegocio = () => {
+      supabase
+        .from("negocios")
+        .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+        .eq("id", negocioInicial.id)
+        .single()
+        .then(({ data }) => data && setNegocio(data as NegocioComRelacoes));
+    };
+    const recarregarAtividades = () => {
+      supabase
+        .from("atividades")
+        .select("*, usuario:usuarios(*)")
+        .eq("negocio_id", negocioInicial.id)
+        .order("criado_em", { ascending: false })
+        .then(({ data }) => data && setAtividades(data));
+    };
+    const recarregarPropostas = () => {
+      supabase
+        .from("propostas")
+        .select("*, plano:planos(*), envelopes(*, signatarios(*))")
+        .eq("negocio_id", negocioInicial.id)
+        .order("criado_em", { ascending: false })
+        .then(({ data }) => data && setPropostas(data));
+    };
+    return assinarRealtime(`negocio-${negocioInicial.id}`, (canal) =>
+      canal
+        .on("postgres_changes", { event: "*", schema: "public", table: "negocios", filter: `id=eq.${negocioInicial.id}` }, recarregarNegocio)
+        .on("postgres_changes", { event: "*", schema: "public", table: "contatos" }, recarregarNegocio)
+        .on("postgres_changes", { event: "*", schema: "public", table: "atividades", filter: `negocio_id=eq.${negocioInicial.id}` }, recarregarAtividades)
+        .on("postgres_changes", { event: "*", schema: "public", table: "propostas", filter: `negocio_id=eq.${negocioInicial.id}` }, recarregarPropostas)
+        .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, recarregarPropostas)
+        .on("postgres_changes", { event: "*", schema: "public", table: "signatarios" }, recarregarPropostas)
+    );
+  }, [negocioInicial.id]);
 
   const atualizarNegocio = async (campos: Partial<NegocioComRelacoes>) => {
     setNegocio((prev) => ({ ...prev, ...campos }));
@@ -56,6 +99,12 @@ export function NegocioDetailClient({
       .from("negocios")
       .update({ etapa_id: etapaPerdido.id, ganho: false, motivo_perda: motivo, probabilidade: 0, atualizado_em: new Date().toISOString() })
       .eq("id", negocio.id);
+    await supabase.from("atividades").insert({
+      negocio_id: negocio.id,
+      tipo: "mudanca_etapa",
+      titulo: `Etapa alterada para: ${etapaPerdido.nome}`,
+      descricao: motivo ? `Motivo da perda: ${motivo}` : null,
+    });
     router.push("/");
     router.refresh();
   };
@@ -163,10 +212,10 @@ export function NegocioDetailClient({
         <VisaoGeralTab negocio={negocio} onAtualizarContato={(campos) => setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))} />
       )}
       {aba === "cadencia" && (
-        <CadenciaTab negocioId={negocio.id} atividadesIniciais={atividadesIniciais} usuarioAtual={usuarioAtual} />
+        <CadenciaTab negocioId={negocio.id} atividadesIniciais={atividades} usuarioAtual={usuarioAtual} />
       )}
       {aba === "proposta" && (
-        <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostasIniciais} usuarioAtual={usuarioAtual} />
+        <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
       {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
     </div>

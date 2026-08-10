@@ -202,7 +202,7 @@ export function VisaoGeralTab({
               defaultValue={negocio.prioridade || "media"}
               onChange={async (e) => {
                 const supabase = createClient();
-                await supabase.from("negocios").update({ prioridade: e.target.value }).eq("id", negocio.id);
+                await supabase.from("negocios").update({ prioridade: e.target.value, atualizado_em: new Date().toISOString() }).eq("id", negocio.id);
               }}
               className="bg-indigo-950/60 border border-indigo-700/60 rounded-lg px-2 py-1 text-sm font-bold mt-1"
             >

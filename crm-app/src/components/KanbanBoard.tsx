@@ -24,13 +24,18 @@ export function KanbanBoard({
   useEffect(() => setNegocios(negociosIniciais), [negociosIniciais]);
 
   useEffect(() => {
+    const recarregar = () => {
+      createClient()
+        .from("negocios")
+        .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
+        .order("criado_em", { ascending: false })
+        .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
+    };
     return assinarRealtime("negocios-kanban", (canal) =>
-      canal.on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, () => {
-        createClient()
-          .from("negocios")
-          .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
-          .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
-      })
+      canal
+        .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, recarregar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "contatos" }, recarregar)
+        .on("postgres_changes", { event: "*", schema: "public", table: "atividades" }, recarregar)
     );
   }, []);
 
@@ -38,6 +43,8 @@ export function KanbanBoard({
     e.preventDefault();
     const negocioId = e.dataTransfer.getData("text/plain");
     if (!negocioId) return;
+    const atual = negocios.find((n) => n.id === negocioId);
+    if (atual?.etapa_id === etapaId) return;
     const etapa = etapas.find((et) => et.id === etapaId);
     setNegocios((prev) =>
       prev.map((n) => (n.id === negocioId ? { ...n, etapa_id: etapaId, etapa: etapa ?? n.etapa } : n))
