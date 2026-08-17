@@ -29,7 +29,7 @@ import { TIPOS_ATIVIDADE } from "@/lib/types";
 import {
   PRESETS_AGENDAMENTO,
   ROTULOS_ATIVIDADE,
-  TITULOS_SUGERIDOS,
+  resumirTexto,
   dataDoPreset,
   descreverPrazo,
   estaAtrasada,
@@ -67,7 +67,6 @@ export function CadenciaTab({
   const [atividades, setAtividades] = useEstadoDaProp(atividadesIniciais);
 
   const [tipo, setTipo] = useState<TipoAtividade>("ligacao");
-  const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [realizadaEm, setRealizadaEm] = useState(() => paraInputDataHora(new Date()));
 
@@ -78,7 +77,7 @@ export function CadenciaTab({
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [tocouTitulo, setTocouTitulo] = useState(false);
+  const [tocouTexto, setTocouTexto] = useState(false);
   const [ok, setOk] = useState(false);
 
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
@@ -109,25 +108,24 @@ export function CadenciaTab({
       );
   }, [atividades, filtroTipo, buscaHistorico]);
 
-  const tituloInvalido = titulo.trim().length === 0;
-  const proximoInvalido = agendarProximo && (!dataAgendada || tituloProximo.trim().length === 0);
+  const textoInvalido = descricao.trim().length === 0;
+  const proximoInvalido = agendarProximo && !dataAgendada;
 
   const limparFormulario = () => {
-    setTitulo("");
     setDescricao("");
     setRealizadaEm(paraInputDataHora(new Date()));
     setTituloProximo("");
     setDataAgendada("");
-    setTocouTitulo(false);
+    setTocouTexto(false);
   };
 
   const handleRegistrar = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTocouTitulo(true);
+    setTocouTexto(true);
     setErro(null);
-    if (tituloInvalido) return;
+    if (textoInvalido) return;
     if (proximoInvalido) {
-      setErro("Para agendar o próximo passo preencha o título e a data.");
+      setErro("Escolha a data do próximo passo ou desmarque o agendamento.");
       return;
     }
 
@@ -140,8 +138,10 @@ export function CadenciaTab({
         negocio_id: negocio.id,
         usuario_id: usuarioAtual.id,
         tipo,
-        titulo: titulo.trim(),
-        descricao: descricao.trim() || null,
+        // O formulário tem só o texto; o título (obrigatório no banco) vem da
+        // primeira linha da anotação e serve de resumo na timeline.
+        titulo: resumirTexto(descricao, ROTULOS_ATIVIDADE[tipo] || "Atividade"),
+        descricao: descricao.trim(),
         concluida: true,
         concluida_em: realizada.toISOString(),
       },
@@ -153,7 +153,7 @@ export function CadenciaTab({
         negocio_id: negocio.id,
         usuario_id: usuarioAtual.id,
         tipo: tipoProximo,
-        titulo: tituloProximo.trim(),
+        titulo: tituloProximo.trim() || `${ROTULOS_ATIVIDADE[tipoProximo]} — ${empresa}`,
         concluida: false,
         data_agendada: quando,
         lembrete_data: quando,
@@ -233,7 +233,6 @@ export function CadenciaTab({
 
   const aplicarPreset = (indice: number) => {
     setDataAgendada(paraInputDataHora(dataDoPreset(PRESETS_AGENDAMENTO[indice])));
-    if (!tituloProximo.trim()) setTituloProximo(`Follow-up — ${empresa}`);
   };
 
   return (
@@ -287,52 +286,29 @@ export function CadenciaTab({
           <div className="space-y-3">
             <div>
               <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-                Título <span className="text-rose-500">*</span>
+                O que aconteceu <span className="text-rose-500">*</span>
               </label>
-              <input
-                value={titulo}
-                onChange={(e) => setTitulo(e.target.value)}
-                onBlur={() => setTocouTitulo(true)}
-                maxLength={120}
-                placeholder="Ex.: Ligação de follow-up com o decisor"
-                className={`w-full px-3.5 py-2.5 text-sm rounded-xl border bg-slate-50 dark:bg-slate-800 outline-hidden focus:ring-1 ${
-                  tocouTitulo && tituloInvalido
+              <textarea
+                rows={12}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                onBlur={() => setTocouTexto(true)}
+                placeholder={
+                  "Anote aqui tudo que importa:\n• Com quem falou e qual o cargo\n• Dores e prioridades levantadas\n• Objeções, concorrentes e preço discutido\n• O que ficou combinado e o prazo"
+                }
+                className={`w-full px-3.5 py-2.5 text-sm leading-relaxed rounded-xl border bg-slate-50 dark:bg-slate-800 resize-y min-h-[240px] outline-hidden focus:ring-1 ${
+                  tocouTexto && textoInvalido
                     ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500"
                     : "border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500"
                 }`}
               />
-              {tocouTitulo && tituloInvalido ? (
-                <p className="text-[11px] font-semibold text-rose-600 mt-1">O título é obrigatório.</p>
+              {tocouTexto && textoInvalido ? (
+                <p className="text-[11px] font-semibold text-rose-600 mt-1">Escreva o que aconteceu no contato.</p>
               ) : (
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {(TITULOS_SUGERIDOS[tipo] || []).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setTitulo(s)}
-                      className="px-2 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-950/40 rounded-md"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {descricao.length} caracteres · a primeira linha vira o resumo no histórico
+                </p>
               )}
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-                O que aconteceu / próximos combinados
-              </label>
-              <textarea
-                rows={9}
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder={
-                  "Anote aqui tudo que importa:\n• Com quem falou e qual o cargo\n• Dores e prioridades levantadas\n• Objeções, concorrentes e preço discutido\n• O que ficou combinado e o prazo"
-                }
-                className="w-full px-3.5 py-2.5 text-sm leading-relaxed rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-y min-h-[180px] outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">{descricao.length} caracteres</p>
             </div>
 
             <div>
@@ -415,13 +391,13 @@ export function CadenciaTab({
 
                 <div>
                   <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                    Título do próximo passo <span className="text-rose-500">*</span>
+                    Descrição do próximo passo <span className="font-semibold normal-case text-slate-400">(opcional)</span>
                   </label>
                   <input
                     value={tituloProximo}
                     onChange={(e) => setTituloProximo(e.target.value)}
                     maxLength={120}
-                    placeholder={`Ex.: Retomar contato com ${empresa}`}
+                    placeholder={`${ROTULOS_ATIVIDADE[tipoProximo]} — ${empresa}`}
                     className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                   />
                 </div>
@@ -614,6 +590,9 @@ export function CadenciaTab({
         <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
           {historico.map((a) => {
             const Icon = ICONES[a.tipo] || MessageSquare;
+            // Nos registros feitos aqui o título é o resumo do próprio texto —
+            // repetir os dois deixaria a primeira linha duplicada na timeline.
+            const tituloRedundante = !!a.descricao && a.descricao.trimStart().startsWith(a.titulo.replace(/…$/, ""));
             return (
               <div key={a.id} className="relative pl-9">
                 <div
@@ -627,7 +606,7 @@ export function CadenciaTab({
                   <div className="flex items-center justify-between gap-2 text-xs mb-1 flex-wrap">
                     <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                       <Icon className="h-3.5 w-3.5 text-slate-400" />
-                      {a.titulo}
+                      {tituloRedundante ? ROTULOS_ATIVIDADE[a.tipo] || a.tipo : a.titulo}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       {formatarDataHora(a.concluida_em || a.criado_em)}
@@ -637,7 +616,7 @@ export function CadenciaTab({
                     <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{a.descricao}</p>
                   )}
                   <p className="text-[10px] text-slate-400 mt-1 font-medium">
-                    {ROTULOS_ATIVIDADE[a.tipo] || a.tipo} · por {a.usuario?.nome || "Sistema"}
+                    Por {a.usuario?.nome || "Sistema"}
                   </p>
                 </div>
               </div>

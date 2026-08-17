@@ -11,16 +11,24 @@ export const ROTULOS_ATIVIDADE: Record<string, string> = {
   mudanca_etapa: "Mudança de etapa",
 };
 
-/** Sugestões de título por tipo — um clique já preenche o campo obrigatório. */
-export const TITULOS_SUGERIDOS: Record<string, string[]> = {
-  ligacao: ["Ligação de prospecção", "Follow-up por telefone", "Ligação não atendida", "Alinhamento comercial"],
-  whatsapp: ["Primeiro contato no WhatsApp", "Follow-up no WhatsApp", "Envio de material", "Confirmação de reunião"],
-  email: ["E-mail de apresentação", "Follow-up por e-mail", "Envio de proposta", "Retomada de contato"],
-  demo: ["Demonstração da plataforma", "Demo técnica com o time de TI", "Reapresentação para decisores"],
-  reuniao: ["Reunião de diagnóstico", "Reunião de negociação", "Reunião de fechamento", "Kickoff"],
-  proposta: ["Proposta apresentada", "Ajuste de proposta", "Negociação de valores"],
-  nota: ["Contexto do cliente", "Concorrente identificado", "Objeção registrada", "Decisor mapeado"],
-};
+/** Tamanho máximo do resumo gerado a partir do texto da anotação. */
+const LIMITE_RESUMO = 120;
+
+/**
+ * Resumo curto da anotação, usado como `titulo` da atividade — o formulário
+ * pede só o texto, mas a coluna é obrigatória e é ela que aparece como
+ * cabeçalho na timeline e na agenda.
+ */
+export function resumirTexto(texto: string, padrao: string): string {
+  const primeiraLinha = texto
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.length > 0);
+  if (!primeiraLinha) return padrao;
+  return primeiraLinha.length > LIMITE_RESUMO
+    ? primeiraLinha.slice(0, LIMITE_RESUMO - 1).trimEnd() + "…"
+    : primeiraLinha;
+}
 
 export type PresetAgendamento = { rotulo: string; dias: number; hora: number };
 
