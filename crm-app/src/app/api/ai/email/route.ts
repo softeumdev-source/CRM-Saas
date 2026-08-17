@@ -46,7 +46,8 @@ Negócio: ${negocio.titulo}
         negocio_id: negocioId,
         usuario_id: user.id,
         tipo: "email",
-        titulo: resultado.assunto,
+        // O título da atividade é obrigatório; a IA pode devolver assunto vazio.
+        titulo: resultado.assunto?.trim() || "E-mail enviado ao contato",
         descricao: "E-mail gerado por IA e enviado ao contato.",
       });
     }

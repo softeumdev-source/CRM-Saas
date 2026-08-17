@@ -115,11 +115,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Negócio sem tenant associado." }, { status: 500 });
   }
   const { data: tenant } = await supabase.from("tenants").select("*").eq("id", tenantId).single();
-  const { count } = await supabase
-    .from("propostas")
-    .select("id", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
-  const numero = `${new Date().getFullYear()}-${String((count ?? 0) + 1).padStart(4, "0")}`;
 
   const valorSetupPlano = Number(plano.valor_setup_plataforma) + Number(plano.valor_setup_erp) + Number(plano.valor_setup_catalogo);
   const valorSetupTotal = valorSetup != null ? Number(valorSetup) : valorSetupPlano;
@@ -129,11 +124,49 @@ export async function POST(request: Request) {
   const valorModWhats = Number(valorModuloWhatsapp ?? 0);
   const valorMensalTotal = valorPlataformaFinal + valorUsoFinal + (qtdEmail > 0 ? valorModEmail : 0) + (qtdWhats > 0 ? valorModWhats : 0);
 
+  // A proposta é criada ANTES de renderizar os PDFs: o número e a versão são
+  // atribuídos pelo banco (trigger com lock por tenant), então nunca se repetem.
+  // Antes o número vinha de count(*) + 1 no app: apagar uma proposta fazia o
+  // contador voltar, o número repetir e o upload sobrescrever o PDF anterior —
+  // era o "gerou um documento e apareceram dois" no mesmo negócio.
+  const { data: proposta, error: erroProposta } = await supabase
+    .from("propostas")
+    .insert({
+      tenant_id: tenantId,
+      negocio_id: negocioId,
+      plano_id: planoId,
+      gerado_por: user.id,
+      aviso_previo_dias: Number(avisoPrevioDias ?? 180),
+      prazo_contrato_meses: Number(prazoContratoMeses ?? 12),
+      valor_setup_plataforma: valorSetupTotal,
+      valor_setup_erp: 0,
+      valor_setup_catalogo: 0,
+      valor_plataforma: valorPlataformaFinal,
+      valor_uso: valorUsoFinal,
+      valor_excedente_pedido: Number(plano.valor_excedente_pedido),
+      valor_plataforma_base_snapshot: pisoPlataformaSnapshot,
+      valor_uso_base_snapshot: pisoUsoSnapshot,
+      qtd_caixas_email: qtdEmail,
+      valor_modulo_email: valorModEmail,
+      qtd_numeros_whatsapp: qtdWhats,
+      valor_modulo_whatsapp: valorModWhats,
+      forma_pagamento: formaPagamento || "Pix ou Boleto",
+      status: "rascunho",
+    })
+    .select()
+    .single();
+
+  if (erroProposta || !proposta) {
+    return NextResponse.json({ error: erroProposta?.message || "Falha ao criar a proposta." }, { status: 500 });
+  }
+
+  const numero = proposta.numero;
+
   const dados: DadosProposta = {
     clienteRazaoSocial: negocio.contato.empresa || negocio.contato.nome,
     clienteCnpj: negocio.contato.cnpj,
     numeroProposta: numero,
-    versao: 1,
+    versao: proposta.versao,
     cidade: "Joinville - SC",
     data: new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
     planoNome: plano.nome,
@@ -175,7 +208,8 @@ export async function POST(request: Request) {
     renderPropostaTecnicaPdf(dados),
   ]);
 
-  const basePath = `${tenantId}/${negocioId}`;
+  // Caminho por id da proposta: dois documentos nunca disputam o mesmo arquivo.
+  const basePath = `${tenantId}/${negocioId}/${proposta.id}`;
   const comercialPath = `${basePath}/proposta-${numero}-comercial.pdf`;
   const tecnicaPath = `${basePath}/proposta-${numero}-tecnica.pdf`;
 
@@ -191,52 +225,30 @@ export async function POST(request: Request) {
   ]);
 
   if (uploadComercial.error || uploadTecnica.error) {
+    // Sem PDF a proposta não serve para nada: desfaz para não sobrar rascunho órfão.
+    await supabase.from("propostas").delete().eq("id", proposta.id);
     return NextResponse.json(
       { error: uploadComercial.error?.message || uploadTecnica.error?.message },
       { status: 500 }
     );
   }
 
-  const { data: proposta, error: erroProposta } = await supabase
+  const { data: propostaFinal, error: erroPaths } = await supabase
     .from("propostas")
-    .insert({
-      tenant_id: tenantId,
-      negocio_id: negocioId,
-      plano_id: planoId,
-      gerado_por: user.id,
-      numero,
-      versao: 1,
-      aviso_previo_dias: Number(avisoPrevioDias ?? 180),
-      prazo_contrato_meses: Number(prazoContratoMeses ?? 12),
-      valor_setup_plataforma: valorSetupTotal,
-      valor_setup_erp: 0,
-      valor_setup_catalogo: 0,
-      valor_plataforma: valorPlataformaFinal,
-      valor_uso: valorUsoFinal,
-      valor_excedente_pedido: dados.valorExcedentePedido,
-      valor_plataforma_base_snapshot: pisoPlataformaSnapshot,
-      valor_uso_base_snapshot: pisoUsoSnapshot,
-      qtd_caixas_email: qtdEmail,
-      valor_modulo_email: valorModEmail,
-      qtd_numeros_whatsapp: qtdWhats,
-      valor_modulo_whatsapp: valorModWhats,
-      forma_pagamento: dados.formaPagamento,
-      status: "rascunho",
-      pdf_comercial_path: comercialPath,
-      pdf_tecnica_path: tecnicaPath,
-    })
+    .update({ pdf_comercial_path: comercialPath, pdf_tecnica_path: tecnicaPath })
+    .eq("id", proposta.id)
     .select()
     .single();
 
-  if (erroProposta || !proposta) {
-    return NextResponse.json({ error: erroProposta?.message }, { status: 500 });
+  if (erroPaths || !propostaFinal) {
+    return NextResponse.json({ error: erroPaths?.message || "Falha ao salvar os PDFs da proposta." }, { status: 500 });
   }
 
   await supabase.from("atividades").insert({
     negocio_id: negocioId,
     usuario_id: user.id,
     tipo: "proposta",
-    titulo: `Proposta ${numero} gerada`,
+    titulo: `Proposta ${numero} (v${propostaFinal.versao}) gerada`,
     descricao: `Plano ${plano.nome}, aviso previo de ${avisoPrevioDias ?? 180} dias.`,
   });
 
@@ -246,7 +258,7 @@ export async function POST(request: Request) {
   ]);
 
   return NextResponse.json({
-    proposta,
+    proposta: propostaFinal,
     urlComercial: urlComercial?.signedUrl,
     urlTecnica: urlTecnica?.signedUrl,
   });

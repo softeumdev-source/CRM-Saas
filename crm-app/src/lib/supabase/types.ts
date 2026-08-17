@@ -17,6 +17,7 @@ export type Database = {
       atividades: {
         Row: {
           concluida: boolean | null
+          concluida_em: string | null
           confirmada: boolean | null
           criado_em: string | null
           data_agendada: string | null
@@ -26,11 +27,12 @@ export type Database = {
           lembrete_enviado: boolean | null
           negocio_id: string | null
           tipo: string
-          titulo: string | null
+          titulo: string
           usuario_id: string | null
         }
         Insert: {
           concluida?: boolean | null
+          concluida_em?: string | null
           confirmada?: boolean | null
           criado_em?: string | null
           data_agendada?: string | null
@@ -40,11 +42,12 @@ export type Database = {
           lembrete_enviado?: boolean | null
           negocio_id?: string | null
           tipo?: string
-          titulo?: string | null
+          titulo: string
           usuario_id?: string | null
         }
         Update: {
           concluida?: boolean | null
+          concluida_em?: string | null
           confirmada?: boolean | null
           criado_em?: string | null
           data_agendada?: string | null
@@ -54,7 +57,7 @@ export type Database = {
           lembrete_enviado?: boolean | null
           negocio_id?: string | null
           tipo?: string
-          titulo?: string | null
+          titulo?: string
           usuario_id?: string | null
         }
         Relationships: [
@@ -554,7 +557,7 @@ export type Database = {
           gerado_por?: string | null
           id?: string
           negocio_id?: string | null
-          numero: string
+          numero?: string
           pdf_assinado_comercial_path?: string | null
           pdf_assinado_tecnica_path?: string | null
           pdf_comercial_path?: string | null

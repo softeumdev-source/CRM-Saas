@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import {
   AlertTriangle,
   FileText,
@@ -20,11 +20,22 @@ import {
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
+import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
-import { assinarRealtime } from "@/lib/supabase/realtime";
+import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
+
+/**
+ * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
+ * O Realtime pode entregar a proposta recém-criada antes do `fetch` de geração
+ * responder — sem isso, a mesma proposta aparecia duas vezes na lista.
+ */
+function semDuplicadas<T extends { id: string }>(lista: T[]): T[] {
+  const vistos = new Set<string>();
+  return lista.filter((p) => (vistos.has(p.id) ? false : (vistos.add(p.id), true)));
+}
 
 function parseMoeda(texto: string): number {
   const limpo = texto.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
@@ -74,12 +85,11 @@ export function PropostaTab({
   usuarioAtual: Usuario;
 }) {
   const isAdmin = usuarioAtual.role === "admin";
-  const [propostas, setPropostas] = useState(propostasIniciais);
+  const [propostas, setPropostas] = useEstadoDaProp(propostasIniciais, semDuplicadas);
   const [planoId, setPlanoId] = useState(planos[0]?.id || "");
 
   // O pai assina o Realtime de propostas/envelopes/signatários e repassa a
   // lista viva por props — o status de assinatura abaixo atualiza sozinho.
-  useEffect(() => setPropostas(propostasIniciais), [propostasIniciais]);
   const plano = planos.find((p) => p.id === planoId);
 
   const [avisoPrevioDias, setAvisoPrevioDias] = useState(180);
@@ -117,28 +127,23 @@ export function PropostaTab({
   const [decidindo, setDecidindo] = useState(false);
   const [respostaAdmin, setRespostaAdmin] = useState("");
 
-  useEffect(() => {
-    const supabase = createClient();
-    const carregar = () => {
-      supabase
-        .from("solicitacoes_desconto")
-        .select("*")
-        .eq("negocio_id", negocio.id)
-        .order("criado_em", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => setSolicitacao(data));
-    };
-    carregar();
-    // Vendedor vê a decisão do admin (aprovado/recusado) na hora, sem recarregar.
-    return assinarRealtime(`descontos-negocio-${negocio.id}`, (canal) =>
-      canal.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "solicitacoes_desconto", filter: `negocio_id=eq.${negocio.id}` },
-        carregar
-      )
-    );
+  // Vendedor vê a decisão do admin (aprovado/recusado) na hora, sem recarregar.
+  const carregarSolicitacao = useCallback(async () => {
+    const { data } = await createClient()
+      .from("solicitacoes_desconto")
+      .select("*")
+      .eq("negocio_id", negocio.id)
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setSolicitacao(data);
   }, [negocio.id]);
+
+  useSincronizacao(carregarSolicitacao, {
+    canal: `descontos-negocio-${negocio.id}`,
+    tabelas: [{ tabela: "solicitacoes_desconto", filtro: `negocio_id=eq.${negocio.id}` }],
+    carregarAoMontar: true,
+  });
 
   const descontoAprovado = solicitacao?.status === "aprovado" ? solicitacao : null;
   // Piso do vendedor: base do plano, rebaixado pelo desconto aprovado (se houver).
@@ -226,7 +231,7 @@ export function PropostaTab({
       setErro(data.error || "Erro ao gerar proposta.");
       return;
     }
-    setPropostas((prev) => [{ ...data.proposta, plano, envelopes: [] }, ...prev]);
+    setPropostas((prev) => semDuplicadas([{ ...data.proposta, plano, envelopes: [] }, ...prev]));
     const supabaseClient = createClient();
     await supabaseClient.from("negocios").update({ valor: valorMensal }).eq("id", negocio.id);
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
@@ -542,6 +547,9 @@ export function PropostaTab({
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="p-5 border-b border-slate-100 dark:border-slate-800">
           <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Propostas geradas ({propostas.length})</h3>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            Cada proposta gera dois arquivos do mesmo documento: a Comercial e a Técnica.
+          </p>
         </div>
         {propostas.length === 0 ? (
           <p className="p-5 text-xs text-slate-400">Nenhuma proposta gerada ainda.</p>
@@ -575,6 +583,7 @@ export function PropostaTab({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Arquivos:</span>
                     {p.pdf_comercial_path && (
                       <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
                         <Eye className="h-3 w-3" /> Comercial
