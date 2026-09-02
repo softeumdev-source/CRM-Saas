@@ -10,7 +10,14 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <style>
     body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    *, *::before, *::after { box-sizing: border-box; }
     a { color: #4f46e5; text-decoration: none; } a:hover { color: #4338ca; }
+    /* estados: nada interativo fica sem resposta ao mouse e ao teclado */
+    [data-acao] { cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
+    [data-acao]:hover { filter: brightness(0.97); }
+    [data-acao]:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+    [data-card] { cursor: pointer; transition: border-color 140ms ease, box-shadow 140ms ease; }
+    [data-card]:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
     .num { font-variant-numeric: tabular-nums; }
   </style>
 </helmet>
@@ -30,7 +37,7 @@
 
     <div style="flex: 1; overflow: hidden; padding: 8px;">
       <sc-for list="{{fila}}" as="f" hint-placeholder-count="5">
-        <div style="border-radius: 10px; padding: 12px 13px; display: flex; flex-direction: column; gap: 6px; background: {{f.fundo}}; border-left: 2px solid {{f.marca}};">
+        <div data-card tabindex="0" style="border-radius: 10px; padding: 12px 13px; display: flex; flex-direction: column; gap: 6px; background: {{f.fundo}}; border-left: 2px solid {{f.marca}};">
           <div style="display: flex; align-items: baseline; gap: 9px;">
             <span style="font-size: 13.5px; font-weight: {{f.peso}}; letter-spacing: -0.008em; flex: 1; min-width: 0;">{{f.empresa}}</span>
             <span class="num" style="font-size: 12.5px; font-weight: 500; white-space: nowrap;">{{f.valor}}</span>
@@ -63,7 +70,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.9" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span style="font-size: 12.5px; font-weight: 500; color: #334155;">WhatsApp</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 7px; background: #0f172a; border-radius: 8px; padding: 9px 14px;">
+          <div data-acao tabindex="0" style="display: flex; align-items: center; gap: 7px; background: #0f172a; border-radius: 8px; padding: 9px 14px;">
             <span style="font-size: 12.5px; font-weight: 500; color: #fff;">Registrar atividade</span>
           </div>
         </div>

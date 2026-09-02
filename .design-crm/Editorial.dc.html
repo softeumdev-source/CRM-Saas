@@ -10,7 +10,14 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <style>
     body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    *, *::before, *::after { box-sizing: border-box; }
     a { color: #4f46e5; text-decoration: none; } a:hover { color: #4338ca; }
+    /* estados: nada interativo fica sem resposta ao mouse e ao teclado */
+    [data-acao] { cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
+    [data-acao]:hover { filter: brightness(0.97); }
+    [data-acao]:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+    [data-card] { cursor: pointer; transition: border-color 140ms ease, box-shadow 140ms ease; }
+    [data-card]:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
     .num { font-variant-numeric: tabular-nums; }
   </style>
 </helmet>
@@ -19,7 +26,7 @@
 
   <!-- RAIL CLARO -->
   <div style="width: 68px; flex-shrink: 0; border-right: 1px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; padding: 20px 0; gap: 26px;">
-    <div style="width: 32px; height: 32px; border-radius: 10px; background: #0f172a; display: flex; align-items: center; justify-content: center;">
+    <div style="width: 32px; height: 32px; border-radius: 10px; background: #4f46e5; display: flex; align-items: center; justify-content: center;">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 4v16M12 4v10M19 4v6"/></svg>
     </div>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
@@ -45,7 +52,7 @@
     <div style="padding: 0 38px 26px; display: flex; align-items: flex-start; gap: 20px;">
       <div style="display: flex; flex-direction: column; gap: 7px;">
         <span style="font-size: 27px; font-weight: 500; letter-spacing: -0.028em; line-height: 1.1;">Pipeline</span>
-        <span class="num" style="font-size: 14px; font-weight: 400; color: #64748b; line-height: 1.5;">25 negócios abertos, somando R$ 184.500 por mês</span>
+        <span class="num" style="font-size: 14px; font-weight: 400; color: #64748b; line-height: 1.5;">21 negócios abertos, somando R$ 184.500 por mês</span>
       </div>
       <div style="margin-left: auto; display: flex; align-items: center; gap: 20px; padding-top: 5px;">
         <div style="display: flex; flex-direction: column; gap: 3px;">
@@ -58,7 +65,7 @@
           <span class="num" style="font-size: 19px; font-weight: 500; color: #d97706; letter-spacing: -0.02em;">4</span>
         </div>
         <div style="width: 1px; height: 34px; background: #f1f5f9;"></div>
-        <div style="display: flex; align-items: center; gap: 8px; border: 1px solid #0f172a; border-radius: 999px; padding: 9px 17px;">
+        <div data-acao tabindex="0" style="display: flex; align-items: center; gap: 8px; border: 1px solid #0f172a; border-radius: 999px; padding: 9px 17px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           <span style="font-size: 13px; font-weight: 500;">Novo negócio</span>
         </div>
@@ -67,7 +74,7 @@
 
     <!-- BOARD -->
     <div style="flex: 1; display: flex; gap: 30px; padding: 0 38px 30px; overflow: hidden; align-items: stretch;">
-      <sc-for list="{{colunas}}" as="c" hint-placeholder-count="4">
+      <sc-for list="{{colunas}}" as="c" hint-placeholder-count="5">
         <div style="width: 296px; flex-shrink: 0; display: flex; flex-direction: column;">
           <div style="display: flex; align-items: baseline; gap: 9px; padding-bottom: 13px; border-bottom: 1px solid #0f172a; margin-bottom: 18px;">
             <span style="font-size: 13px; font-weight: 500; letter-spacing: -0.005em;">{{c.nome}}</span>
@@ -104,20 +111,24 @@ class Component extends DCLogic {
     return {
       colunas: [
         { nome: 'Novo Lead / Inbound', qtd: 4, valor: 'R$ 12.400', cards: [
-          { empresa: 'Distribuidora Vale Norte', contato: 'Marcos Ribeiro, Compras', valor: 'R$ 3.900', prazo: 'Contato hoje às 17:00', sinal: V },
-          { empresa: 'Atacado São Bento', contato: 'Julia Prado, Diretoria', valor: 'R$ 2.800', prazo: '2 dias sem contato', sinal: A },
+          { empresa: 'Distribuidora Vale Norte', contato: 'Marcos Ribeiro · Compras', valor: 'R$ 3.900', prazo: 'Contato hoje às 17:00', sinal: V },
+          { empresa: 'Atacado São Bento', contato: 'Julia Prado · Diretoria', valor: 'R$ 2.800', prazo: '2 dias sem contato', sinal: A },
         ]},
         { nome: 'Qualificação', qtd: 2, valor: 'R$ 9.100', cards: [
-          { empresa: 'Farmácias Bom Preço', contato: 'Aline Costa, Operações', valor: 'R$ 5.400', prazo: 'Ligar amanhã às 09:00', sinal: V },
-          { empresa: 'Casa & Construção MG', contato: 'Pedro Nunes, Sócio', valor: 'R$ 3.700', prazo: 'Atrasado desde 28/08', sinal: R },
+          { empresa: 'Farmácias Bom Preço', contato: 'Aline Costa · Operações', valor: 'R$ 5.400', prazo: 'Ligar amanhã às 09:00', sinal: V },
+          { empresa: 'Casa & Construção MG', contato: 'Pedro Nunes · Sócio', valor: 'R$ 3.700', prazo: 'Atrasado desde 28/08', sinal: R },
         ]},
         { nome: 'Demonstração Agendada', qtd: 5, valor: 'R$ 41.200', cards: [
-          { empresa: 'Rede Supermercados Aurora', contato: 'Camila Freitas, CEO', valor: 'R$ 12.500', prazo: 'Demo hoje às 15:30', sinal: V },
-          { empresa: 'Metalúrgica Trindade', contato: 'Sérgio Lima, Comercial', valor: 'R$ 8.900', prazo: 'Demo em 3 dias', sinal: V },
+          { empresa: 'Rede Supermercados Aurora', contato: 'Camila Freitas · CEO', valor: 'R$ 12.500', prazo: 'Demo hoje às 15:30', sinal: V },
+          { empresa: 'Metalúrgica Trindade', contato: 'Sérgio Lima · Comercial', valor: 'R$ 8.900', prazo: 'Demo em 3 dias', sinal: V },
         ]},
         { nome: 'Proposta Enviada', qtd: 5, valor: 'R$ 68.300', cards: [
-          { empresa: 'Grupo Alimentar Serra', contato: 'Diego Martins, CFO', valor: 'R$ 18.900', prazo: 'Aguardando assinatura', sinal: A },
-          { empresa: 'Auto Peças Guanabara', contato: 'Tatiana Mendes, Compras', valor: 'R$ 11.200', prazo: 'Follow-up amanhã', sinal: V },
+          { empresa: 'Grupo Alimentar Serra', contato: 'Diego Martins · CFO', valor: 'R$ 18.900', prazo: 'Aguardando assinatura', sinal: A },
+          { empresa: 'Auto Peças Guanabara', contato: 'Tatiana Mendes · Compras', valor: 'R$ 11.200', prazo: 'Follow-up amanhã', sinal: V },
+        ]},
+        { nome: 'Negociação / Contrato', qtd: 5, valor: 'R$ 53.500', cards: [
+          { empresa: 'Têxtil Boa Vista', contato: 'Fernanda Lopes · Diretora', valor: 'R$ 16.400', prazo: 'Reunião em 04/09', sinal: V },
+          { empresa: 'Logística Interlagos', contato: 'Rafael Souto · COO', valor: 'R$ 14.700', prazo: 'Desconto em análise', sinal: A },
         ]},
       ],
     };

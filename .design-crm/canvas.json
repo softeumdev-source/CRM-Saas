@@ -1,10 +1,45 @@
 {
   "artboards": [
-    { "file": "Calmo.dc.html", "title": "A · Calmo — kanban", "x": 0, "y": 0, "w": 1440, "h": 900 },
-    { "file": "Main.dc.html", "title": "B · Denso — kanban", "x": 1560, "y": 0, "w": 1440, "h": 900 },
-    { "file": "Editorial.dc.html", "title": "C · Editorial — kanban", "x": 3120, "y": 0, "w": 1440, "h": 900 },
-    { "file": "CardGaveta.dc.html", "title": "Card 1 · Gaveta sobre o board", "x": 0, "y": 1140, "w": 1440, "h": 900 },
-    { "file": "CardDividido.dc.html", "title": "Card 2 · Tela dividida com a fila", "x": 1560, "y": 1140, "w": 1440, "h": 900 }
+    {
+      "file": "Calmo.dc.html",
+      "title": "A · Calmo — kanban",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "B · Denso — kanban",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Editorial.dc.html",
+      "title": "C · Editorial — kanban",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "CardGaveta.dc.html",
+      "title": "Card 1 · Gaveta sobre o board",
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "CardDividido.dc.html",
+      "title": "Card 2 · Tela dividida com a fila",
+      "x": 1560,
+      "y": 1400,
+      "w": 1440,
+      "h": 900
+    }
   ],
   "annotations": [
     {
@@ -33,29 +68,31 @@
       "x": 3120,
       "y": 940,
       "w": 420,
-      "text": "C · EDITORIAL\n\nTipografia grande, muito espaço, três informações por card em vez de sete. Colunas separadas por linha, sem caixa colorida.\n\nA favor: o mais bonito e o mais calmo de ler.\nContra: cabem bem menos cards por tela. Com 2000 leads/mês você rola muito mais — é o oposto do que o volume pede."
+      "text": "C · EDITORIAL\n\nTipografia grande, muito espaço, três informações por card em vez de sete. Colunas separadas por linha, sem caixa colorida.\n\nA favor: o mais bonito e o mais calmo de ler.\nContra: cabem menos colunas E menos cards por tela — a 5a etapa fica na borda. Com 2000 leads/mês você rola muito mais — é o oposto do que o volume pede."
     },
     {
       "id": "nota-card1",
       "x": 0,
-      "y": 2080,
+      "y": 2340,
       "w": 420,
       "text": "CARD 1 · GAVETA\n\nO card abre por cima do board, que continua visível atrás. Fechar devolve você exatamente onde estava.\n\nResolve: a perda de contexto (hoje é página cheia, o board desmonta e remonta).\nContra: 720px de largura é menos espaço que a tela inteira para a aba de Proposta, que é a mais densa."
     },
     {
       "id": "nota-card2",
       "x": 1560,
-      "y": 2080,
+      "y": 2340,
       "w": 420,
       "text": "CARD 2 · TELA DIVIDIDA\n\nA fila da etapa fica à esquerda, o detalhe à direita. Você desce a lista sem fechar nada.\n\nResolve: trabalhar em série — que é exatamente o que o SDR vai fazer com a fila dele.\nContra: some a visão das outras colunas do funil enquanto você está aqui dentro."
     },
     {
       "id": "nota-comum",
       "x": 3120,
-      "y": 2080,
+      "y": 1400,
       "w": 420,
       "text": "OS DOIS CARDS JÁ CORRIGEM\n\n· Etapa e Responsável ganham borda visível (hoje são selects invisíveis que gravam sozinhos ao clicar)\n· E-mail e telefone viram botões (hoje é texto morto no cabeçalho)\n· A cadência aparece UMA vez (hoje aparece três)\n· \"Ganhei/Perdi\" sai do canto superior direito e vira \"Encerrar negócio\"\n· Aba \"ia\" chamada \"Mensagens\" com componente \"Copiloto\" vira só Mensagens"
     }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }
