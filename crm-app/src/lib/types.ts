@@ -19,8 +19,28 @@ export type NegocioComRelacoes = Negocio & {
   contato: Contato | null;
   responsavel: Usuario | null;
   etapa: EtapaPipeline | null;
-  atividades_pendentes?: { id: string; data_agendada: string | null; concluida: boolean | null }[] | null;
+  atividades_pendentes?:
+    | { id: string; titulo: string | null; tipo: string | null; data_agendada: string | null; concluida: boolean | null }[]
+    | null;
 };
+
+/** Colunas de `atividades` que o card do pipeline precisa. */
+export const SELECT_ATIVIDADES_CARD = "atividades_pendentes:atividades(id, titulo, tipo, data_agendada, concluida)";
+
+/** Select padrão de um negócio com tudo que o pipeline mostra. */
+export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), ${SELECT_ATIVIDADES_CARD}`;
+
+/**
+ * Ganho/perda derivados do nome da etapa — o funil padrão usa
+ * "Fechado (Ganho)" e "Perdido". `null` = negócio ainda em aberto.
+ * É o que alimenta `fechado_em` e, por consequência, as métricas de conversão.
+ */
+export function resultadoDaEtapa(etapa: { nome?: string | null } | null | undefined): boolean | null {
+  const nome = (etapa?.nome || "").toLowerCase();
+  if (nome.includes("ganho")) return true;
+  if (nome.includes("perdid")) return false;
+  return null;
+}
 
 export const PRIORIDADES = ["alta", "media", "baixa"] as const;
 export type Prioridade = (typeof PRIORIDADES)[number];

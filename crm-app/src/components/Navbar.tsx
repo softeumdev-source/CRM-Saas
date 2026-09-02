@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { assinarRealtime } from "@/lib/supabase/realtime";
+import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { Usuario, Notificacao } from "@/lib/types";
 import { iniciais } from "@/lib/types";
+import { formatarDataHora } from "@/lib/atividades";
 import {
   Kanban,
   ListFilter,
@@ -17,6 +18,7 @@ import {
   LogOut,
   Loader2,
   Trash2,
+  CalendarClock,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -28,33 +30,22 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
 
-  useEffect(() => {
-    const supabase = createClient();
-    let active = true;
+  const carregarNotificacoes = useCallback(async () => {
+    const { data } = await createClient()
+      .from("notificacoes")
+      .select("*")
+      .order("criado_em", { ascending: false })
+      .limit(30);
+    if (data) setNotificacoes(data);
+  }, []);
 
-    async function carregar() {
-      const { data } = await supabase
-        .from("notificacoes")
-        .select("*")
-        .order("criado_em", { ascending: false })
-        .limit(20);
-      if (active && data) setNotificacoes(data);
-    }
-    carregar();
-
-    const limpar = assinarRealtime("notificacoes-realtime", (canal) =>
-      canal.on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notificacoes", filter: `usuario_id=eq.${usuario.id}` },
-        (payload) => setNotificacoes((prev) => [payload.new as Notificacao, ...prev])
-      )
-    );
-
-    return () => {
-      active = false;
-      limpar();
-    };
-  }, [usuario.id]);
+  // O sino é o canal dos lembretes de agendamento: precisa chegar sozinho.
+  useSincronizacao(carregarNotificacoes, {
+    canal: "notificacoes",
+    tabelas: [{ tabela: "notificacoes", filtro: `usuario_id=eq.${usuario.id}` }],
+    intervaloMs: 30_000,
+    carregarAoMontar: true,
+  });
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
 
@@ -90,6 +81,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
 
   const links = [
     { href: "/", label: "Pipeline Kanban", icon: Kanban },
+    { href: "/agenda", label: "Agenda", icon: CalendarClock },
     { href: "/lista", label: "Lista de Leads", icon: ListFilter },
     { href: "/assinaturas", label: "Assinaturas", icon: FileSignature },
   ];
@@ -173,8 +165,14 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
                       onClick={() => setShowNotifs(false)}
                       className="block p-3 border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs"
                     >
-                      <p className="font-bold text-slate-800 dark:text-slate-200">{n.titulo}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`font-bold ${n.lida ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-200"}`}>
+                          {n.titulo}
+                        </p>
+                        {!n.lida && <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                      </div>
                       {n.corpo && <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.corpo}</p>}
+                      <p className="text-[10px] text-slate-400 mt-1">{formatarDataHora(n.criado_em)}</p>
                     </Link>
                   ))
                 )}

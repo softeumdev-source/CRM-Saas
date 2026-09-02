@@ -1,122 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Layers } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { assinarRealtime } from "@/lib/supabase/realtime";
+import { useState } from "react";
+import { Plus, Layers, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
+import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 import { LeadCard } from "@/components/LeadCard";
 
 export function KanbanBoard({
   etapas,
-  negociosIniciais,
-  busca = "",
+  negocios,
   onNovoNegocio,
+  onMoverNegocio,
 }: {
   etapas: EtapaPipeline[];
-  negociosIniciais: NegocioComRelacoes[];
-  busca?: string;
-  onNovoNegocio: () => void;
+  negocios: NegocioComRelacoes[];
+  onNovoNegocio: (etapaId: string) => void;
+  onMoverNegocio: (negocioId: string, etapaId: string) => void;
 }) {
-  const [negocios, setNegocios] = useState(negociosIniciais);
+  const [etapaAlvo, setEtapaAlvo] = useState<string | null>(null);
+  const [arrastando, setArrastando] = useState<string | null>(null);
 
-  useEffect(() => setNegocios(negociosIniciais), [negociosIniciais]);
-
-  useEffect(() => {
-    const recarregar = () => {
-      createClient()
-        .from("negocios")
-        .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), atividades_pendentes:atividades(id, data_agendada, concluida)")
-        .order("criado_em", { ascending: false })
-        .then(({ data }) => data && setNegocios(data as NegocioComRelacoes[]));
-    };
-    return assinarRealtime("negocios-kanban", (canal) =>
-      canal
-        .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, recarregar)
-        .on("postgres_changes", { event: "*", schema: "public", table: "contatos" }, recarregar)
-        .on("postgres_changes", { event: "*", schema: "public", table: "atividades" }, recarregar)
-    );
-  }, []);
-
-  const handleDrop = async (e: React.DragEvent, etapaId: string) => {
+  const handleDrop = (e: React.DragEvent, etapaId: string) => {
     e.preventDefault();
+    setEtapaAlvo(null);
+    setArrastando(null);
     const negocioId = e.dataTransfer.getData("text/plain");
     if (!negocioId) return;
-    const atual = negocios.find((n) => n.id === negocioId);
-    if (atual?.etapa_id === etapaId) return;
-    const etapa = etapas.find((et) => et.id === etapaId);
-    setNegocios((prev) =>
-      prev.map((n) => (n.id === negocioId ? { ...n, etapa_id: etapaId, etapa: etapa ?? n.etapa } : n))
-    );
-    const supabase = createClient();
-    await supabase
-      .from("negocios")
-      .update({ etapa_id: etapaId, probabilidade: etapa?.probabilidade ?? 10, atualizado_em: new Date().toISOString() })
-      .eq("id", negocioId);
-    await supabase.from("atividades").insert({
-      negocio_id: negocioId,
-      tipo: "mudanca_etapa",
-      titulo: `Etapa alterada para: ${etapa?.nome}`,
-    });
+    onMoverNegocio(negocioId, etapaId);
   };
-
-  const termo = busca.trim().toLowerCase();
-  const termoDigitos = termo.replace(/\D/g, "");
-  const negociosFiltrados = !termo
-    ? negocios
-    : negocios.filter((n) => {
-        const c = n.contato;
-        if (termoDigitos.length >= 3) {
-          const docs = [c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp].map((v) => (v || "").replace(/\D/g, ""));
-          if (docs.some((d) => d && d.includes(termoDigitos))) return true;
-        }
-        const campos = [c?.empresa, c?.nome, c?.email, c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp, n.titulo];
-        return campos.some((v) => v && String(v).toLowerCase().includes(termo));
-      });
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
       <div className="flex gap-4 min-w-max h-full">
         {etapas.map((etapa) => {
-          const hoje = new Date().toDateString();
-          const doEtapa = negociosFiltrados
-            .filter((n) => n.etapa_id === etapa.id)
-            .slice()
-            .sort((a, b) => {
-              const aHoje = a.ultima_atividade_em ? new Date(a.ultima_atividade_em).toDateString() === hoje : false;
-              const bHoje = b.ultima_atividade_em ? new Date(b.ultima_atividade_em).toDateString() === hoje : false;
-              if (aHoje === bHoje) return 0;
-              return aHoje ? 1 : -1;
-            });
+          const doEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
           const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
+          const trabalhadosHoje = doEtapa.filter((n) => temAtividadeHoje(n)).length;
+          const atrasados = doEtapa.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
+          const cor = etapa.cor || "#6366f1";
+          const alvo = etapaAlvo === etapa.id;
 
           return (
             <div
               key={etapa.id}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, etapa.id)}
-              className="w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full"
-              style={{
-                borderColor: (etapa.cor || "#6366f1") + "40",
-                background: (etapa.cor || "#6366f1") + "0a",
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (etapaAlvo !== etapa.id) setEtapaAlvo(etapa.id);
               }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setEtapaAlvo(null);
+              }}
+              onDrop={(e) => handleDrop(e, etapa.id)}
+              className={`w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-all ${
+                alvo ? "ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-slate-950" : ""
+              }`}
+              style={{ borderColor: cor + "40", background: cor + (alvo ? "1f" : "0a") }}
             >
-              <div className="mb-3.5 pb-2.5 border-b border-slate-200/80 dark:border-slate-800/80">
+              <div className="mb-3 pb-2.5 border-b border-slate-200/80 dark:border-slate-800/80">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-sm text-slate-800 dark:text-slate-100">{etapa.nome}</h2>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h2 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{etapa.nome}</h2>
                     <span
-                      className="px-2 py-0.5 text-xs font-bold rounded-full"
-                      style={{ background: (etapa.cor || "#6366f1") + "22", color: etapa.cor || "#6366f1" }}
+                      className="px-2 py-0.5 text-xs font-bold rounded-full shrink-0"
+                      style={{ background: cor + "22", color: cor }}
                     >
                       {doEtapa.length}
                     </span>
                   </div>
                   <button
-                    onClick={onNovoNegocio}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-all"
-                    title="Adicionar negócio nesta etapa"
+                    onClick={() => onNovoNegocio(etapa.id)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-all shrink-0"
+                    title={`Adicionar negócio em ${etapa.nome}`}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -125,6 +80,18 @@ export function KanbanBoard({
                   <span>Valor na etapa:</span>
                   <span className="font-bold text-slate-900 dark:text-slate-100">{formatarMoeda(totalValor)}</span>
                 </div>
+                {doEtapa.length > 0 && (
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400" title="Negócios com atividade registrada hoje">
+                      <CheckCircle2 className="h-3 w-3" /> {trabalhadosHoje} hoje
+                    </span>
+                    {atrasados > 0 && (
+                      <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400" title="Negócios com próximo passo atrasado">
+                        <AlertTriangle className="h-3 w-3" /> {atrasados} atrasado{atrasados > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
@@ -138,8 +105,18 @@ export function KanbanBoard({
                     <div
                       key={negocio.id}
                       draggable
-                      onDragStart={(e) => e.dataTransfer.setData("text/plain", negocio.id)}
-                      className="cursor-grab active:cursor-grabbing"
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", negocio.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setArrastando(negocio.id);
+                      }}
+                      onDragEnd={() => {
+                        setArrastando(null);
+                        setEtapaAlvo(null);
+                      }}
+                      className={`cursor-grab active:cursor-grabbing transition-opacity ${
+                        arrastando === negocio.id ? "opacity-40" : ""
+                      }`}
                     >
                       <LeadCard negocio={negocio} />
                     </div>

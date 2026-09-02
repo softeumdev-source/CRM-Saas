@@ -1,9 +1,16 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
+import { NegocioDetailClient, ehAbaValida } from "@/components/negocio/NegocioDetailClient";
+import { SELECT_NEGOCIO_COMPLETO } from "@/lib/types";
 
-export default async function NegocioPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function NegocioPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,11 +25,7 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
     { data: propostas },
     { data: usuarioAtual },
   ] = await Promise.all([
-    supabase
-      .from("negocios")
-      .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
-      .eq("id", id)
-      .single(),
+    supabase.from("negocios").select(SELECT_NEGOCIO_COMPLETO).eq("id", id).single(),
     supabase.from("etapas_pipeline").select("*").order("ordem"),
     supabase.from("usuarios").select("*").eq("role", "vendedor").eq("ativo", true),
     supabase.from("planos").select("*").eq("ativo", true).order("valor_plataforma_base"),
@@ -39,13 +42,14 @@ export default async function NegocioPage({ params }: { params: Promise<{ id: st
 
   return (
     <NegocioDetailClient
-      negocioInicial={negocio as any}
+      negocioInicial={negocio as never}
       etapas={etapas || []}
       vendedores={vendedores || []}
       planos={planos || []}
-      atividadesIniciais={(atividades as any) || []}
-      propostasIniciais={(propostas as any) || []}
+      atividadesIniciais={(atividades as never) || []}
+      propostasIniciais={(propostas as never) || []}
       usuarioAtual={usuarioAtual!}
+      abaInicial={ehAbaValida(tab) ? tab : "geral"}
     />
   );
 }

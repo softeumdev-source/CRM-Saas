@@ -8,11 +8,14 @@ import type { EtapaPipeline, Usuario } from "@/lib/types";
 
 export function NewLeadModal({
   etapas,
+  etapaInicial,
   vendedores,
   usuarioAtual,
   onClose,
 }: {
   etapas: EtapaPipeline[];
+  /** Etapa em que o card será criado (vem do botão "+" da coluna). */
+  etapaInicial?: string | null;
   vendedores: Usuario[];
   usuarioAtual: Usuario;
   onClose: () => void;
@@ -27,7 +30,7 @@ export function NewLeadModal({
   const [telefone, setTelefone] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [titulo, setTitulo] = useState("");
-  const [etapaId, setEtapaId] = useState(etapas[0]?.id || "");
+  const [etapaId, setEtapaId] = useState(etapaInicial || etapas[0]?.id || "");
   const [responsavelId, setResponsavelId] = useState(
     usuarioAtual.role === "vendedor" ? usuarioAtual.id : ""
   );

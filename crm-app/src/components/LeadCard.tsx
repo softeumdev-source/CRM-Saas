@@ -1,9 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, Clock, ChevronRight, Flame, Bell, CalendarClock } from "lucide-react";
+import { Building2, Clock, ChevronRight, Bell, CalendarClock, AlertTriangle, CircleAlert } from "lucide-react";
 import type { NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
+import {
+  descreverPrazo,
+  diasSemContato,
+  estaAtrasada,
+  formatarDataHora,
+  proximaAtividade,
+  temAtividadeHoje,
+} from "@/lib/atividades";
 
 const PRIORIDADE_COR: Record<string, string> = {
   alta: "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-200 dark:border-rose-800",
@@ -12,16 +20,28 @@ const PRIORIDADE_COR: Record<string, string> = {
 };
 
 export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
-  const hoje = new Date().toDateString();
-  const comAtividadeHoje = negocio.ultima_atividade_em ? new Date(negocio.ultima_atividade_em).toDateString() === hoje : false;
-  const proximaAtividade = (negocio.atividades_pendentes || [])
-    .filter((a) => !a.concluida && a.data_agendada)
-    .sort((a, b) => new Date(a.data_agendada!).getTime() - new Date(b.data_agendada!).getTime())[0];
+  const comAtividadeHoje = temAtividadeHoje(negocio);
+  const dias = diasSemContato(negocio);
+  const proxima = proximaAtividade(negocio.atividades_pendentes);
+  const proximaAtrasada = estaAtrasada(proxima?.data_agendada);
+
+  const semCnpj = !negocio.contato?.cnpj;
+  const statusContato = comAtividadeHoje
+    ? "Atividade registrada hoje"
+    : dias === null
+      ? "Nenhuma atividade registrada"
+      : `${dias} ${dias === 1 ? "dia" : "dias"} sem contato`;
 
   return (
     <Link
       href={`/negocios/${negocio.id}`}
-      className="group block bg-white dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200/90 dark:border-slate-700/80 shadow-xs hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-200 relative overflow-hidden"
+      className={`group block bg-white dark:bg-slate-800/90 rounded-2xl p-4 border shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden ${
+        comAtividadeHoje
+          ? "border-emerald-200/90 dark:border-emerald-900/70 hover:border-emerald-300"
+          : proximaAtrasada
+            ? "border-rose-200 dark:border-rose-900/70 hover:border-rose-300"
+            : "border-slate-200/90 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-700"
+      }`}
     >
       {negocio.prioridade === "alta" && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-rose-500" />
@@ -31,27 +51,58 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span
-              className={`h-2 w-2 rounded-full shrink-0 ${comAtividadeHoje ? "bg-emerald-500" : "bg-amber-500"}`}
+              title={statusContato}
+              className={`h-2.5 w-2.5 rounded-full shrink-0 ring-2 ${
+                comAtividadeHoje
+                  ? "bg-emerald-500 ring-emerald-100 dark:ring-emerald-950"
+                  : "bg-amber-500 ring-amber-100 dark:ring-amber-950"
+              }`}
             />
             <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
             <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
               {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
             </h3>
-            {proximaAtividade && <Bell className="h-3.5 w-3.5 text-indigo-500 shrink-0" />}
+            {proxima && <Bell className={`h-3.5 w-3.5 shrink-0 ${proximaAtrasada ? "text-rose-500" : "text-indigo-500"}`} />}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium pl-5 mt-0.5 line-clamp-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium pl-6 mt-0.5 line-clamp-1">
             {negocio.contato?.nome} {negocio.contato?.cargo ? `• ${negocio.contato.cargo}` : ""}
           </p>
-          {proximaAtividade && (
-            <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold pl-5 mt-0.5 flex items-center gap-1">
-              <CalendarClock className="h-3 w-3" /> {new Date(proximaAtividade.data_agendada!).toLocaleString("pt-BR")}
-            </p>
-          )}
         </div>
         {negocio.prioridade && (
           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border shrink-0 capitalize ${PRIORIDADE_COR[negocio.prioridade]}`}>
             {negocio.prioridade}
           </span>
+        )}
+      </div>
+
+      <div className="pl-6 space-y-1">
+        <p
+          className={`text-[11px] font-semibold flex items-center gap-1 ${
+            comAtividadeHoje
+              ? "text-emerald-600 dark:text-emerald-400"
+              : dias === null || dias >= 7
+                ? "text-amber-600 dark:text-amber-400"
+                : "text-slate-500 dark:text-slate-400"
+          }`}
+        >
+          <Clock className="h-3 w-3" /> {statusContato}
+        </p>
+        {proxima && (
+          <p
+            className={`text-[11px] font-semibold flex items-center gap-1 ${
+              proximaAtrasada ? "text-rose-600 dark:text-rose-400" : "text-indigo-600 dark:text-indigo-400"
+            }`}
+            title={proxima.titulo || undefined}
+          >
+            <CalendarClock className="h-3 w-3" />
+            {proximaAtrasada ? "Atrasado: " : "Próximo: "}
+            {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
+          </p>
+        )}
+        {!proxima && !comAtividadeHoje && (
+          <p className="text-[11px] font-semibold flex items-center gap-1 text-amber-600 dark:text-amber-400">
+            <CircleAlert className="h-3 w-3" /> Sem próximo passo agendado
+          </p>
         )}
       </div>
 
@@ -62,9 +113,9 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
             {formatarMoeda(negocio.valor)}
           </p>
         </div>
-        {!negocio.contato?.cnpj && (
+        {semCnpj && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 rounded-md border border-amber-200 dark:border-amber-800">
-            <Flame className="h-3 w-3" />
+            <AlertTriangle className="h-3 w-3" />
             Falta CNPJ
           </span>
         )}
