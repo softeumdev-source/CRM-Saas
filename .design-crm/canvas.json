@@ -1,48 +1,70 @@
 {
   "pages": [
-    { "id": "page-1", "name": "Escolhido" },
-    { "id": "page-2", "name": "Descartadas" }
+    { "id": "page-1", "name": "Estilo do card" },
+    { "id": "page-2", "name": "Já aprovado" },
+    { "id": "page-3", "name": "Descartadas" }
   ],
   "artboards": [
-    { "file": "Main.dc.html", "title": "Kanban — escolhido", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 900 },
-    { "file": "CardGaveta.dc.html", "title": "Card 1 · Gaveta sobre o board", "page": "page-1", "x": 0, "y": 1240, "w": 1440, "h": 900 },
-    { "file": "CardDividido.dc.html", "title": "Card 2 · Tela dividida com a fila", "page": "page-1", "x": 1560, "y": 1240, "w": 1440, "h": 900 },
+    { "file": "Papel.dc.html", "title": "1 · Papel", "page": "page-1", "x": 0, "y": 0, "w": 760, "h": 1000 },
+    { "file": "Tinta.dc.html", "title": "2 · Tinta", "page": "page-1", "x": 880, "y": 0, "w": 760, "h": 1000 },
+    { "file": "Bloco.dc.html", "title": "3 · Bloco", "page": "page-1", "x": 1760, "y": 0, "w": 760, "h": 1000 },
+    { "file": "Noite.dc.html", "title": "4 · Noite", "page": "page-1", "x": 2640, "y": 0, "w": 760, "h": 1000 },
 
-    { "file": "Calmo.dc.html", "title": "A · Calmo (descartada)", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 900 },
-    { "file": "Editorial.dc.html", "title": "C · Editorial (descartada)", "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 900 }
+    { "file": "Main.dc.html", "title": "Kanban — aprovado por você", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "CardDividido.dc.html", "title": "Estrutura do card — tela dividida", "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 900 },
+
+    { "file": "Calmo.dc.html", "title": "Calmo (descartada)", "page": "page-3", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Editorial.dc.html", "title": "Editorial (descartada)", "page": "page-3", "x": 1560, "y": 0, "w": 1440, "h": 900 },
+    { "file": "CardGaveta.dc.html", "title": "Gaveta (descartada)", "page": "page-3", "x": 3120, "y": 0, "w": 1440, "h": 900 }
   ],
   "annotations": [
     {
-      "id": "escolhido",
-      "page": "page-1",
-      "x": 1560,
-      "y": 0,
-      "w": 480,
-      "text": "KANBAN ESCOLHIDO\n\nO tabuleiro da opção A — colunas com o tom da etapa, cards espaçados, o formato que você já conhece — com a barra lateral da B no lugar da pílula no topo.\n\nA lateral estreitou para 200px para o board não perder espaço. Cabem 4 colunas inteiras e a quinta aparece na borda, indicando que rola para o lado. É o mesmo comportamento de hoje: com colunas desse tamanho, 5 nunca couberam em 1440px.\n\nA marca saiu do topo e foi para a lateral, então o cabeçalho da página ficou só com o título, a busca e o botão de novo negócio.\n\nA lateral é também onde o board do SDR vai entrar depois, como um segundo item do grupo Comercial — sem competir com este."
-    },
-    {
-      "id": "tipografia",
-      "page": "page-1",
-      "x": 1560,
-      "y": 620,
-      "w": 480,
-      "text": "UMA CONFIRMAÇÃO\n\nMantive a correção de tipografia que a opção A já trazia: entra peso normal no texto secundário e o corpo sobe para 12,5px.\n\nSe \"como está\" para você significava literalmente igual à produção de hoje — tudo em negrito, corpo a 10-12px — me diga que eu reverto. Mas é justamente esse ponto que faz a tela parecer densa demais hoje."
-    },
-    {
-      "id": "falta-card",
+      "id": "leia-primeiro",
       "page": "page-1",
       "x": 0,
-      "y": 2180,
-      "w": 480,
-      "text": "AINDA FALTA ESCOLHER\n\nO kanban está definido. Falta decidir o que acontece ao abrir um card: gaveta por cima do board (1) ou tela dividida com a fila da etapa à esquerda (2).\n\nOs dois já corrigem os mesmos problemas — Etapa e Responsável com borda visível em vez de select invisível que grava sozinho, e-mail e telefone como ações, a cadência aparecendo uma vez em vez de três, e \"Ganhei/Perdi\" fora do canto superior direito."
+      "y": -360,
+      "w": 900,
+      "text": "QUATRO ESTILOS PARA O MESMO CARD\n\nCada quadro mostra as DUAS coisas que a gente estava confundindo:\nem cima, o card pequeno que se repete dentro da coluna do kanban;\nembaixo, o card aberto — a tela que aparece quando você clica nele.\n\nO conteúdo é idêntico nos quatro. O que muda é o acabamento: tipografia,\ncor, contorno, sombra, o quanto a cor da etapa aparece.\n\nA estrutura já está decidida (kanban com barra lateral, card em tela\ndividida) — isso aqui é só a pele. Escolha um número."
     },
     {
-      "id": "nota-descartadas",
+      "id": "n1",
+      "page": "page-1",
+      "x": 0,
+      "y": 1040,
+      "w": 760,
+      "text": "1 · PAPEL\n\nNeutros quentes em vez do cinza-azulado padrão, nenhum contorno, sombra macia, e um serif itálico só nos números e no nome da empresa.\n\nSensação: caro, calmo, editorial. É o mais distante do que você tem hoje.\nRisco: menos contraste entre os cards — num board cheio, eles se misturam mais."
+    },
+    {
+      "id": "n2",
+      "page": "page-1",
+      "x": 880,
+      "y": 1040,
+      "w": 760,
+      "text": "2 · TINTA\n\nTraço de 1px, zero sombra, cards encostados um no outro formando uma tabela. Números e rótulos em monoespaçada. A cor da etapa é uma faixa fina na lateral.\n\nSensação: instrumento de trabalho, preciso, dá para ler muita linha rápido.\nRisco: pode parecer seco demais para quem gosta de interface mais macia."
+    },
+    {
+      "id": "n3",
+      "page": "page-1",
+      "x": 1760,
+      "y": 1040,
+      "w": 760,
+      "text": "3 · BLOCO\n\nA cor da etapa vira identidade: faixa sólida no topo do card, avatar na mesma cor, cabeçalho escuro na tela aberta. Valor em destaque grande.\n\nSensação: o mais colorido e confiante dos quatro, o que mais parece \"produto\".\nRisco: com 7 etapas coloridas o board fica agitado — é o oposto do calmo."
+    },
+    {
+      "id": "n4",
+      "page": "page-1",
+      "x": 2640,
+      "y": 1040,
+      "w": 760,
+      "text": "4 · NOITE\n\nEscuro como padrão, não como alternativa. Verde e rosa dessaturados para os sinais, halo suave no ponto de status.\n\nSensação: moderno, cansa menos a vista em quem fica o dia todo na tela.\nRisco: PDF de proposta e documento assinado são brancos — vão dar um salto de brilho toda vez que abrirem."
+    },
+    {
+      "id": "aprovado",
       "page": "page-2",
       "x": 0,
-      "y": -260,
-      "w": 620,
-      "text": "DIREÇÕES DESCARTADAS\n\nGuardadas para referência. A escolhida (na página Escolhido) usa o tabuleiro da A com a navegação lateral que só existia na B.\n\nA C · Editorial foi descartada pelo volume: com 500-2000 leads por mês, mostrar menos colunas e menos cards por tela é o oposto do que a operação pede."
+      "y": -280,
+      "w": 760,
+      "text": "O QUE JÁ ESTÁ DECIDIDO\n\nA ESTRUTURA — onde cada coisa fica. O kanban com navegação lateral e o card abrindo em tela dividida.\n\nO estilo visual dos dois vai mudar conforme o número que você escolher na página \"Estilo do card\". Aqui é só o esqueleto."
     }
   ],
   "launch": { "view": "canvas", "page": "page-1" }
