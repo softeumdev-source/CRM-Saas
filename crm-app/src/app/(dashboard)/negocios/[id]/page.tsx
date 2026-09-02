@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { NegocioDetailClient, ehAbaValida } from "@/components/negocio/NegocioDetailClient";
-import { SELECT_NEGOCIO_COMPLETO } from "@/lib/types";
+import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
+import { SELECT_NEGOCIO_COMPLETO, ehAbaValida } from "@/lib/types";
 
 export default async function NegocioPage({
   params,

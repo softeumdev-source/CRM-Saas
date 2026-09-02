@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { AgendaClient, SELECT_AGENDA, type AtividadeAgenda } from "@/components/AgendaClient";
+import { AgendaClient, type AtividadeAgenda } from "@/components/AgendaClient";
+import { SELECT_AGENDA } from "@/lib/types";
 
 export default async function AgendaPage() {
   const supabase = await createClient();
