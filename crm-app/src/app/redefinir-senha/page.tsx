@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, KeyRound } from "lucide-react";
+import { Portao } from "@/components/shell/Portao";
+import { Alerta, Button, Field, Input } from "@/components/ui";
 
 export default function RedefinirSenhaPage() {
   const router = useRouter();
@@ -36,54 +37,40 @@ export default function RedefinirSenhaPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-superficie px-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <KeyRound className="h-5 w-5 text-indigo-600" />
-          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            Defina sua nova senha
-          </h1>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Nova senha
-            </label>
-            <input
+    <Portao titulo="Nova senha" descricao="Defina a senha que você vai usar para entrar.">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field rotulo="Nova senha" dica="Ao menos 8 caracteres.">
+          {(p) => (
+            <Input
+              {...p}
               type="password"
               required
+              autoComplete="new-password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Confirmar senha
-            </label>
-            <input
+          )}
+        </Field>
+
+        <Field rotulo="Confirmar senha">
+          {(p) => (
+            <Input
+              {...p}
               type="password"
               required
+              autoComplete="new-password"
               value={confirmar}
               onChange={(e) => setConfirmar(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
-          </div>
-          {erro && (
-            <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
-              {erro}
-            </p>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Salvar nova senha
-          </button>
-        </form>
-      </div>
-    </div>
+        </Field>
+
+        {erro && <Alerta>{erro}</Alerta>}
+
+        <Button type="submit" variante="primario" carregando={loading} className="w-full">
+          Salvar nova senha
+        </Button>
+      </form>
+    </Portao>
   );
 }

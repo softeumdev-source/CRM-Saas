@@ -10,12 +10,21 @@ import { useId } from "react";
  * e o arquivo herda a fronteira de quem importa.
  */
 
+/**
+ * O controle carrega o proprio contorno, e nao pode ser so branco com sombra.
+ *
+ * O cartao do Papel dispensa contorno porque flutua sobre um fundo rebaixado —
+ * mas um campo nao tem esse fundo garantido: dentro de um cartao branco (que e
+ * onde formulario mora) ele ficava branco sobre branco e sumia por completo.
+ * O filete resolve nos dois casos. Sombra saiu junto: no Papel sombra quer
+ * dizer "flutua", e campo nao flutua.
+ */
 const CONTROLE =
-  "w-full rounded-lg bg-cartao px-3 py-2 text-corpo-lg text-tinta " +
-  "shadow-cartao placeholder:text-tinta-fraca " +
-  "transition-[box-shadow,background-color] duration-150 ease-out " +
+  "w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta " +
+  "placeholder:text-tinta-fraca " +
+  "transition-[border-color] duration-150 ease-out hover:border-tinta-fraca " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 " +
-  "disabled:cursor-not-allowed disabled:opacity-60";
+  "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-fio";
 
 export function Field({
   rotulo,
