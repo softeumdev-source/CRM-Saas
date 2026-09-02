@@ -1,98 +1,49 @@
 {
+  "pages": [
+    { "id": "page-1", "name": "Escolhido" },
+    { "id": "page-2", "name": "Descartadas" }
+  ],
   "artboards": [
-    {
-      "file": "Calmo.dc.html",
-      "title": "A · Calmo — kanban",
-      "x": 0,
-      "y": 0,
-      "w": 1440,
-      "h": 900
-    },
-    {
-      "file": "Main.dc.html",
-      "title": "B · Denso — kanban",
-      "x": 1560,
-      "y": 0,
-      "w": 1440,
-      "h": 900
-    },
-    {
-      "file": "Editorial.dc.html",
-      "title": "C · Editorial — kanban",
-      "x": 3120,
-      "y": 0,
-      "w": 1440,
-      "h": 900
-    },
-    {
-      "file": "CardGaveta.dc.html",
-      "title": "Card 1 · Gaveta sobre o board",
-      "x": 0,
-      "y": 1400,
-      "w": 1440,
-      "h": 900
-    },
-    {
-      "file": "CardDividido.dc.html",
-      "title": "Card 2 · Tela dividida com a fila",
-      "x": 1560,
-      "y": 1400,
-      "w": 1440,
-      "h": 900
-    }
+    { "file": "Main.dc.html", "title": "Kanban — escolhido", "page": "page-1", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "CardGaveta.dc.html", "title": "Card 1 · Gaveta sobre o board", "page": "page-1", "x": 0, "y": 1240, "w": 1440, "h": 900 },
+    { "file": "CardDividido.dc.html", "title": "Card 2 · Tela dividida com a fila", "page": "page-1", "x": 1560, "y": 1240, "w": 1440, "h": 900 },
+
+    { "file": "Calmo.dc.html", "title": "A · Calmo (descartada)", "page": "page-2", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Editorial.dc.html", "title": "C · Editorial (descartada)", "page": "page-2", "x": 1560, "y": 0, "w": 1440, "h": 900 }
   ],
   "annotations": [
     {
-      "id": "como-escolher",
-      "x": 0,
-      "y": -300,
-      "w": 660,
-      "text": "DUAS ESCOLHAS INDEPENDENTES\n\nLinha de cima: como o kanban se parece (A, B ou C).\nLinha de baixo: o que acontece ao abrir um card (1 ou 2).\n\nDá para combinar qualquer letra com qualquer número.\nA paleta é a mesma nos três — o que muda é densidade,\nhierarquia e navegação."
-    },
-    {
-      "id": "nota-a",
-      "x": 0,
-      "y": 940,
-      "w": 420,
-      "text": "A · CALMO\n\nMantém a navegação em pílula no topo e as colunas coloridas que você já tem. A mudança é só a tipografia: entra peso normal, o corpo sobe para 12,5px e o negrito passa a marcar só nome e valor.\n\nA favor: menor risco, seus vendedores não reaprendem nada.\nContra: continua parecendo o mesmo app — resolve o cansaço visual, não o \"cara de CRM\"."
-    },
-    {
-      "id": "nota-b",
+      "id": "escolhido",
+      "page": "page-1",
       "x": 1560,
-      "y": 940,
-      "w": 420,
-      "text": "B · DENSO  (minha recomendação)\n\nBarra lateral escura no lugar da pílula, colunas mais estreitas, números alinhados. Cabem 5 colunas e mais cards por tela.\n\nA favor: é o que mais lê como CRM de verdade, e a lateral é onde o board do SDR entra sem competir com o do vendedor. Aguenta os 500-2000 leads/mês que você projetou.\nContra: a mudança de navegação é a mais visível das três."
+      "y": 0,
+      "w": 480,
+      "text": "KANBAN ESCOLHIDO\n\nO tabuleiro da opção A — colunas com o tom da etapa, cards espaçados, o formato que você já conhece — com a barra lateral da B no lugar da pílula no topo.\n\nA lateral estreitou para 200px para o board não perder espaço. Cabem 4 colunas inteiras e a quinta aparece na borda, indicando que rola para o lado. É o mesmo comportamento de hoje: com colunas desse tamanho, 5 nunca couberam em 1440px.\n\nA marca saiu do topo e foi para a lateral, então o cabeçalho da página ficou só com o título, a busca e o botão de novo negócio.\n\nA lateral é também onde o board do SDR vai entrar depois, como um segundo item do grupo Comercial — sem competir com este."
     },
     {
-      "id": "nota-c",
-      "x": 3120,
-      "y": 940,
-      "w": 420,
-      "text": "C · EDITORIAL\n\nTipografia grande, muito espaço, três informações por card em vez de sete. Colunas separadas por linha, sem caixa colorida.\n\nA favor: o mais bonito e o mais calmo de ler.\nContra: cabem menos colunas E menos cards por tela — a 5a etapa fica na borda. Com 2000 leads/mês você rola muito mais — é o oposto do que o volume pede."
-    },
-    {
-      "id": "nota-card1",
-      "x": 0,
-      "y": 2340,
-      "w": 420,
-      "text": "CARD 1 · GAVETA\n\nO card abre por cima do board, que continua visível atrás. Fechar devolve você exatamente onde estava.\n\nResolve: a perda de contexto (hoje é página cheia, o board desmonta e remonta).\nContra: 720px de largura é menos espaço que a tela inteira para a aba de Proposta, que é a mais densa."
-    },
-    {
-      "id": "nota-card2",
+      "id": "tipografia",
+      "page": "page-1",
       "x": 1560,
-      "y": 2340,
-      "w": 420,
-      "text": "CARD 2 · TELA DIVIDIDA\n\nA fila da etapa fica à esquerda, o detalhe à direita. Você desce a lista sem fechar nada.\n\nResolve: trabalhar em série — que é exatamente o que o SDR vai fazer com a fila dele.\nContra: some a visão das outras colunas do funil enquanto você está aqui dentro."
+      "y": 620,
+      "w": 480,
+      "text": "UMA CONFIRMAÇÃO\n\nMantive a correção de tipografia que a opção A já trazia: entra peso normal no texto secundário e o corpo sobe para 12,5px.\n\nSe \"como está\" para você significava literalmente igual à produção de hoje — tudo em negrito, corpo a 10-12px — me diga que eu reverto. Mas é justamente esse ponto que faz a tela parecer densa demais hoje."
     },
     {
-      "id": "nota-comum",
-      "x": 3120,
-      "y": 1400,
-      "w": 420,
-      "text": "OS DOIS CARDS JÁ CORRIGEM\n\n· Etapa e Responsável ganham borda visível (hoje são selects invisíveis que gravam sozinhos ao clicar)\n· E-mail e telefone viram botões (hoje é texto morto no cabeçalho)\n· A cadência aparece UMA vez (hoje aparece três)\n· \"Ganhei/Perdi\" sai do canto superior direito e vira \"Encerrar negócio\"\n· Aba \"ia\" chamada \"Mensagens\" com componente \"Copiloto\" vira só Mensagens"
+      "id": "falta-card",
+      "page": "page-1",
+      "x": 0,
+      "y": 2180,
+      "w": 480,
+      "text": "AINDA FALTA ESCOLHER\n\nO kanban está definido. Falta decidir o que acontece ao abrir um card: gaveta por cima do board (1) ou tela dividida com a fila da etapa à esquerda (2).\n\nOs dois já corrigem os mesmos problemas — Etapa e Responsável com borda visível em vez de select invisível que grava sozinho, e-mail e telefone como ações, a cadência aparecendo uma vez em vez de três, e \"Ganhei/Perdi\" fora do canto superior direito."
+    },
+    {
+      "id": "nota-descartadas",
+      "page": "page-2",
+      "x": 0,
+      "y": -260,
+      "w": 620,
+      "text": "DIREÇÕES DESCARTADAS\n\nGuardadas para referência. A escolhida (na página Escolhido) usa o tabuleiro da A com a navegação lateral que só existia na B.\n\nA C · Editorial foi descartada pelo volume: com 500-2000 leads por mês, mostrar menos colunas e menos cards por tela é o oposto do que a operação pede."
     }
   ],
-  "launch": {
-    "view": "canvas"
-  }
+  "launch": { "view": "canvas", "page": "page-1" }
 }
