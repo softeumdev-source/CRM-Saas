@@ -1,8 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Send, MessageCircle, Copy, Check, Mail } from "lucide-react";
+import { Send, MessageCircle, Copy, Check } from "lucide-react";
 import type { NegocioComRelacoes, Usuario } from "@/lib/types";
+import { Button, Cartao, Rotulo, Segmentado, Textarea } from "@/components/ui";
+
+/**
+ * O gerador de modelos de mensagem.
+ *
+ * Chamava-se CopilotoTab, na aba de id `ia` rotulada "Mensagens", e nao tinha
+ * IA nenhuma dentro — sao modelos de texto com o nome do cliente e do vendedor
+ * preenchidos. Agora o nome do arquivo, o id da aba e o rotulo dizem a mesma
+ * coisa. Os textos dos modelos estao preservados palavra por palavra.
+ */
 
 interface Modelo {
   id: string;
@@ -104,7 +114,7 @@ function preencher(texto: string, vars: Record<string, string>): string {
     .replaceAll("{vendedor}", vars.vendedor || "");
 }
 
-export function CopilotoTab({ negocio, usuarioAtual }: { negocio: NegocioComRelacoes; usuarioAtual: Usuario }) {
+export function MensagensTab({ negocio, usuarioAtual }: { negocio: NegocioComRelacoes; usuarioAtual: Usuario }) {
   const [canal, setCanal] = useState<"email" | "whatsapp">("email");
   const [modeloId, setModeloId] = useState("primeiro");
   const [copiado, setCopiado] = useState(false);
@@ -122,12 +132,14 @@ export function CopilotoTab({ negocio, usuarioAtual }: { negocio: NegocioComRela
   const assuntoFinal = modelo.assunto ? preencher(modelo.assunto, vars) : "";
 
   const copiar = () => {
-    navigator.clipboard.writeText(canal === "email" && assuntoFinal ? `${assuntoFinal}\n\n${corpoFinal}` : corpoFinal);
+    navigator.clipboard.writeText(
+      canal === "email" && assuntoFinal ? `${assuntoFinal}\n\n${corpoFinal}` : corpoFinal,
+    );
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1800);
   };
 
-  const telefone = (negocio.contato?.telefone || "").replace(/\D/g, "");
+  const telefone = (negocio.contato?.whatsapp || negocio.contato?.telefone || "").replace(/\D/g, "");
   const linkWhats = telefone ? `https://wa.me/55${telefone}?text=${encodeURIComponent(corpoFinal)}` : null;
   const linkEmail = negocio.contato?.email
     ? `mailto:${negocio.contato.email}?subject=${encodeURIComponent(assuntoFinal)}&body=${encodeURIComponent(corpoFinal)}`
@@ -135,104 +147,84 @@ export function CopilotoTab({ negocio, usuarioAtual }: { negocio: NegocioComRela
 
   const trocarCanal = (novo: "email" | "whatsapp") => {
     setCanal(novo);
-    const primeiros = (novo === "email" ? EMAIL_MODELOS : WHATS_MODELOS);
-    if (!primeiros.some((m) => m.id === modeloId)) setModeloId(primeiros[0].id);
+    const disponiveis = novo === "email" ? EMAIL_MODELOS : WHATS_MODELOS;
+    if (!disponiveis.some((m) => m.id === modeloId)) setModeloId(disponiveis[0].id);
   };
 
   return (
-    <div className="space-y-5">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
-        <div>
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Gerador de mensagens</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Modelos prontos com o nome do vendedor e do cliente preenchidos. Escolha, revise e envie.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit">
-          <button
-            onClick={() => trocarCanal("email")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg ${canal === "email" ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-xs" : "text-slate-500"}`}
-          >
-            <Mail className="h-3.5 w-3.5" /> E-mail
-          </button>
-          <button
-            onClick={() => trocarCanal("whatsapp")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg ${canal === "whatsapp" ? "bg-white dark:bg-slate-900 text-emerald-600 shadow-xs" : "text-slate-500"}`}
-          >
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {modelos.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setModeloId(m.id)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg border ${
-                modelo.id === m.id
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              {m.titulo}
-            </button>
-          ))}
-        </div>
-
-        {canal === "email" && assuntoFinal && (
-          <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Assunto</label>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">{assuntoFinal}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Mensagem</label>
-          <textarea
-            readOnly
-            value={corpoFinal}
-            rows={canal === "email" ? 16 : 8}
-            className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl leading-relaxed"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={copiar}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl"
-          >
-            {copiado ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-            {copiado ? "Copiado!" : "Copiar"}
-          </button>
-
-          {canal === "whatsapp" && linkWhats && (
-            <a
-              href={linkWhats}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl"
-            >
-              <MessageCircle className="h-3.5 w-3.5" /> Abrir no WhatsApp
-            </a>
-          )}
-          {canal === "whatsapp" && !linkWhats && (
-            <span className="text-[11px] text-amber-600">Cadastre um telefone no contato para abrir o WhatsApp.</span>
-          )}
-
-          {canal === "email" && linkEmail && (
-            <a
-              href={linkEmail}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl"
-            >
-              <Send className="h-3.5 w-3.5" /> Abrir no e-mail
-            </a>
-          )}
-          {canal === "email" && !linkEmail && (
-            <span className="text-[11px] text-amber-600">Cadastre um e-mail no contato para abrir o cliente de e-mail.</span>
-          )}
-        </div>
+    <Cartao className="flex max-w-3xl flex-col gap-4 p-5">
+      <div className="flex flex-col gap-1">
+        <Rotulo>Modelo de mensagem</Rotulo>
+        <p className="text-corpo text-tinta-suave">
+          Nome do cliente e do vendedor ja preenchidos. Escolha, revise e envie.
+        </p>
       </div>
-    </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Segmentado
+          rotulo="Canal"
+          valor={canal}
+          aoTrocar={trocarCanal}
+          opcoes={[
+            { chave: "email" as const, label: "E-mail" },
+            { chave: "whatsapp" as const, label: "WhatsApp" },
+          ]}
+        />
+        <Segmentado
+          rotulo="Momento da cadencia"
+          valor={modelo.id}
+          aoTrocar={setModeloId}
+          opcoes={modelos.map((m) => ({ chave: m.id, label: m.titulo }))}
+        />
+      </div>
+
+      {canal === "email" && assuntoFinal && (
+        <div className="flex flex-col gap-1.5">
+          <Rotulo>Assunto</Rotulo>
+          <p className="text-corpo-lg rounded-lg bg-recuo px-3 py-2 text-tinta">{assuntoFinal}</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <Rotulo>Mensagem</Rotulo>
+        <Textarea readOnly value={corpoFinal} rows={canal === "email" ? 16 : 8} aria-label="Mensagem" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-fio pt-4">
+        <Button icone={copiado ? Check : Copy} onClick={copiar}>
+          {copiado ? "Copiado" : "Copiar"}
+        </Button>
+
+        {canal === "whatsapp" &&
+          (linkWhats ? (
+            <Button
+              variante="primario"
+              icone={MessageCircle}
+              onClick={() => window.open(linkWhats, "_blank", "noopener")}
+            >
+              Abrir no WhatsApp
+            </Button>
+          ) : (
+            <span className="text-corpo text-amber-700">
+              Cadastre um telefone no contato para abrir o WhatsApp.
+            </span>
+          ))}
+
+        {canal === "email" &&
+          (linkEmail ? (
+            <Button
+              variante="primario"
+              icone={Send}
+              onClick={() => window.open(linkEmail, "_blank", "noopener")}
+            >
+              Abrir no e-mail
+            </Button>
+          ) : (
+            <span className="text-corpo text-amber-700">
+              Cadastre um e-mail no contato para abrir o cliente de e-mail.
+            </span>
+          ))}
+      </div>
+    </Cartao>
   );
 }

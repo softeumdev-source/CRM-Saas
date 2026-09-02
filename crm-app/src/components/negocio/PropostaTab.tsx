@@ -26,6 +26,7 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
+import { Alerta, Button, Input } from "@/components/ui";
 
 /**
  * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
@@ -78,11 +79,14 @@ export function PropostaTab({
   planos,
   propostasIniciais,
   usuarioAtual,
+  onAtualizarContato,
 }: {
   negocio: NegocioComRelacoes;
   planos: Plano[];
   propostasIniciais: any[];
   usuarioAtual: Usuario;
+  /** Para o CNPJ preenchido aqui refletir no cabecalho sem recarregar. */
+  onAtualizarContato: (campos: Partial<NonNullable<NegocioComRelacoes["contato"]>>) => void;
 }) {
   const isAdmin = usuarioAtual.role === "admin";
   const [propostas, setPropostas] = useEstadoDaProp(propostasIniciais, semDuplicadas);
@@ -346,17 +350,7 @@ export function PropostaTab({
 
   return (
     <div className="space-y-5">
-      {!temCnpj && (
-        <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-2xl flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">CNPJ obrigatório</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              Este contato ainda não tem CNPJ cadastrado. Preencha o CNPJ na aba &quot;Visão Geral&quot; antes de gerar a proposta.
-            </p>
-          </div>
-        </div>
-      )}
+      {!temCnpj && <CnpjPendente negocio={negocio} onSalvou={onAtualizarContato} />}
 
       <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4 ${!temCnpj ? "opacity-50 pointer-events-none" : ""}`}>
         <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Gerar nova proposta</h3>
@@ -795,5 +789,60 @@ export function PropostaTab({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * O CNPJ faltando desabilitava a aba inteira e mandava a pessoa "preencher na
+ * aba Visão Geral" — sem link, e a aba nem se chama mais assim. Agora o campo
+ * que destrava a proposta fica aqui, no lugar onde a falta aparece.
+ */
+function CnpjPendente({
+  negocio,
+  onSalvou,
+}: {
+  negocio: NegocioComRelacoes;
+  onSalvou: (campos: Partial<NonNullable<NegocioComRelacoes["contato"]>>) => void;
+}) {
+  const [cnpj, setCnpj] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const salvar = async () => {
+    const valor = cnpj.trim();
+    if (!valor || !negocio.contato) return;
+    setSalvando(true);
+    setErro(null);
+    const { error } = await createClient()
+      .from("contatos")
+      .update({ cnpj: valor, atualizado_em: new Date().toISOString() })
+      .eq("id", negocio.contato.id);
+    setSalvando(false);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    onSalvou({ cnpj: valor });
+  };
+
+  return (
+    <Alerta tom="aviso" className="flex flex-col gap-3">
+      <span>Sem CNPJ a proposta não pode ser gerada. Dá para preencher aqui mesmo.</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="w-56">
+          <Input
+            value={cnpj}
+            onChange={(e) => setCnpj(e.target.value)}
+            aria-label="CNPJ do contato"
+            placeholder="00.000.000/0000-00"
+            onKeyDown={(e) => e.key === "Enter" && void salvar()}
+          />
+        </div>
+        <Button variante="primario" carregando={salvando} disabled={!cnpj.trim()} onClick={salvar}>
+          Salvar CNPJ
+        </Button>
+      </div>
+      {erro && <span className="font-normal">{erro}</span>}
+    </Alerta>
   );
 }

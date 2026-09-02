@@ -34,11 +34,25 @@ export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usua
 export const SELECT_AGENDA =
   "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
 
-/** Abas da tela de negócio. Fica aqui, e não no componente, porque a page (server) valida a query string. */
-export type Aba = "geral" | "cadencia" | "proposta" | "ia";
+/**
+ * Abas da tela de negócio. Fica aqui, e não no componente, porque a page
+ * (server) valida a query string — importar valor de módulo "use client" no
+ * servidor foi o que derrubou os cards em produção.
+ *
+ * `geral` virou `contato` (a aba é um formulário de contato, não um resumo) e
+ * `ia` virou `mensagens` (não havia IA nenhuma dentro dela). Os dois nomes
+ * antigos continuam sendo aceitos: há notificações salvas com `?tab=` no banco.
+ */
+export type Aba = "cadencia" | "contato" | "proposta" | "mensagens";
 
-export function ehAbaValida(valor: string | undefined): valor is Aba {
-  return valor === "geral" || valor === "cadencia" || valor === "proposta" || valor === "ia";
+const ABAS_ANTIGAS: Record<string, Aba> = { geral: "contato", ia: "mensagens" };
+
+export function normalizarAba(valor: string | undefined): Aba | undefined {
+  if (!valor) return undefined;
+  if (valor === "cadencia" || valor === "contato" || valor === "proposta" || valor === "mensagens") {
+    return valor;
+  }
+  return ABAS_ANTIGAS[valor];
 }
 
 /**
