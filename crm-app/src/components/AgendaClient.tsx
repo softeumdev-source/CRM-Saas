@@ -31,9 +31,7 @@ import {
   formatarDataHora,
   paraInputDataHora,
 } from "@/lib/atividades";
-
-export const SELECT_AGENDA =
-  "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
+import { SELECT_AGENDA } from "@/lib/types";
 
 export type AtividadeAgenda = Atividade & {
   negocio: {

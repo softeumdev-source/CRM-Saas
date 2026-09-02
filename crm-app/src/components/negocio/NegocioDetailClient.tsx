@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
-import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
+import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa, type Aba } from "@/lib/types";
 import {
   descreverPrazo,
   diasSemContato,
@@ -23,12 +23,6 @@ import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { CopilotoTab } from "@/components/negocio/CopilotoTab";
 
 type PropostaComRelacoes = Record<string, unknown>;
-export type Aba = "geral" | "cadencia" | "proposta" | "ia";
-
-export function ehAbaValida(valor: string | undefined): valor is Aba {
-  return valor === "geral" || valor === "cadencia" || valor === "proposta" || valor === "ia";
-}
-
 const ABAS: { id: Aba; label: string }[] = [
   { id: "geral", label: "Visão Geral" },
   { id: "cadencia", label: "Cadência" },

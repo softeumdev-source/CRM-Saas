@@ -30,6 +30,17 @@ export const SELECT_ATIVIDADES_CARD = "atividades_pendentes:atividades(id, titul
 /** Select padrão de um negócio com tudo que o pipeline mostra. */
 export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), ${SELECT_ATIVIDADES_CARD}`;
 
+/** Select da agenda: a atividade com o negócio e o contato para ligar/mandar mensagem. */
+export const SELECT_AGENDA =
+  "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
+
+/** Abas da tela de negócio. Fica aqui, e não no componente, porque a page (server) valida a query string. */
+export type Aba = "geral" | "cadencia" | "proposta" | "ia";
+
+export function ehAbaValida(valor: string | undefined): valor is Aba {
+  return valor === "geral" || valor === "cadencia" || valor === "proposta" || valor === "ia";
+}
+
 /**
  * Ganho/perda derivados do nome da etapa — o funil padrão usa
  * "Fechado (Ganho)" e "Perdido". `null` = negócio ainda em aberto.
