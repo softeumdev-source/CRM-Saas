@@ -1,70 +1,102 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Tokens do CRM.
+   Estilo "Papel" — neutros quentes, sem contorno, sombra macia.
 
-   A escala tipografica abaixo e nova e convive com a do Tailwind: os nomes sao
-   semanticos (text-rotulo, text-corpo...) justamente para nao sobrescrever
-   text-xs/text-sm, que aparecem em centenas de lugares ainda nao migrados.
-   Componentes novos usam a escala semantica; os antigos migram por fase.
+   As superficies sao tokens semanticos (superficie, recuo, cartao...) e nao
+   cores cruas, para o modo escuro ser uma troca de valores e nao um segundo
+   conjunto de classes. Os componentes novos usam so os tokens.
 --------------------------------------------------------------------------- */
 
 @theme inline {
   /* A Inter era carregada em --font-inter mas --font-sans apontava para
-     --font-geist-sans, que nao existe. Resultado: a fonte nunca era aplicada. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+     --font-geist-sans, que nao existe: a fonte nunca chegava a ser aplicada. */
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+
+  --color-superficie: var(--superficie);
+  --color-recuo: var(--recuo);
+  --color-cartao: var(--cartao);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-tinta-fraca: var(--tinta-fraca);
+  --color-fio: var(--fio);
+  --color-acento: var(--acento);
+}
+
+:root {
+  --superficie: #faf9f7;   /* fundo da pagina */
+  --recuo: #f2f0ec;        /* superficie rebaixada: coluna do kanban, fila */
+  --cartao: #ffffff;       /* o que flutua sobre o recuo */
+  --tinta: #1c1917;
+  --tinta-suave: #78716c;
+  --tinta-fraca: #a8a29e;
+  --fio: #ebe8e4;          /* filete de separacao */
+  --acento: #4338ca;       /* so acao: botao, foco, link */
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --superficie: #16140f;
+    --recuo: #1c1917;
+    --cartao: #24211d;
+    --tinta: #f5f3f0;
+    --tinta-suave: #a8a29e;
+    --tinta-fraca: #78716c;
+    --fio: #322e29;
+    --acento: #a5b4fc;
+    color-scheme: dark;
+  }
 }
 
 @theme {
-  /* Tipografia — substitui os text-[10px] / text-[11px] fora de escala.
-     Nada de corpo abaixo de 12,5px: e o que tornava a tela cansativa. */
-  --text-rotulo: 0.6875rem;          /* 11px — so para CAIXA ALTA com tracking */
+  /* Tipografia. Nomes semanticos para conviver com text-xs/text-sm, que ainda
+     aparecem em centenas de lugares nao migrados. Nada de corpo abaixo de
+     12,5px: era o que tornava a tela cansativa. */
+  --text-rotulo: 0.65625rem;         /* 10,5px — SO em caixa alta com tracking */
   --text-rotulo--line-height: 1rem;
-  --text-rotulo--letter-spacing: 0.04em;
-  --text-rotulo--font-weight: 500;
+  --text-rotulo--letter-spacing: 0.08em;
+  --text-rotulo--font-weight: 600;
 
   --text-corpo: 0.78125rem;          /* 12,5px — texto secundario */
   --text-corpo--line-height: 1.15rem;
 
-  --text-corpo-lg: 0.84375rem;       /* 13,5px — texto principal de leitura */
-  --text-corpo-lg--line-height: 1.3rem;
+  --text-corpo-lg: 0.84375rem;       /* 13,5px — texto principal */
+  --text-corpo-lg--line-height: 1.35rem;
 
-  --text-titulo: 0.9375rem;          /* 15px — titulo de card e de secao */
-  --text-titulo--line-height: 1.25rem;
+  --text-titulo: 0.875rem;           /* 14px — nome no card */
+  --text-titulo--line-height: 1.2rem;
+  --text-titulo--letter-spacing: -0.016em;
   --text-titulo--font-weight: 600;
 
-  --text-titulo-lg: 1.3125rem;       /* 21px — titulo de tela */
-  --text-titulo-lg--line-height: 1.6rem;
-  --text-titulo-lg--letter-spacing: -0.02em;
+  --text-display: 1.875rem;          /* 30px — titulo de tela, no serif */
+  --text-display--line-height: 2rem;
+  --text-display--letter-spacing: -0.012em;
 
-  /* Elevacao: borda fina para estrutura, sombra so para o que flutua. */
-  --shadow-cartao: 0 1px 2px rgb(15 23 42 / 0.05);
-  --shadow-flutuante: 0 8px 24px rgb(15 23 42 / 0.10), 0 2px 6px rgb(15 23 42 / 0.06);
+  /* Elevacao: sombra so para o que flutua. Sem contorno — e a assinatura
+     do Papel, e o que o fundo rebaixado da coluna torna possivel. */
+  --shadow-cartao: 0 1px 2px rgb(28 25 23 / 0.06);
+  --shadow-erguido: 0 6px 18px rgb(28 25 23 / 0.10), 0 1px 3px rgb(28 25 23 / 0.06);
+  --shadow-flutuante: 0 12px 32px rgb(28 25 23 / 0.12), 0 2px 6px rgb(28 25 23 / 0.06);
 
-  /* Camadas nomeadas, para nao ter disputa de z-index solto. */
+  /* Camadas nomeadas, para nao haver disputa de z-index solto. */
   --z-dropdown: 20;
   --z-cabecalho: 30;
   --z-modal: 50;
 }
 
-/* Anel de foco unico do app. Hoje 24 dos 30 inputs nao tem foco visivel. */
-@utility foco-visivel {
+/* Anel de foco unico do app: hoje 24 dos 30 inputs nao tem foco visivel. */
+@utility foco {
   &:focus-visible {
-    outline: 2px solid var(--color-indigo-500);
+    outline: 2px solid var(--acento);
     outline-offset: 2px;
   }
 }
 
 body {
-  background: var(--color-slate-100);
-  color: var(--color-slate-900);
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background: var(--color-slate-950);
-    color: var(--color-slate-100);
-  }
+  background: var(--superficie);
+  color: var(--tinta);
 }
 
 ::-webkit-scrollbar {
@@ -72,11 +104,11 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(100 116 139 / 0.4);
+  background: color-mix(in oklab, var(--tinta-fraca) 55%, transparent);
   border-radius: 999px;
 }
 
-/* Motion: curta, so em transform/opacity/cor, e respeitando quem pediu menos. */
+/* Motion curta, so em transform/opacity/cor, e respeitando quem pediu menos. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
