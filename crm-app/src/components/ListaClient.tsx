@@ -183,7 +183,7 @@ export function ListaClient({
                     <td className="p-4 text-right">
                       <Link
                         href={`/negocios/${n.id}`}
-                        className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl transition-all whitespace-nowrap"
+                        className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl transition-colors duration-150 ease-out whitespace-nowrap"
                       >
                         Ver detalhes
                       </Link>

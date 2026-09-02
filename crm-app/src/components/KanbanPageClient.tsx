@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
+import { moverEtapa } from "@/lib/negocios";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
@@ -82,25 +83,21 @@ export function KanbanPageClient({
       );
       setErro(null);
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("negocios")
-        .update({ etapa_id: etapaId, probabilidade: etapa?.probabilidade ?? 10, ganho, atualizado_em: agora })
-        .eq("id", negocioId);
+      if (!etapa) return;
+      const r = await moverEtapa({
+        negocioId,
+        etapa,
+        nomeEtapaAnterior: atual.etapa?.nome,
+        probabilidadeAtual: atual.probabilidade,
+        usuarioId: usuarioAtual.id,
+        sufixoDescricao: " no pipeline",
+      });
 
-      if (error) {
+      if (!r.ok) {
         setNegocios(anterior);
-        setErro(`Não foi possível mover o negócio: ${error.message}`);
+        setErro(`Não foi possível mover o negócio: ${r.erro}`);
         return;
       }
-
-      await supabase.from("atividades").insert({
-        negocio_id: negocioId,
-        usuario_id: usuarioAtual.id,
-        tipo: "mudanca_etapa",
-        titulo: `Etapa alterada para: ${etapa?.nome ?? "—"}`,
-        descricao: `Movido de "${atual.etapa?.nome ?? "—"}" para "${etapa?.nome ?? "—"}" no pipeline.`,
-      });
       void recarregar();
     },
     [negocios, etapas, usuarioAtual.id, recarregar],
@@ -162,7 +159,7 @@ export function KanbanPageClient({
           </div>
           <button
             onClick={() => abrirNovoNegocio(etapas[0]?.id || "")}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
           >
             <Plus className="h-4 w-4" />
             <span>Novo Negócio</span>
@@ -212,7 +209,7 @@ export function KanbanPageClient({
               <button
                 key={f.chave}
                 onClick={() => setFoco(f.chave)}
-                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap ${
                   foco === f.chave
                     ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-800"

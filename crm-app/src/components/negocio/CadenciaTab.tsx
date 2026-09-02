@@ -22,6 +22,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
+import { Confirmar } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, TipoAtividade, Usuario } from "@/lib/types";
 import type { TablesInsert } from "@/lib/supabase/types";
@@ -220,14 +221,17 @@ export function CadenciaTab({
     }
   };
 
-  const excluirAtividade = async (id: string) => {
-    if (!confirm("Excluir este passo da cadência?")) return;
+  const [excluindo, setExcluindo] = useState<AtividadeComUsuario | null>(null);
+
+  const excluirAtividade = async (): Promise<string | void> => {
+    if (!excluindo) return;
     const antes = atividades;
+    const id = excluindo.id;
     setAtividades((prev) => prev.filter((a) => a.id !== id));
     const { error } = await createClient().from("atividades").delete().eq("id", id);
     if (error) {
       setAtividades(antes);
-      setErro(`Não foi possível excluir: ${error.message}`);
+      return error.message;
     }
   };
 
@@ -259,7 +263,7 @@ export function CadenciaTab({
         </div>
 
         <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Tipo de contato</label>
+          <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Tipo de contato</span>
           <div className="flex flex-wrap gap-1.5">
             {TIPOS_REGISTRAVEIS.map((t) => {
               const Icon = ICONES[t] || MessageSquare;
@@ -269,9 +273,9 @@ export function CadenciaTab({
                   key={t}
                   type="button"
                   onClick={() => setTipo(t)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-colors duration-150 ease-out ${
                     ativo
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20"
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
                       : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
                   }`}
                 >
@@ -285,10 +289,10 @@ export function CadenciaTab({
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+              <label htmlFor="cadenciata-1" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
                 O que aconteceu <span className="text-rose-500">*</span>
               </label>
-              <textarea
+              <textarea id="cadenciata-1"
                 rows={12}
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
@@ -312,8 +316,8 @@ export function CadenciaTab({
             </div>
 
             <div>
-              <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Realizada em</label>
-              <input
+              <label htmlFor="cadenciata-2" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Realizada em</label>
+              <input id="cadenciata-2"
                 type="datetime-local"
                 value={realizadaEm}
                 onChange={(e) => setRealizadaEm(e.target.value)}
@@ -330,8 +334,8 @@ export function CadenciaTab({
                 : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
             }`}
           >
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
+            <label htmlFor="cadenciata-3" className="flex items-start gap-2 cursor-pointer">
+              <input id="cadenciata-3"
                 type="checkbox"
                 checked={agendarProximo}
                 onChange={(e) => setAgendarProximo(e.target.checked)}
@@ -350,7 +354,7 @@ export function CadenciaTab({
             {agendarProximo && (
               <>
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Quando</label>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Quando</span>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {PRESETS_AGENDAMENTO.map((p, i) => (
                       <button
@@ -377,8 +381,8 @@ export function CadenciaTab({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Tipo do próximo passo</label>
-                  <select
+                  <label htmlFor="cadenciata-4" className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Tipo do próximo passo</label>
+                  <select id="cadenciata-4"
                     value={tipoProximo}
                     onChange={(e) => setTipoProximo(e.target.value as TipoAtividade)}
                     className="w-full px-3 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
@@ -390,10 +394,10 @@ export function CadenciaTab({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                  <label htmlFor="cadenciata-5" className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
                     Descrição do próximo passo <span className="font-semibold normal-case text-slate-400">(opcional)</span>
                   </label>
-                  <input
+                  <input id="cadenciata-5"
                     value={tituloProximo}
                     onChange={(e) => setTituloProximo(e.target.value)}
                     maxLength={120}
@@ -544,7 +548,7 @@ export function CadenciaTab({
                       Concluir
                     </button>
                     <button
-                      onClick={() => excluirAtividade(a.id)}
+                      onClick={() => setExcluindo(a)}
                       title="Excluir"
                       className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg"
                     >
@@ -625,6 +629,20 @@ export function CadenciaTab({
           {historico.length === 0 && <p className="text-xs text-slate-400 pl-9">Nenhum registro encontrado.</p>}
         </div>
       </div>
+
+      <Confirmar
+        aberto={!!excluindo}
+        titulo="Excluir passo da cadência"
+        rotuloConfirmar="Excluir passo"
+        aoFechar={() => setExcluindo(null)}
+        aoConfirmar={excluirAtividade}
+        descricao={
+          <>
+            <strong className="font-bold text-slate-900 dark:text-slate-100">{excluindo?.titulo}</strong>{" "}
+            sai do histórico deste negócio. Não dá para desfazer.
+          </>
+        }
+      />
     </div>
   );
 }

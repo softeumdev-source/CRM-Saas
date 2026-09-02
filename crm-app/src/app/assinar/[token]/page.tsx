@@ -165,11 +165,11 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       )}
 
       <div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-1">
+        <label htmlFor="page-1" className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-1">
           <Mail className="h-3.5 w-3.5 text-indigo-600" />
           E-mail de faturamento
         </label>
-        <input
+        <input id="page-1"
           type="email"
           value={emailFaturamento}
           onChange={(e) => setEmailFaturamento(e.target.value)}
@@ -178,8 +178,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         />
       </div>
 
-      <label className="flex items-start gap-2 text-xs text-slate-600">
-        <input type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
+      <label htmlFor="page-2" className="flex items-start gap-2 text-xs text-slate-600">
+        <input id="page-2" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
         <span>
           Declaro que li e concordo com os termos das propostas Comercial e Técnica acima, e que esta
           assinatura eletrônica tem validade jurídica nos termos do art. 10, §2º da Medida Provisória

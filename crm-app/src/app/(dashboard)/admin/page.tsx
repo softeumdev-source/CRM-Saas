@@ -2,6 +2,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminClient } from "@/components/admin/AdminClient";
 
+/**
+ * Teto explicito: a consulta era ilimitada e, no volume alvo de 500-2000
+ * leads/mes, derrubava a pagina. A tela avisa quando bate no teto, para
+ * "distribuir todos" nao mentir sobre o que alcancou.
+ */
+const TETO_LEADS_SEM_DONO = 500;
+
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
@@ -19,7 +26,7 @@ export default async function AdminPage() {
     supabase.from("planos").select("*").order("valor_plataforma_base"),
     supabase.from("negocios").select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)"),
     supabase.from("etapas_pipeline").select("*").order("ordem"),
-    supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }),
+    supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }).limit(TETO_LEADS_SEM_DONO),
     supabase.from("contatos").select("*, responsavel:usuarios(id, nome)").not("responsavel_id", "is", null).order("criado_em", { ascending: false }).limit(1000),
     supabase.from("negocio_etapa_historico").select("negocio_id, etapa_id"),
     supabase
@@ -36,6 +43,7 @@ export default async function AdminPage() {
       negocios={(negocios as any) || []}
       etapas={etapas || []}
       contatosSemDono={contatosSemDono || []}
+      tetoLeadsSemDono={TETO_LEADS_SEM_DONO}
       contatosComDono={(contatosComDono as any) || []}
       historicoEtapas={historicoEtapas || []}
       solicitacoesDesconto={(solicitacoesDesconto as any) || []}

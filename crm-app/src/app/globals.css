@@ -8,8 +8,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Apontava para --font-geist-sans e --font-geist-mono, que nunca existiram
+     em lugar nenhum do projeto: a Inter era baixada pelo layout.tsx em
+     --font-inter e jamais chegava a ser aplicada. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {

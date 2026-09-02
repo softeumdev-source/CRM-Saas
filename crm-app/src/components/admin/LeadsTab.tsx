@@ -37,11 +37,14 @@ const COR_STATUS: Record<StatusLinha, string> = {
 export function LeadsTab({
   vendedores,
   contatosSemDonoIniciais,
+  teto,
   contatosComDonoIniciais = [],
   usuarioAtual,
 }: {
   vendedores: Usuario[];
   contatosSemDonoIniciais: Contato[];
+  /** Teto de carregamento do servidor; se a lista bater nele, avisa. */
+  teto?: number;
   contatosComDonoIniciais?: ContatoComDono[];
   usuarioAtual: Usuario;
 }) {
@@ -263,10 +266,10 @@ export function LeadsTab({
           Os leads importados entram no pool &quot;sem dono&quot; até serem distribuídos.
         </p>
         {!preview && (
-          <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
+          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
             {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {processando ? progresso || "Processando..." : "Escolher arquivo"}
-            <input type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
+            <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
           </label>
         )}
         {resultado && (
@@ -353,7 +356,14 @@ export function LeadsTab({
             <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length})
             </h3>
-            <p className="text-xs text-slate-500">{selecionados.size} selecionados</p>
+            <p className="text-xs text-slate-500">
+              {selecionados.size} selecionados
+              {teto !== undefined && contatosSemDono.length >= teto && (
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  {" · "}mostrando os {teto} mais recentes; distribua estes e recarregue para ver o resto
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">

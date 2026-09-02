@@ -52,7 +52,7 @@ export function KanbanBoard({
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) setEtapaAlvo(null);
               }}
               onDrop={(e) => handleDrop(e, etapa.id)}
-              className={`w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-all ${
+              className={`w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-colors duration-150 ease-out ${
                 alvo ? "ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-slate-950" : ""
               }`}
               style={{ borderColor: cor + "40", background: cor + (alvo ? "1f" : "0a") }}
@@ -70,7 +70,7 @@ export function KanbanBoard({
                   </div>
                   <button
                     onClick={() => onNovoNegocio(etapa.id)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-all shrink-0"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors duration-150 ease-out shrink-0"
                     title={`Adicionar negócio em ${etapa.nome}`}
                   >
                     <Plus className="h-4 w-4" />

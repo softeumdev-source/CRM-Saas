@@ -38,10 +38,10 @@ export function FunilTab({
       <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Buscar vendedor</label>
+            <label htmlFor="funiltab-1" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Buscar vendedor</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <input
+              <input id="funiltab-1"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome do vendedor..."
@@ -50,8 +50,8 @@ export function FunilTab({
             </div>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Filtrar funil</label>
-            <select
+            <label htmlFor="funiltab-2" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Filtrar funil</label>
+            <select id="funiltab-2"
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               className="px-4 py-2.5 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full"

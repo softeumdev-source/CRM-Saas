@@ -82,24 +82,24 @@ export function VisaoGeralTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Nome do contato</label>
-            <input
+            <label htmlFor="visaogeral-1" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Nome do contato</label>
+            <input id="visaogeral-1"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Empresa</label>
-            <input
+            <label htmlFor="visaogeral-2" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Empresa</label>
+            <input id="visaogeral-2"
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">E-mail</label>
-            <input
+            <label htmlFor="visaogeral-3" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">E-mail</label>
+            <input id="visaogeral-3"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -107,16 +107,16 @@ export function VisaoGeralTab({
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Telefone</label>
-            <input
+            <label htmlFor="visaogeral-4" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Telefone</label>
+            <input id="visaogeral-4"
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">WhatsApp</label>
-            <input
+            <label htmlFor="visaogeral-5" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">WhatsApp</label>
+            <input id="visaogeral-5"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               placeholder="(00) 00000-0000"
@@ -126,10 +126,10 @@ export function VisaoGeralTab({
         </div>
 
         <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
+          <label htmlFor="visaogeral-6" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
             CNPJ <span className="text-rose-500">(obrigatório para gerar proposta)</span>
           </label>
-          <input
+          <input id="visaogeral-6"
             value={cnpj}
             onChange={(e) => setCnpj(e.target.value)}
             placeholder="00.000.000/0000-00"
@@ -146,16 +146,16 @@ export function VisaoGeralTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Cargo</label>
-            <input
+            <label htmlFor="visaogeral-7" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Cargo</label>
+            <input id="visaogeral-7"
               value={cargo}
               onChange={(e) => setCargo(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
             />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Estado (UF)</label>
-            <input
+            <label htmlFor="visaogeral-8" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Estado (UF)</label>
+            <input id="visaogeral-8"
               value={industria}
               onChange={(e) => setIndustria(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
@@ -173,7 +173,7 @@ export function VisaoGeralTab({
         </button>
 
         <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Origem</label>
+          <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Origem</span>
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 capitalize">{negocio.contato?.origem || "manual"}</p>
         </div>
 

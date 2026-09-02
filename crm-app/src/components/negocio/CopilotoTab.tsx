@@ -182,14 +182,14 @@ export function CopilotoTab({ negocio, usuarioAtual }: { negocio: NegocioComRela
 
         {canal === "email" && assuntoFinal && (
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Assunto</label>
+            <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Assunto</span>
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">{assuntoFinal}</p>
           </div>
         )}
 
         <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Mensagem</label>
-          <textarea
+          <label htmlFor="copilotota-1" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Mensagem</label>
+          <textarea id="copilotota-1"
             readOnly
             value={corpoFinal}
             rows={canal === "email" ? 16 : 8}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
+import { abrirPdf } from "@/lib/storage";
 
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
@@ -151,15 +152,26 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
               </Link>
               {(assinadoComercial || assinadoTecnica) && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {/* Botao, e nao <a href>: o banco guarda o caminho no bucket
+                      privado, entao a URL tem de ser assinada na hora. Com o
+                      caminho cru no href, estes links davam 404. */}
                   {assinadoComercial && (
-                    <a href={assinadoComercial} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
+                    <button
+                      type="button"
+                      onClick={() => void abrirPdf(assinadoComercial)}
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800"
+                    >
                       <Download className="h-3.5 w-3.5" /> Baixar comercial assinada
-                    </a>
+                    </button>
                   )}
                   {assinadoTecnica && (
-                    <a href={assinadoTecnica} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
+                    <button
+                      type="button"
+                      onClick={() => void abrirPdf(assinadoTecnica)}
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800"
+                    >
                       <Download className="h-3.5 w-3.5" /> Baixar técnica assinada
-                    </a>
+                    </button>
                   )}
                 </div>
               )}

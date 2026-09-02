@@ -46,10 +46,10 @@ export default function RedefinirSenhaPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label htmlFor="page-1" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
               Nova senha
             </label>
-            <input
+            <input id="page-1"
               type="password"
               required
               value={senha}
@@ -58,10 +58,10 @@ export default function RedefinirSenhaPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+            <label htmlFor="page-2" className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
               Confirmar senha
             </label>
-            <input
+            <input id="page-2"
               type="password"
               required
               value={confirmar}

@@ -26,6 +26,8 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
+import { abrirPdf } from "@/lib/storage";
+import { Confirmar } from "@/components/ui";
 
 /**
  * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
@@ -237,8 +239,12 @@ export function PropostaTab({
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
-  const handleExcluir = async (propostaId: string) => {
-    if (!confirm("Excluir esta proposta? Esta ação não pode ser desfeita.")) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [excluindoProposta, setExcluindoProposta] = useState<any>(null);
+
+  const handleExcluir = async (): Promise<string | void> => {
+    if (!excluindoProposta) return;
+    const propostaId = excluindoProposta.id;
     const supabase = createClient();
     const proposta = propostas.find((p) => p.id === propostaId);
     const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter(Boolean);
@@ -246,10 +252,7 @@ export function PropostaTab({
       await supabase.storage.from("documentos").remove(paths);
     }
     const { error } = await supabase.from("propostas").delete().eq("id", propostaId);
-    if (error) {
-      setErro("Falha ao excluir proposta: " + error.message);
-      return;
-    }
+    if (error) return `Falha ao excluir: ${error.message}`;
     setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
   };
 
@@ -328,15 +331,9 @@ export function PropostaTab({
     }
   };
 
-  const baixarPdf = async (path: string) => {
-    if (path.startsWith("http")) {
-      window.open(path, "_blank");
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 60 * 5);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-  };
+  // A logica de assinar a URL vive em lib/storage: a tela de Assinaturas
+  // precisa da mesma coisa, e la ela estava faltando (os links davam 404).
+  const baixarPdf = (path: string) => void abrirPdf(path);
 
   const copiarLink = (link: string) => {
     navigator.clipboard.writeText(link);
@@ -362,8 +359,8 @@ export function PropostaTab({
         <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Gerar nova proposta</h3>
 
         <div>
-          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Plano</label>
-          <select value={planoId} onChange={(e) => {
+          <label htmlFor="propostata-1" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Plano</label>
+          <select id="propostata-1" value={planoId} onChange={(e) => {
             setPlanoId(e.target.value);
             const p = planos.find((x) => x.id === e.target.value);
             const newSetup = (p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0);
@@ -378,10 +375,10 @@ export function PropostaTab({
         </div>
 
         <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
-          <label className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400 block mb-1">Mensalidade do plano</label>
+          <label htmlFor="propostata-2" className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400 block mb-1">Mensalidade do plano</label>
           <div className="flex items-center gap-2">
             <span className="text-sm text-indigo-500">R$</span>
-            <input
+            <input id="propostata-2"
               type="text"
               inputMode="decimal"
               value={valorMensalTexto}
@@ -407,10 +404,10 @@ export function PropostaTab({
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-          <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobrança única)</label>
+          <label htmlFor="propostata-3" className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobrança única)</label>
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">R$</span>
-            <input
+            <input id="propostata-3"
               type="text"
               inputMode="decimal"
               value={valorSetupTexto}
@@ -427,12 +424,12 @@ export function PropostaTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Prazo contrato (meses)</label>
-            <input type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
+            <label htmlFor="propostata-4" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Prazo contrato (meses)</label>
+            <input id="propostata-4" type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
           </div>
           <div>
-            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso prévio de rescisão</label>
-            <select value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
+            <label htmlFor="propostata-5" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso prévio de rescisão</label>
+            <select id="propostata-5" value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
               {AVISOS_PREVIOS_DIAS.map((d) => (
                 <option key={d} value={d}>{d} dias {d === 180 ? "(padrão)" : ""}</option>
               ))}
@@ -613,7 +610,7 @@ export function PropostaTab({
                           <Send className="h-3.5 w-3.5" /> Enviar para assinatura
                         </button>
                         <button
-                          onClick={() => handleExcluir(p.id)}
+                          onClick={() => setExcluindoProposta(p)}
                           className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-rose-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -794,6 +791,23 @@ export function PropostaTab({
           </div>
         )}
       </div>
+
+      <Confirmar
+        aberto={!!excluindoProposta}
+        titulo="Excluir proposta"
+        rotuloConfirmar="Excluir proposta"
+        aoFechar={() => setExcluindoProposta(null)}
+        aoConfirmar={handleExcluir}
+        descricao={
+          <>
+            A proposta{" "}
+            <strong className="font-bold text-slate-900 dark:text-slate-100">
+              {excluindoProposta?.numero}
+            </strong>{" "}
+            e os PDFs dela no Storage são apagados. Não dá para desfazer.
+          </>
+        }
+      />
     </div>
   );
 }

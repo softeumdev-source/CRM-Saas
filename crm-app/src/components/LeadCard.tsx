@@ -35,7 +35,7 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
   return (
     <Link
       href={`/negocios/${negocio.id}`}
-      className={`group block bg-white dark:bg-slate-800/90 rounded-2xl p-4 border shadow-xs hover:shadow-md transition-all duration-200 relative overflow-hidden ${
+      className={`group block bg-white dark:bg-slate-800/90 rounded-2xl p-4 border shadow-xs hover:shadow-md transition-colors duration-150 ease-out duration-200 relative overflow-hidden ${
         comAtividadeHoje
           ? "border-emerald-200/90 dark:border-emerald-900/70 hover:border-emerald-300"
           : proximaAtrasada
@@ -134,7 +134,7 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
           <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
             {negocio.probabilidade ?? 0}% Prob.
           </span>
-          <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all" />
+          <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-colors duration-150 ease-out" />
         </div>
       </div>
     </Link>

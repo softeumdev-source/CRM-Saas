@@ -72,7 +72,7 @@ export function DesempenhoTab({
             <button
               key={p.chave}
               onClick={() => setPeriodo(p.chave)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-colors duration-150 ease-out ${
                 periodo === p.chave
                   ? "bg-indigo-600 text-white shadow-md"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
@@ -199,7 +199,7 @@ export function DesempenhoTab({
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-44 shrink-0 truncate">{f.etapa.nome}</span>
                 <div className="flex-1 h-7 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden relative">
                   <div
-                    className="h-full rounded-lg flex items-center justify-end pr-2 transition-all"
+                    className="h-full rounded-lg flex items-center justify-end pr-2 transition-colors duration-150 ease-out"
                     style={{ width: `${(f.alcancaram / topoFunil) * 100}%`, background: (f.etapa.cor || "#6366f1"), minWidth: f.alcancaram > 0 ? "2rem" : 0 }}
                   >
                     <span className="text-[11px] font-extrabold text-white drop-shadow">{f.alcancaram}</span>

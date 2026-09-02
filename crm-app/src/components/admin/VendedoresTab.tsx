@@ -5,6 +5,7 @@ import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserChec
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
+import { Botao, Confirmar } from "@/components/ui";
 
 export function VendedoresTab({
   vendedores,
@@ -83,12 +84,16 @@ export function VendedoresTab({
     }
   };
 
-  const toggleAtivo = async (v: Usuario) => {
-    const novoAtivo = !v.ativo;
-    if (novoAtivo === false && !confirm(`Remover ${v.nome} do time de vendedores? Os leads dele continuam com ele, mas ele deixa de aparecer para receber novos leads e não consegue mais acessar o sistema.`)) return;
-    setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo: novoAtivo } : u)));
-    const supabase = createClient();
-    await supabase.from("usuarios").update({ ativo: novoAtivo }).eq("id", v.id);
+  const [desativando, setDesativando] = useState<Usuario | null>(null);
+
+  const definirAtivo = async (v: Usuario, ativo: boolean): Promise<string | void> => {
+    const antes = vendedoresState;
+    setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo } : u)));
+    const { error } = await createClient().from("usuarios").update({ ativo }).eq("id", v.id);
+    if (error) {
+      setVendedoresState(antes);
+      return error.message;
+    }
   };
 
   const totalMeta = vendedoresState.filter((v) => v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
@@ -216,12 +221,15 @@ export function VendedoresTab({
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
+                  {/* A meta era somada no topo do painel mas nao havia onde
+                      defini-la — so mexendo direto no banco. */}
+                  <MetaMensal usuario={v} />
                   <div className="text-right">
                     <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
                     <p className="text-[11px] text-slate-400">{deles.length} negócios</p>
                   </div>
                   <button
-                    onClick={() => toggleAtivo(v)}
+                    onClick={() => setDesativando(v)}
                     title="Remover vendedor"
                     className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
                   >
@@ -248,7 +256,7 @@ export function VendedoresTab({
                       </div>
                     </div>
                     <button
-                      onClick={() => toggleAtivo(v)}
+                      onClick={() => void definirAtivo(v, true)}
                       title="Reativar vendedor"
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
                     >
@@ -261,6 +269,74 @@ export function VendedoresTab({
           )}
         </div>
       </div>
+
+      <Confirmar
+        aberto={!!desativando}
+        titulo="Remover do time"
+        rotuloConfirmar="Remover do time"
+        aoFechar={() => setDesativando(null)}
+        aoConfirmar={() => definirAtivo(desativando!, false)}
+        descricao={
+          <>
+            <strong className="font-bold text-slate-900 dark:text-slate-100">{desativando?.nome}</strong>{" "}
+            deixa de acessar o sistema e some das listas de quem pode receber lead. Os negócios já
+            atribuídos continuam com essa pessoa — reatribua antes se for o caso.
+          </>
+        }
+      />
+    </div>
+  );
+}
+
+/** Edicao da meta mensal na propria linha da pessoa. */
+function MetaMensal({ usuario }: { usuario: Usuario }) {
+  const [meta, setMeta] = useState(String(usuario.meta_mensal ?? 0));
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  useEffect(() => setMeta(String(usuario.meta_mensal ?? 0)), [usuario.meta_mensal]);
+
+  const alterada = Number(meta) !== (usuario.meta_mensal ?? 0);
+
+  const salvar = async () => {
+    const valor = Number(meta);
+    if (!Number.isFinite(valor) || valor < 0) {
+      setErro("Valor inválido");
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    const { error } = await createClient()
+      .from("usuarios")
+      .update({ meta_mensal: valor })
+      .eq("id", usuario.id);
+    setSalvando(false);
+    if (error) setErro(error.message);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <label
+        htmlFor={`meta-${usuario.id}`}
+        className="text-[11px] font-bold uppercase text-slate-400"
+      >
+        Meta
+      </label>
+      <input
+        id={`meta-${usuario.id}`}
+        type="number"
+        min={0}
+        step={1000}
+        value={meta}
+        onChange={(e) => setMeta(e.target.value)}
+        className="w-28 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-900 transition-[border-color] duration-150 ease-out hover:border-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      {alterada && (
+        <Botao tamanho="sm" variante="primario" carregando={salvando} onClick={salvar}>
+          Salvar
+        </Botao>
+      )}
+      {erro && <span className="text-[11px] font-semibold text-rose-600">{erro}</span>}
     </div>
   );
 }

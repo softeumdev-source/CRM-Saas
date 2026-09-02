@@ -192,7 +192,7 @@ export function PdfFieldEditor({
               <button
                 key={s.ordem}
                 onClick={() => setSignatarioSelecionado(s.ordem)}
-                className={`w-full text-left px-3 py-2 rounded-lg mb-1 text-xs font-semibold border transition-all ${selecionado ? cor.label + " border-2" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
+                className={`w-full text-left px-3 py-2 rounded-lg mb-1 text-xs font-semibold border transition-colors duration-150 ease-out ${selecionado ? cor.label + " border-2" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
               >
                 <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: cor.border }} />
                 {s.nome || s.email}

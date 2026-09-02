@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
+import { ehDoTime } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
@@ -19,6 +20,7 @@ export function AdminClient({
   negocios,
   etapas,
   contatosSemDono,
+  tetoLeadsSemDono,
   contatosComDono,
   historicoEtapas,
   solicitacoesDesconto,
@@ -30,6 +32,7 @@ export function AdminClient({
   negocios: NegocioComRelacoes[];
   etapas: EtapaPipeline[];
   contatosSemDono: Contato[];
+  tetoLeadsSemDono?: number;
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   historicoEtapas?: { negocio_id: string; etapa_id: string | null }[];
   solicitacoesDesconto?: any[];
@@ -61,7 +64,9 @@ export function AdminClient({
     };
   }, [router]);
 
-  const vendedores = usuarios.filter((u) => u.role === "vendedor");
+  // Era `u.role === "vendedor"` cravado: qualquer papel novo ficava invisivel
+  // no painel inteiro — inclusive nas listas de quem pode receber lead.
+  const vendedores = usuarios.filter(ehDoTime);
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
   const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
 
@@ -92,7 +97,7 @@ export function AdminClient({
               <button
                 key={t.id}
                 onClick={() => setAba(t.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-colors duration-150 ease-out ${
                   aba === t.id ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:text-white"
                 }`}
               >
@@ -108,7 +113,7 @@ export function AdminClient({
       {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}
-      {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
+      {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
       {aba === "descontos" && <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />}
     </div>
   );

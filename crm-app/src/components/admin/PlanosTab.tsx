@@ -5,6 +5,7 @@ import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
+import { Confirmar } from "@/components/ui";
 
 const PLANO_VAZIO = {
   nome: "",
@@ -73,15 +74,15 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
     setModalAberto(false);
   };
 
-  const excluir = async (id: string) => {
-    if (!confirm("Excluir este plano?")) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("planos").delete().eq("id", id);
-    if (error) {
-      alert("Falha ao excluir plano: " + error.message);
-      return;
-    }
-    setPlanos((prev) => prev.filter((p) => p.id !== id));
+  // Era confirm() + alert(): o erro da exclusao chegava num dialogo separado,
+  // depois de o primeiro ja ter fechado. Agora volta para dentro do proprio.
+  const [excluindo, setExcluindo] = useState<Plano | null>(null);
+
+  const excluir = async (): Promise<string | void> => {
+    if (!excluindo) return;
+    const { error } = await createClient().from("planos").delete().eq("id", excluindo.id);
+    if (error) return `Falha ao excluir: ${error.message}`;
+    setPlanos((prev) => prev.filter((p) => p.id !== excluindo.id));
   };
 
   return (
@@ -106,7 +107,7 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
               </div>
               <div className="flex items-center gap-1">
                 <button onClick={() => abrirEdicao(p)} className="p-1.5 text-slate-400 hover:text-indigo-600"><Edit3 className="h-4 w-4" /></button>
-                <button onClick={() => excluir(p.id)} className="p-1.5 text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => setExcluindo(p)} className="p-1.5 text-slate-400 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
             <div className="py-2 border-y border-slate-100 dark:border-slate-800 text-xs space-y-1">
@@ -144,6 +145,20 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
           </div>
         </div>
       )}
+
+      <Confirmar
+        aberto={!!excluindo}
+        titulo="Excluir plano"
+        rotuloConfirmar="Excluir plano"
+        aoFechar={() => setExcluindo(null)}
+        aoConfirmar={excluir}
+        descricao={
+          <>
+            O plano <strong className="font-bold text-slate-900 dark:text-slate-100">{excluindo?.nome}</strong>{" "}
+            deixa de aparecer na geração de propostas. As propostas já emitidas com ele não mudam.
+          </>
+        }
+      />
     </div>
   );
 }
@@ -151,8 +166,8 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
 function Campo({ label, value, onChange, step }: { label: string; value: number; onChange: (v: number) => void; step?: string }) {
   return (
     <div>
-      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">{label}</label>
-      <input
+      <label htmlFor="planostab-1" className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">{label}</label>
+      <input id="planostab-1"
         type="number"
         step={step || "1"}
         value={value}

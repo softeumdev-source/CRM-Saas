@@ -187,7 +187,7 @@ export function PdfSignViewer({
           <div
             key={campo.id}
             onClick={() => !assinado && onCampoClick(campo)}
-            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-all ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-[1.02]"} ${!assinado ? "animate-pulse ring-2 " + cor.pulse : ""}`}
+            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-colors duration-150 ease-out ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-[1.02]"} ${!assinado ? "animate-pulse ring-2 " + cor.pulse : ""}`}
             style={{
               left: `${campo.x * 100}%`,
               top: `${campo.y * 100}%`,
