@@ -7,129 +7,130 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
   <style>
-    body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     *, *::before, *::after { box-sizing: border-box; }
-    a { color: #4f46e5; text-decoration: none; } a:hover { color: #4338ca; }
-    /* estados: nada interativo fica sem resposta ao mouse e ao teclado */
-    [data-acao] { cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease; }
-    [data-acao]:hover { filter: brightness(0.97); }
-    [data-acao]:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
-    [data-card] { cursor: pointer; transition: border-color 140ms ease, box-shadow 140ms ease; }
-    [data-card]:hover { border-color: #a5b4fc; box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
+    a { color: #4338ca; text-decoration: none; } a:hover { color: #312e81; }
     .num { font-variant-numeric: tabular-nums; }
+    .serif { font-family: "Instrument Serif", Georgia, serif; }
+    .card { transition: transform 160ms ease-out, box-shadow 160ms ease-out; cursor: pointer; }
+    .card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgb(28 25 23 / 0.10), 0 1px 3px rgb(28 25 23 / 0.06); }
+    .card:focus-visible { outline: 2px solid #4338ca; outline-offset: 3px; }
+    .nav { transition: background-color 140ms ease, color 140ms ease; cursor: pointer; }
+    .nav:hover { background: #292524; color: #fafaf9; }
+    .acao { transition: background-color 140ms ease, border-color 140ms ease; cursor: pointer; }
+    .acao:hover { filter: brightness(0.96); }
   </style>
 </helmet>
 
-<div style="width: 1440px; height: 900px; display: flex; background: #f1f5f9; color: #0f172a; overflow: hidden;">
+<div style="width: 1440px; height: 900px; display: flex; background: #faf9f7; color: #1c1917; overflow: hidden;">
 
-  <!-- RAIL -->
-  <div style="width: 200px; flex-shrink: 0; background: #0f172a; display: flex; flex-direction: column; padding: 18px 12px; gap: 24px;">
+  <!-- BARRA LATERAL -->
+  <div style="width: 200px; flex-shrink: 0; background: #1c1917; display: flex; flex-direction: column; padding: 20px 12px; gap: 26px;">
     <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px;">
-      <div style="width: 30px; height: 30px; border-radius: 9px; background: #4f46e5; display: flex; align-items: center; justify-content: center;">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 4v16M12 4v10M19 4v6"/></svg>
+      <div style="width: 29px; height: 29px; border-radius: 9px; background: #4338ca; display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M5 4v16M12 4v10M19 4v6"/></svg>
       </div>
-      <span style="color: #f8fafc; font-size: 14px; font-weight: 600; letter-spacing: -0.01em;">Softeum</span>
+      <span class="serif" style="color: #fafaf9; font-size: 19px; letter-spacing: -0.005em;">Softeum</span>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 2px;">
-      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #475569; padding: 0 10px 8px;">Comercial</div>
-
-      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #1e293b;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>
-        <span style="font-size: 13px; font-weight: 500; color: #f8fafc;">Pipeline</span>
+      <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: #57534e; padding: 0 10px 9px;">Comercial</div>
+      <div class="nav" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; background: #292524; color: #fafaf9;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="7" rx="1"/></svg>
+        <span style="font-size: 13.5px; font-weight: 500;">Pipeline</span>
       </div>
-
-      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
-        <span style="font-size: 13px; font-weight: 400; color: #cbd5e1;">Lista</span>
+      <div class="nav" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #d6d3d1;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#78716c" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+        <span style="font-size: 13.5px; font-weight: 400;">Agenda</span>
+        <span class="num" style="margin-left: auto; font-size: 11px; font-weight: 600; color: #fda4af; background: #431a1f; padding: 1px 7px; border-radius: 999px;">6</span>
       </div>
-
-      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
-        <span style="font-size: 13px; font-weight: 400; color: #cbd5e1;">Agenda</span>
-        <span class="num" style="margin-left: auto; font-size: 11px; font-weight: 600; color: #fda4af; background: #4c0519; padding: 1px 6px; border-radius: 999px;">6</span>
+      <div class="nav" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #d6d3d1;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#78716c" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <span style="font-size: 13.5px; font-weight: 400;">Lista</span>
       </div>
-
-      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 8V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-3"/><path d="M3 13h8"/></svg>
-        <span style="font-size: 13px; font-weight: 400; color: #cbd5e1;">Assinaturas</span>
+      <div class="nav" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #d6d3d1;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#78716c" stroke-width="1.9" stroke-linecap="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 8V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-3"/><path d="M3 13h8"/></svg>
+        <span style="font-size: 13.5px; font-weight: 400;">Assinaturas</span>
       </div>
     </div>
 
     <div style="display: flex; flex-direction: column; gap: 2px;">
-      <div style="font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #475569; padding: 0 10px 8px;">Gestão</div>
-      <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
-        <span style="font-size: 13px; font-weight: 400; color: #cbd5e1;">Administração</span>
+      <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: #57534e; padding: 0 10px 9px;">Gestão</div>
+      <div class="nav" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px; color: #d6d3d1;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#78716c" stroke-width="1.9" stroke-linecap="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+        <span style="font-size: 13.5px; font-weight: 400;">Administração</span>
       </div>
     </div>
 
-    <div style="margin-top: auto; display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; background: #1e293b;">
-      <div class="num" style="width: 27px; height: 27px; border-radius: 999px; background: #312e81; color: #c7d2fe; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;">WS</div>
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 9px; background: #292524;">
+      <div class="num" style="width: 27px; height: 27px; border-radius: 999px; background: #44403c; color: #e7e5e4; font-size: 10.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">WS</div>
       <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
-        <span style="font-size: 12px; font-weight: 500; color: #f8fafc;">William</span>
-        <span style="font-size: 12px; font-weight: 400; color: #64748b;">Vendedor</span>
+        <span style="font-size: 12.5px; font-weight: 500; color: #fafaf9;">William</span>
+        <span style="font-size: 12px; font-weight: 400; color: #a8a29e;">Vendedor</span>
       </div>
     </div>
   </div>
 
-  <!-- MAIN -->
+  <!-- CONTEUDO -->
   <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
-  <div style="padding: 20px 24px 16px; display: flex; align-items: flex-end; gap: 16px;">
-    <div style="display: flex; flex-direction: column; gap: 4px;">
-      <span style="font-size: 21px; font-weight: 600; letter-spacing: -0.02em;">Pipeline</span>
-      <span class="num" style="font-size: 13px; font-weight: 400; color: #64748b;">21 negócios abertos · R$ 184.500 por mês em jogo</span>
-    </div>
-    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
-      <div style="display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 9px 13px; width: 250px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <span style="font-size: 13px; font-weight: 400; color: #94a3b8;">Buscar negócio…</span>
-      </div>
-      <div data-acao tabindex="0" style="display: flex; align-items: center; gap: 8px; background: #4f46e5; border-radius: 10px; padding: 10px 16px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        <span style="font-size: 13px; font-weight: 600; color: #fff;">Novo negócio</span>
-      </div>
-    </div>
-  </div>
 
-  <!-- BOARD -->
-  <div style="flex: 1; display: flex; gap: 14px; padding: 0 24px 22px; overflow: hidden; align-items: stretch;">
-    <sc-for list="{{colunas}}" as="c" hint-placeholder-count="4">
-      <div style="width: 262px; flex-shrink: 0; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid {{c.borda}}; background: {{c.fundo}}; overflow: hidden;">
-        <div style="padding: 14px 15px 12px; display: flex; flex-direction: column; gap: 5px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 13px; font-weight: 600; letter-spacing: -0.005em; flex: 1; min-width: 0;">{{c.nome}}</span>
-            <span class="num" style="font-size: 12px; font-weight: 500; color: #475569;">{{c.qtd}}</span>
-          </div>
-          <span class="num" style="font-size: 12px; font-weight: 400; color: #64748b;">{{c.valor}}</span>
+    <div style="padding: 24px 24px 18px; display: flex; align-items: flex-end; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span class="serif" style="font-size: 30px; letter-spacing: -0.012em; line-height: 1.05;">Pipeline</span>
+        <span class="num" style="font-size: 13.5px; font-weight: 400; color: #78716c;">21 negócios abertos · R$ 184.500 por mês em jogo</span>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+        <div class="acao" style="display: flex; align-items: center; gap: 8px; background: #ffffff; border-radius: 10px; padding: 9px 13px; width: 250px; box-shadow: 0 1px 2px rgb(28 25 23 / 0.05);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span style="font-size: 13px; font-weight: 400; color: #a8a29e;">Buscar negócio…</span>
         </div>
+        <div class="acao" tabindex="0" style="display: flex; align-items: center; gap: 8px; background: #1c1917; border-radius: 10px; padding: 10px 16px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span style="font-size: 13px; font-weight: 500; color: #fff;">Novo negócio</span>
+        </div>
+      </div>
+    </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 0 10px 10px; overflow: hidden;">
-          <sc-for list="{{c.cards}}" as="k" hint-placeholder-count="3">
-            <div data-card tabindex="0" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 11px; box-shadow: 0 1px 2px rgba(15,23,42,0.05);">
-              <div style="display: flex; flex-direction: column; gap: 3px;">
-                <span style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3;">{{k.empresa}}</span>
-                <span style="font-size: 12.5px; font-weight: 400; color: #64748b; line-height: 1.4;">{{k.contato}}</span>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 7px;">
-                <div style="width: 7px; height: 7px; border-radius: 999px; background: {{k.sinal}};"></div>
-                <span style="font-size: 12.5px; font-weight: 400; color: #475569;">{{k.prazo}}</span>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
-                <span class="num" style="font-size: 14px; font-weight: 600; letter-spacing: -0.01em;">{{k.valor}}</span>
-                <span style="font-size: 12px; font-weight: 400; color: #94a3b8;">/mês</span>
-                <div class="num" style="margin-left: auto; width: 22px; height: 22px; border-radius: 999px; background: #e0e7ff; color: #4338ca; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{k.dono}}</div>
-              </div>
+    <!-- BOARD -->
+    <div style="flex: 1; display: flex; gap: 14px; padding: 0 24px 24px; overflow: hidden; align-items: stretch;">
+      <sc-for list="{{colunas}}" as="c" hint-placeholder-count="5">
+        <!-- a coluna tem fundo levemente mais fechado que a pagina: e o que faz
+             o card branco continuar destacado num board cheio -->
+        <div style="width: 262px; flex-shrink: 0; display: flex; flex-direction: column; background: #f2f0ec; border-radius: 16px; overflow: hidden;">
+          <div style="padding: 15px 15px 12px; display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 6px; height: 6px; border-radius: 999px; background: {{c.cor}};"></div>
+              <span style="font-size: 13.5px; font-weight: 600; letter-spacing: -0.012em; flex: 1; min-width: 0;">{{c.nome}}</span>
+              <span class="num" style="font-size: 12.5px; font-weight: 500; color: #78716c;">{{c.qtd}}</span>
             </div>
-          </sc-for>
+            <span class="num" style="font-size: 12.5px; font-weight: 400; color: #a8a29e; padding-left: 14px;">{{c.valor}}</span>
+          </div>
+
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 9px; padding: 0 10px 10px; overflow: hidden;">
+            <sc-for list="{{c.cards}}" as="k" hint-placeholder-count="4">
+              <div class="card" tabindex="0" style="background: #ffffff; border-radius: 13px; padding: 14px 15px; display: flex; flex-direction: column; gap: 11px; box-shadow: 0 1px 2px rgb(28 25 23 / 0.06);">
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <span style="font-size: 14px; font-weight: 600; letter-spacing: -0.016em; line-height: 1.3;">{{k.empresa}}</span>
+                  <span style="font-size: 12.5px; font-weight: 400; color: #78716c; line-height: 1.35;">{{k.contato}}</span>
+                </div>
+
+                <div style="display: flex; align-items: baseline; gap: 7px;">
+                  <span class="num serif" style="font-size: 20px; letter-spacing: -0.008em; line-height: 1;">{{k.valor}}</span>
+                  <span style="font-size: 12px; font-weight: 400; color: #a8a29e;">por mês</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #f5f5f4;">
+                  <span style="font-size: 12.5px; font-weight: 500; color: {{k.tom}}; flex: 1; min-width: 0;">{{k.prazo}}</span>
+                  <div class="num" style="width: 21px; height: 21px; border-radius: 999px; background: #f5f5f4; color: #57534e; font-size: 9.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">{{k.dono}}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
         </div>
-      </div>
-    </sc-for>
-  </div>
+      </sc-for>
+    </div>
   </div>
 </div>
 </x-dc>
@@ -137,28 +138,34 @@
 <script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
   renderVals() {
-    const V = '#059669', A = '#d97706', R = '#e11d48';
+    const V = '#15803d', N = '#78716c', R = '#b91c1c';
     return {
       colunas: [
-        { nome: 'Novo Lead / Inbound', qtd: 4, valor: 'R$ 12.400 /mês', fundo: '#eef2ff', borda: '#c7d2fe', cards: [
-          { empresa: 'Distribuidora Vale Norte', contato: 'Marcos Ribeiro · Compras', valor: 'R$ 3.900', prazo: 'Contato hoje às 17:00', sinal: V, dono: 'WS' },
-          { empresa: 'Atacado São Bento', contato: 'Julia Prado · Diretoria', valor: 'R$ 2.800', prazo: '2 dias sem contato', sinal: A, dono: 'WS' },
+        { nome: 'Novo Lead / Inbound', cor: '#6366f1', qtd: 4, valor: 'R$ 12.400 por mês', cards: [
+          { empresa: 'Distribuidora Vale Norte', contato: 'Marcos Ribeiro · Compras', valor: 'R$ 3.900', prazo: 'Contato hoje às 17:00', tom: V, dono: 'WS' },
+          { empresa: 'Atacado São Bento', contato: 'Julia Prado · Diretoria', valor: 'R$ 2.800', prazo: '2 dias sem contato', tom: N, dono: 'WS' },
+          { empresa: 'Comercial Ipiranga', contato: 'Renato Alves · TI', valor: 'R$ 3.200', prazo: 'Sem próximo passo', tom: N, dono: 'AS' },
+          { empresa: 'Mercado Boa Safra', contato: 'Leandro Pinto · Sócio', valor: 'R$ 2.500', prazo: 'Contato em 2 dias', tom: V, dono: 'WS' },
         ]},
-        { nome: 'Qualificação', qtd: 2, valor: 'R$ 9.100 /mês', fundo: '#f0f9ff', borda: '#bae6fd', cards: [
-          { empresa: 'Farmácias Bom Preço', contato: 'Aline Costa · Operações', valor: 'R$ 5.400', prazo: 'Ligar amanhã às 09:00', sinal: V, dono: 'WS' },
-          { empresa: 'Casa & Construção MG', contato: 'Pedro Nunes · Sócio', valor: 'R$ 3.700', prazo: 'Atrasado desde 28/08', sinal: R, dono: 'WS' },
+        { nome: 'Qualificação', cor: '#0ea5e9', qtd: 2, valor: 'R$ 9.100 por mês', cards: [
+          { empresa: 'Farmácias Bom Preço', contato: 'Aline Costa · Operações', valor: 'R$ 5.400', prazo: 'Ligar amanhã às 09:00', tom: V, dono: 'WS' },
+          { empresa: 'Casa & Construção MG', contato: 'Pedro Nunes · Sócio', valor: 'R$ 3.700', prazo: 'Atrasado desde 28/08', tom: R, dono: 'WS' },
         ]},
-        { nome: 'Demonstração Agendada', qtd: 5, valor: 'R$ 41.200 /mês', fundo: '#faf5ff', borda: '#e9d5ff', cards: [
-          { empresa: 'Rede Supermercados Aurora', contato: 'Camila Freitas · CEO', valor: 'R$ 12.500', prazo: 'Demo hoje às 15:30', sinal: V, dono: 'AS' },
-          { empresa: 'Metalúrgica Trindade', contato: 'Sérgio Lima · Comercial', valor: 'R$ 8.900', prazo: 'Demo em 3 dias', sinal: V, dono: 'WS' },
+        { nome: 'Demonstração Agendada', cor: '#8b5cf6', qtd: 5, valor: 'R$ 41.200 por mês', cards: [
+          { empresa: 'Rede Supermercados Aurora', contato: 'Camila Freitas · CEO', valor: 'R$ 12.500', prazo: 'Demo hoje às 15:30', tom: V, dono: 'AS' },
+          { empresa: 'Metalúrgica Trindade', contato: 'Sérgio Lima · Comercial', valor: 'R$ 8.900', prazo: 'Demo em 3 dias', tom: V, dono: 'WS' },
+          { empresa: 'Óticas Visão Clara', contato: 'Bianca Reis · Franquias', valor: 'R$ 6.100', prazo: 'Atrasado desde 30/08', tom: R, dono: 'WS' },
+          { empresa: 'Clínica Vida Plena', contato: 'Roberta Assis · Diretora', valor: 'R$ 6.300', prazo: 'Retorno em 2 dias', tom: V, dono: 'AS' },
         ]},
-        { nome: 'Proposta Enviada', qtd: 5, valor: 'R$ 68.300 /mês', fundo: '#fffbeb', borda: '#fde68a', cards: [
-          { empresa: 'Grupo Alimentar Serra', contato: 'Diego Martins · CFO', valor: 'R$ 18.900', prazo: 'Aguardando assinatura', sinal: A, dono: 'AS' },
-          { empresa: 'Auto Peças Guanabara', contato: 'Tatiana Mendes · Compras', valor: 'R$ 11.200', prazo: 'Follow-up amanhã', sinal: V, dono: 'WS' },
+        { nome: 'Proposta Enviada', cor: '#f59e0b', qtd: 5, valor: 'R$ 68.300 por mês', cards: [
+          { empresa: 'Grupo Alimentar Serra', contato: 'Diego Martins · CFO', valor: 'R$ 18.900', prazo: 'Aguardando assinatura', tom: N, dono: 'AS' },
+          { empresa: 'Auto Peças Guanabara', contato: 'Tatiana Mendes · Compras', valor: 'R$ 11.200', prazo: 'Follow-up amanhã', tom: V, dono: 'WS' },
+          { empresa: 'Papelaria Central', contato: 'Otávio Barros · Dono', valor: 'R$ 4.800', prazo: '5 dias sem contato', tom: N, dono: 'WS' },
+          { empresa: 'Transportes Litoral', contato: 'Vinícius Rocha · Diretor', valor: 'R$ 9.700', prazo: 'Atrasado desde 29/08', tom: R, dono: 'AS' },
         ]},
-        { nome: 'Negociação / Contrato', qtd: 5, valor: 'R$ 53.500 /mês', fundo: '#ecfdf5', borda: '#a7f3d0', cards: [
-          { empresa: 'Têxtil Boa Vista', contato: 'Fernanda Lopes · Diretora', valor: 'R$ 16.400', prazo: 'Reunião em 04/09', sinal: V, dono: 'AS' },
-          { empresa: 'Logística Interlagos', contato: 'Rafael Souto · COO', valor: 'R$ 14.700', prazo: 'Desconto em análise', sinal: A, dono: 'WS' },
+        { nome: 'Negociação / Contrato', cor: '#10b981', qtd: 5, valor: 'R$ 53.500 por mês', cards: [
+          { empresa: 'Têxtil Boa Vista', contato: 'Fernanda Lopes · Diretora', valor: 'R$ 16.400', prazo: 'Reunião em 04/09', tom: V, dono: 'AS' },
+          { empresa: 'Logística Interlagos', contato: 'Rafael Souto · COO', valor: 'R$ 14.700', prazo: 'Desconto em análise', tom: N, dono: 'WS' },
         ]},
       ],
     };
