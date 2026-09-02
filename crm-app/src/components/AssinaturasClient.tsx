@@ -1,49 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, Eye, FileSignature, Search } from "lucide-react";
-import clsx from "clsx";
+import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
-import { abrirPdf } from "@/lib/storage";
-import { Badge, Button, Cartao, Input, Segmentado, Vazio, type Tom } from "@/components/ui";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-type Situacao = "todos" | "aguardando" | "concluido" | "cancelado";
-
-/** Os quatro status do envelope reduzidos aos tres que o vendedor distingue. */
-function situacaoDoEnvelope(status: string): Exclude<Situacao, "todos"> {
-  if (status === "concluido") return "concluido";
-  if (status === "cancelado") return "cancelado";
-  return "aguardando"; // enviado | aguardando
-}
-
-const ROTULO_STATUS: Record<string, { texto: string; tom: Tom }> = {
-  concluido: { texto: "Concluído", tom: "sucesso" },
-  cancelado: { texto: "Cancelado", tom: "neutro" },
-  aguardando: { texto: "Cliente visualizou", tom: "atencao" },
-  enviado: { texto: "Enviado", tom: "atencao" },
-};
-
-const ROTULO_SIGNATARIO: Record<string, { texto: string; tom: Tom }> = {
-  assinado: { texto: "assinou", tom: "sucesso" },
-  visualizado: { texto: "visualizou", tom: "info" },
-};
 
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: any[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
   const [busca, setBusca] = useState("");
-  const [situacao, setSituacao] = useState<Situacao>("todos");
 
   useEffect(() => {
     const recarregar = () => {
       createClient()
         .from("envelopes")
-        .select(
-          "*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))",
-        )
+        .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios(*)))")
         .order("criado_em", { ascending: false })
         .then(({ data }) => data && setEnvelopes(data));
     };
@@ -51,179 +22,151 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
       canal
         .on("postgres_changes", { event: "*", schema: "public", table: "envelopes" }, recarregar)
         .on("postgres_changes", { event: "*", schema: "public", table: "signatarios" }, recarregar)
-        .on("postgres_changes", { event: "*", schema: "public", table: "propostas" }, recarregar),
+        .on("postgres_changes", { event: "*", schema: "public", table: "propostas" }, recarregar)
     );
   }, []);
 
-  // Busca antes do filtro de situacao, para as contagens nao mudarem ao trocar
-  // de aba — mesma regra do kanban.
-  const buscados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return envelopes;
-    const termoDigitos = termo.replace(/\D/g, "");
-    return envelopes.filter((env) => {
-      const contato = env.proposta?.negocio?.contato;
-      const cnpjDigitos = (contato?.cnpj || "").replace(/\D/g, "");
-      if (termoDigitos.length >= 3 && cnpjDigitos.includes(termoDigitos)) return true;
-      const campos = [
-        contato?.empresa,
-        contato?.nome,
-        contato?.cnpj,
-        contato?.email,
-        env.proposta?.numero,
-        env.proposta?.negocio?.responsavel?.nome,
-        ...(env.signatarios || []).flatMap((s: any) => [s.nome, s.email]),
-      ];
-      return campos.some((v) => v && String(v).toLowerCase().includes(termo));
-    });
-  }, [envelopes, busca]);
+  const contadores = {
+    acaoNecessaria: envelopes.filter((e) => e.status === "enviado" || e.status === "aguardando").length,
+    concluido: envelopes.filter((e) => e.status === "concluido").length,
+    cancelado: envelopes.filter((e) => e.status === "cancelado").length,
+  };
 
-  const contagens = useMemo(
-    () => ({
-      todos: buscados.length,
-      aguardando: buscados.filter((e) => situacaoDoEnvelope(e.status) === "aguardando").length,
-      concluido: buscados.filter((e) => e.status === "concluido").length,
-      cancelado: buscados.filter((e) => e.status === "cancelado").length,
-    }),
-    [buscados],
-  );
-
-  const listados =
-    situacao === "todos" ? buscados : buscados.filter((e) => situacaoDoEnvelope(e.status) === situacao);
+  const termo = busca.trim().toLowerCase();
+  const termoDigitos = termo.replace(/\D/g, "");
+  const envelopesFiltrados = !termo
+    ? envelopes
+    : envelopes.filter((env) => {
+        const contato = env.proposta?.negocio?.contato;
+        const cnpjDigitos = (contato?.cnpj || "").replace(/\D/g, "");
+        if (termoDigitos.length >= 3 && cnpjDigitos.includes(termoDigitos)) return true;
+        const campos = [
+          contato?.empresa,
+          contato?.nome,
+          contato?.cnpj,
+          contato?.email,
+          env.proposta?.numero,
+          env.proposta?.negocio?.responsavel?.nome,
+          ...(env.signatarios || []).flatMap((s: any) => [s.nome, s.email]),
+        ];
+        return campos.some((v) => v && String(v).toLowerCase().includes(termo));
+      });
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-0.5">
-        <h1 className="font-serif text-display text-tinta">Assinaturas</h1>
-        <p className="text-corpo-lg tabular-nums text-tinta-suave">
-          {contagens.aguardando} {contagens.aguardando === 1 ? "contrato aguardando" : "contratos aguardando"}
-          {" · "}
-          {contagens.concluido} {contagens.concluido === 1 ? "concluído" : "concluídos"}
-        </p>
+    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <FileSignature className="h-5 w-5 text-indigo-600" />
+        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Assinaturas</h1>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Segmentado
-          rotulo="Filtrar por situação"
-          valor={situacao}
-          aoTrocar={setSituacao}
-          opcoes={[
-            { chave: "todos" as const, label: "Todos", contagem: contagens.todos },
-            { chave: "aguardando" as const, label: "Aguardando", contagem: contagens.aguardando },
-            { chave: "concluido" as const, label: "Concluídos", contagem: contagens.concluido },
-            { chave: "cancelado" as const, label: "Cancelados", contagem: contagens.cancelado },
-          ]}
-        />
-        <div className="relative min-w-[220px] flex-1">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-tinta-fraca"
-            aria-hidden
-          />
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            aria-label="Buscar contrato"
-            placeholder="Buscar empresa, CNPJ, nº da proposta ou signatário…"
-            className="pl-9"
-          />
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+          <p className="text-2xl font-extrabold text-amber-600">{contadores.acaoNecessaria}</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase">Aguardando assinatura</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+          <p className="text-2xl font-extrabold text-emerald-600">{contadores.concluido}</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase">Concluídas</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+          <p className="text-2xl font-extrabold text-slate-400">{contadores.cancelado}</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase">Canceladas</p>
         </div>
       </div>
 
-      <Cartao className="flex flex-col p-0">
-        {listados.length === 0 ? (
-          <Vazio
-            icone={FileSignature}
-            titulo={
-              envelopes.length === 0
-                ? "Nenhum envelope de assinatura ainda"
-                : "Nenhum contrato nesta situação"
-            }
-            descricao={
-              envelopes.length === 0
-                ? "Os contratos aparecem aqui quando uma proposta é enviada para assinatura."
-                : "Tente outro filtro ou limpe a busca."
-            }
-          />
-        ) : (
-          listados.map((env, i) => {
-            const negocio = env.proposta?.negocio;
-            const status = ROTULO_STATUS[env.status] ?? ROTULO_STATUS.enviado;
-            const assinados = [
-              ["comercial", env.proposta?.pdf_assinado_comercial_path],
-              ["técnica", env.proposta?.pdf_assinado_tecnica_path],
-            ].filter(([, caminho]) => caminho) as [string, string][];
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <input
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por empresa, nome, CNPJ, e-mail, nº da proposta ou signatário..."
+          className="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+        />
+      </div>
 
-            return (
-              <div
-                key={env.id}
-                className={clsx("flex flex-col gap-3 px-5 py-4", i > 0 && "border-t border-fio")}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <Link
-                      href={negocio ? `/negocios/${negocio.id}` : "#"}
-                      className="text-titulo text-tinta transition-colors duration-150 ease-out hover:text-acento focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
-                    >
-                      {negocio?.contato?.empresa || negocio?.contato?.nome || "Sem contato"}
-                    </Link>
-                    <span className="text-corpo text-tinta-suave">
-                      Proposta {env.proposta?.numero ?? "—"} ·{" "}
-                      {negocio?.responsavel?.nome ?? "Sem responsável"}
-                    </span>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
+        {envelopes.length === 0 && <p className="p-6 text-xs text-slate-400 text-center">Nenhum envelope de assinatura ainda.</p>}
+        {envelopes.length > 0 && envelopesFiltrados.length === 0 && (
+          <p className="p-6 text-xs text-slate-400 text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
+        )}
+        {envelopesFiltrados.map((env) => {
+          const negocio = env.proposta?.negocio;
+          const assinadoComercial = env.proposta?.pdf_assinado_comercial_path;
+          const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
+          return (
+            <div key={env.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <Link href={negocio ? `/negocios/${negocio.id}` : "#"} className="block">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                      {negocio?.contato?.empresa || negocio?.contato?.nome} — Proposta {env.proposta?.numero}
+                    </p>
+                    <p className="text-xs text-slate-500">Vendedor: {negocio?.responsavel?.nome || "—"}</p>
                   </div>
-                  <Badge tom={status.tom}>{status.texto}</Badge>
+                  <span
+                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                      env.status === "concluido"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        : env.status === "cancelado"
+                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                    }`}
+                  >
+                    {env.status === "concluido" ? <CheckCircle2 className="h-3.5 w-3.5" /> : env.status === "cancelado" ? <XCircle className="h-3.5 w-3.5" /> : env.status === "aguardando" ? <Eye className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                    {env.status === "concluido"
+                      ? "concluído"
+                      : env.status === "cancelado"
+                        ? "cancelado"
+                        : env.status === "aguardando"
+                          ? "cliente visualizou"
+                          : "enviado"}
+                  </span>
                 </div>
-
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2 mt-2">
                   {[...(env.signatarios || [])]
                     .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-                    .map((s: any) => {
-                      const r = ROTULO_SIGNATARIO[s.status];
-                      return (
-                        <Badge
-                          key={s.id}
-                          tom={r?.tom ?? "neutro"}
-                          className={s.status === "visualizado" ? "gap-1" : undefined}
-                        >
-                          {s.status === "visualizado" && <Eye className="h-3 w-3" aria-hidden />}
-                          <span title={quandoSignatario(s)}>
-                            {s.nome} ({s.papel}) {r?.texto ?? "aguardando"}
-                          </span>
-                        </Badge>
-                      );
-                    })}
-                </div>
-
-                {assinados.length > 0 && (
-                  <div className="flex flex-wrap gap-2 border-t border-fio pt-3">
-                    {assinados.map(([rotulo, caminho]) => (
-                      // Botao, nao <a href>: o banco guarda o caminho no bucket
-                      // privado, entao a URL tem de ser assinada na hora.
-                      <Button
-                        key={rotulo}
-                        variante="sutil"
-                        tamanho="sm"
-                        icone={Download}
-                        onClick={() => void abrirPdf(caminho)}
+                    .map((s: any) => (
+                      <span
+                        key={s.id}
+                        title={
+                          s.status === "assinado" && s.assinado_em
+                            ? `Assinado em ${new Date(s.assinado_em).toLocaleString("pt-BR")}`
+                            : s.status === "visualizado" && s.visualizado_em
+                              ? `Visualizou em ${new Date(s.visualizado_em).toLocaleString("pt-BR")}`
+                              : "Ainda não visualizou o documento"
+                        }
+                        className={`text-[11px] px-2 py-1 rounded-lg font-semibold flex items-center gap-1 ${
+                          s.status === "assinado"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40"
+                            : s.status === "visualizado"
+                              ? "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+                              : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                        }`}
                       >
-                        Baixar {rotulo} assinada
-                      </Button>
+                        {s.status === "visualizado" && <Eye className="h-3 w-3" />}
+                        {s.nome} ({s.papel}): {s.status === "assinado" ? "assinado" : s.status === "visualizado" ? "visualizou" : "aguardando"}
+                      </span>
                     ))}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </Cartao>
+                </div>
+              </Link>
+              {(assinadoComercial || assinadoTecnica) && (
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {assinadoComercial && (
+                    <a href={assinadoComercial} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
+                      <Download className="h-3.5 w-3.5" /> Baixar comercial assinada
+                    </a>
+                  )}
+                  {assinadoTecnica && (
+                    <a href={assinadoTecnica} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
+                      <Download className="h-3.5 w-3.5" /> Baixar técnica assinada
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-}
-
-function quandoSignatario(s: any): string {
-  if (s.status === "assinado" && s.assinado_em)
-    return `Assinado em ${new Date(s.assinado_em).toLocaleString("pt-BR")}`;
-  if (s.status === "visualizado" && s.visualizado_em)
-    return `Visualizou em ${new Date(s.visualizado_em).toLocaleString("pt-BR")}`;
-  return "Ainda não visualizou o documento";
 }

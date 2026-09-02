@@ -3,17 +3,7 @@
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import {
-  Upload,
-  Loader2,
-  Users2,
-  Shuffle,
-  CheckCircle2,
-  ArrowRightLeft,
-  Search,
-  X,
-  AlertTriangle,
-} from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, X, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
 import {
@@ -37,24 +27,21 @@ interface Preview {
 }
 
 const COR_STATUS: Record<StatusLinha, string> = {
-  novo: "text-emerald-600 bg-emerald-50",
-  sem_nome: "text-tinta-suave bg-recuo ",
-  email_invalido: "text-amber-600 bg-amber-50",
-  dup_arquivo: "text-amber-600 bg-amber-50",
-  existe: "text-tinta-suave bg-recuo ",
+  novo: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40",
+  sem_nome: "text-slate-500 bg-slate-100 dark:bg-slate-800",
+  email_invalido: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
+  dup_arquivo: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
+  existe: "text-slate-500 bg-slate-100 dark:bg-slate-800",
 };
 
 export function LeadsTab({
   vendedores,
   contatosSemDonoIniciais,
-  teto,
   contatosComDonoIniciais = [],
   usuarioAtual,
 }: {
   vendedores: Usuario[];
   contatosSemDonoIniciais: Contato[];
-  /** Teto de carregamento do servidor; se a lista bater nele, avisa. */
-  teto?: number;
   contatosComDonoIniciais?: ContatoComDono[];
   usuarioAtual: Usuario;
 }) {
@@ -142,11 +129,7 @@ export function LeadsTab({
         if (!data || data.length < PAGINA) break;
       }
 
-      const { classificadas, resumo } = classificarImportacao(
-        mapeadas,
-        existentesEmails,
-        existentesCnpj,
-      );
+      const { classificadas, resumo } = classificarImportacao(mapeadas, existentesEmails, existentesCnpj);
       setPreview({ arquivo: file.name, classificadas, resumo });
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Falha ao ler o arquivo.");
@@ -172,15 +155,8 @@ export function LeadsTab({
       const supabase = createClient();
       let inseridos = 0;
       for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
-        const lote = novos.slice(i, i + TAMANHO_LOTE).map((c) => ({
-          ...c,
-          nome: c.nome ?? "",
-          tenant_id: usuarioAtual.tenant_id,
-          origem: "importacao",
-        }));
-        setProgresso(
-          `Importando ${Math.min(i + TAMANHO_LOTE, novos.length)} de ${novos.length}...`,
-        );
+        const lote = novos.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, nome: c.nome ?? "", tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
+        setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, novos.length)} de ${novos.length}...`);
         const { data, error } = await supabase
           .from("contatos")
           .upsert(lote, { onConflict: "tenant_id,email", ignoreDuplicates: true })
@@ -191,11 +167,7 @@ export function LeadsTab({
 
       setResultado({ inseridos, total: preview.resumo.total });
       setPreview(null);
-      const { data: atualizados } = await supabase
-        .from("contatos")
-        .select("*")
-        .is("responsavel_id", null)
-        .order("criado_em", { ascending: false });
+      const { data: atualizados } = await supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false });
       if (atualizados) setContatosSemDono(atualizados);
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Falha ao importar.");
@@ -217,18 +189,14 @@ export function LeadsTab({
     if (!vendedorManual || selecionados.size === 0) return;
     setDistribuindo(true);
     const supabase = createClient();
-    await supabase
-      .from("contatos")
-      .update({ responsavel_id: vendedorManual })
-      .in("id", Array.from(selecionados));
+    await supabase.from("contatos").update({ responsavel_id: vendedorManual }).in("id", Array.from(selecionados));
     setContatosSemDono((prev) => prev.filter((c) => !selecionados.has(c.id)));
     setSelecionados(new Set());
     setDistribuindo(false);
   };
 
   const distribuirAutomatico = async () => {
-    const idsAlvo =
-      selecionados.size > 0 ? Array.from(selecionados) : contatosSemDono.map((c) => c.id);
+    const idsAlvo = selecionados.size > 0 ? Array.from(selecionados) : contatosSemDono.map((c) => c.id);
     if (idsAlvo.length === 0) return;
     setDistribuindo(true);
     const supabase = createClient();
@@ -243,18 +211,12 @@ export function LeadsTab({
   };
 
   const selecionarTodosPool = () => {
-    setSelecionados((prev) =>
-      prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id)),
-    );
+    setSelecionados((prev) => (prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id))));
   };
 
   const comDonoFiltrados = contatosComDono.filter((c) => {
     const okVendedor = filtroVendedor === "all" || c.responsavel?.id === filtroVendedor;
-    const okBusca =
-      !buscaComDono.trim() ||
-      (c.nome + " " + (c.empresa || "") + " " + (c.email || ""))
-        .toLowerCase()
-        .includes(buscaComDono.trim().toLowerCase());
+    const okBusca = !buscaComDono.trim() || (c.nome + " " + (c.empresa || "") + " " + (c.email || "")).toLowerCase().includes(buscaComDono.trim().toLowerCase());
     return okVendedor && okBusca;
   });
 
@@ -275,23 +237,13 @@ export function LeadsTab({
     const destino = paraPool ? null : novoResp;
     await supabase.from("contatos").update({ responsavel_id: destino }).in("id", ids);
     if (paraPool) {
-      const movidos = contatosComDono
-        .filter((c) => selComDono.has(c.id))
-        .map((c) => ({ ...c, responsavel_id: null, responsavel: null }));
+      const movidos = contatosComDono.filter((c) => selComDono.has(c.id)).map((c) => ({ ...c, responsavel_id: null, responsavel: null }));
       setContatosSemDono((prev) => [...movidos, ...prev]);
       setContatosComDono((prev) => prev.filter((c) => !selComDono.has(c.id)));
     } else {
       const dest = vendedores.find((v) => v.id === novoResp);
       setContatosComDono((prev) =>
-        prev.map((c) =>
-          selComDono.has(c.id)
-            ? {
-                ...c,
-                responsavel_id: novoResp,
-                responsavel: dest ? { id: dest.id, nome: dest.nome } : null,
-              }
-            : c,
-        ),
+        prev.map((c) => (selComDono.has(c.id) ? { ...c, responsavel_id: novoResp, responsavel: dest ? { id: dest.id, nome: dest.nome } : null } : c))
       );
     }
     setSelComDono(new Set());
@@ -301,102 +253,57 @@ export function LeadsTab({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl bg-cartao shadow-cartao p-5 space-y-3">
-        <h3 className="text-titulo text-tinta flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-3">
+        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Upload className="h-4 w-4 text-indigo-600" /> Importar base de contatos (CSV ou XLSX)
         </h3>
-        <p className="text-corpo text-tinta-suave">
-          Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj.
-          Repetidos (por e-mail ou CNPJ) — tanto no arquivo quanto já cadastrados — são detectados e
-          mostrados numa prévia antes de gravar. Os leads importados entram no pool &quot;sem
-          dono&quot; até serem distribuídos.
+        <p className="text-xs text-slate-500">
+          Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj. Repetidos (por e-mail ou
+          CNPJ) — tanto no arquivo quanto já cadastrados — são detectados e mostrados numa prévia antes de gravar.
+          Os leads importados entram no pool &quot;sem dono&quot; até serem distribuídos.
         </p>
         {!preview && (
-          <label className="inline-flex items-center gap-2 px-4 py-2.5 text-corpo-lg font-medium text-white bg-tinta hover:brightness-125 rounded-xl shadow-cartao cursor-pointer w-fit">
-            {processando ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
+          <label className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
+            {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {processando ? progresso || "Processando..." : "Escolher arquivo"}
-            <input
-              type="file"
-              accept=".csv,.xlsx"
-              className="hidden"
-              onChange={analisarArquivo}
-              disabled={processando}
-            />
+            <input type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
           </label>
         )}
         {resultado && (
           <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos
-            importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados).
+            <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados).
           </p>
         )}
-        {erro && (
-          <p className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg px-3 py-2">
-            {erro}
-          </p>
-        )}
+        {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
         {preview && (
-          <div className="border border-fio rounded-xl overflow-hidden">
-            <div className="p-4 bg-recuo border-b border-fio flex flex-wrap items-center justify-between gap-3">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-corpo-lg font-medium text-tinta truncate">
-                  Prévia — {preview.arquivo}
-                </p>
-                <p className="text-corpo text-tinta-suave">
-                  {preview.resumo.total} linhas analisadas
-                </p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">Prévia — {preview.arquivo}</p>
+                <p className="text-[11px] text-slate-500">{preview.resumo.total} linhas analisadas</p>
               </div>
               <button
                 onClick={() => setPreview(null)}
                 disabled={confirmando}
-                className="flex items-center gap-1 text-corpo font-medium text-tinta-suave hover:text-tinta disabled:opacity-50"
+                className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50"
               >
                 <X className="h-3.5 w-3.5" /> Cancelar
               </button>
             </div>
 
             <div className="p-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
-              <ResumoPill
-                cor="text-emerald-600"
-                bg="bg-emerald-50"
-                label="Novos"
-                valor={preview.resumo.novos}
-              />
-              <ResumoPill
-                cor="text-tinta-suave"
-                bg="bg-recuo "
-                label="Já existem"
-                valor={preview.resumo.existentes}
-              />
-              <ResumoPill
-                cor="text-amber-600"
-                bg="bg-amber-50"
-                label="Repetidos"
-                valor={preview.resumo.dupArquivo}
-              />
-              <ResumoPill
-                cor="text-amber-600"
-                bg="bg-amber-50"
-                label="E-mail inválido"
-                valor={preview.resumo.emailInvalido}
-              />
-              <ResumoPill
-                cor="text-tinta-suave"
-                bg="bg-recuo "
-                label="Sem nome"
-                valor={preview.resumo.semNome}
-              />
+              <ResumoPill cor="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40" label="Novos" valor={preview.resumo.novos} />
+              <ResumoPill cor="text-slate-500" bg="bg-slate-100 dark:bg-slate-800" label="Já existem" valor={preview.resumo.existentes} />
+              <ResumoPill cor="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/40" label="Repetidos" valor={preview.resumo.dupArquivo} />
+              <ResumoPill cor="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/40" label="E-mail inválido" valor={preview.resumo.emailInvalido} />
+              <ResumoPill cor="text-slate-500" bg="bg-slate-100 dark:bg-slate-800" label="Sem nome" valor={preview.resumo.semNome} />
             </div>
 
-            <div className="max-h-72 overflow-y-auto border-t border-fio">
-              <table className="w-full text-left text-corpo">
-                <thead className="sticky top-0 bg-white ">
-                  <tr className="border-b border-fio text-tinta-fraca uppercase text-corpo">
+            <div className="max-h-72 overflow-y-auto border-t border-slate-100 dark:border-slate-800">
+              <table className="w-full text-left text-[11px]">
+                <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
                     <th className="p-2 w-10">Linha</th>
                     <th className="p-2">Nome</th>
                     <th className="p-2">Empresa</th>
@@ -404,22 +311,16 @@ export function LeadsTab({
                     <th className="p-2">Situação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-fio">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {preview.classificadas.slice(0, 300).map((l) => (
                     <tr key={l._linha} className={l._status === "novo" ? "" : "opacity-70"}>
-                      <td className="p-2 text-tinta-fraca">{l._linha}</td>
-                      <td className="p-2 font-semibold text-tinta ">
-                        {l.nome || <span className="text-rose-500">—</span>}
-                      </td>
-                      <td className="p-2 text-tinta-suave">{l.empresa || "—"}</td>
-                      <td className="p-2 text-tinta-suave">{l.email || l.cnpj || "—"}</td>
+                      <td className="p-2 text-slate-400">{l._linha}</td>
+                      <td className="p-2 font-semibold text-slate-800 dark:text-slate-200">{l.nome || <span className="text-rose-500">—</span>}</td>
+                      <td className="p-2 text-slate-500">{l.empresa || "—"}</td>
+                      <td className="p-2 text-slate-500">{l.email || l.cnpj || "—"}</td>
                       <td className="p-2">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-corpo ${COR_STATUS[l._status]}`}
-                        >
-                          {(l._status === "email_invalido" || l._status === "dup_arquivo") && (
-                            <AlertTriangle className="h-3 w-3" />
-                          )}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] ${COR_STATUS[l._status]}`}>
+                          {(l._status === "email_invalido" || l._status === "dup_arquivo") && <AlertTriangle className="h-3 w-3" />}
                           {rotuloStatus(l._status)}
                         </span>
                       </td>
@@ -428,96 +329,64 @@ export function LeadsTab({
                 </tbody>
               </table>
               {preview.classificadas.length > 300 && (
-                <p className="p-2 text-corpo text-tinta-fraca text-center">
-                  Mostrando as primeiras 300 de {preview.classificadas.length} linhas.
-                </p>
+                <p className="p-2 text-[11px] text-slate-400 text-center">Mostrando as primeiras 300 de {preview.classificadas.length} linhas.</p>
               )}
             </div>
 
-            <div className="p-4 border-t border-fio flex items-center justify-end gap-2">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
               <button
                 onClick={confirmarImportacao}
                 disabled={confirmando || preview.resumo.novos === 0}
-                className="flex items-center gap-2 px-4 py-2.5 text-corpo-lg font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-cartao disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md disabled:opacity-50"
               >
-                {confirmando ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
-                {confirmando
-                  ? progresso || "Importando..."
-                  : preview.resumo.novos === 0
-                    ? "Nada novo para importar"
-                    : `Importar ${preview.resumo.novos} novos`}
+                {confirmando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {confirmando ? progresso || "Importando..." : preview.resumo.novos === 0 ? "Nada novo para importar" : `Importar ${preview.resumo.novos} novos`}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="rounded-xl bg-cartao shadow-cartao overflow-hidden">
-        <div className="p-5 border-b border-fio flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-titulo text-tinta flex items-center gap-2">
-              <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length}
-              )
+            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length})
             </h3>
-            <p className="text-corpo text-tinta-suave">
-              {selecionados.size} selecionados
-              {teto !== undefined && contatosSemDono.length >= teto && (
-                <span className="text-amber-800">
-                  {" · "}mostrando os {teto} mais recentes; distribua estes e recarregue para ver o
-                  resto
-                </span>
-              )}
-            </p>
+            <p className="text-xs text-slate-500">{selecionados.size} selecionados</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Vendedor que vai receber os leads"
-              value={vendedorManual}
-              onChange={(e) => setVendedorManual(e.target.value)}
-              className="px-3 py-2 text-xs bg-recuo border border-fio rounded-xl"
-            >
+            <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <option value="">Escolher vendedor...</option>
               {vendedores.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                </option>
+                <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
             <button
               onClick={distribuirManual}
               disabled={!vendedorManual || selecionados.size === 0 || distribuindo}
-              className="px-3 py-2 text-corpo-lg font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl disabled:opacity-50"
             >
               Atribuir selecionados
             </button>
             <button
               onClick={distribuirAutomatico}
-              disabled={distribuindo || contatosSemDono.length === 0}
-              className="flex items-center gap-1.5 px-3 py-2 text-corpo-lg font-medium text-white bg-tinta hover:brightness-125 rounded-xl shadow-cartao disabled:opacity-50"
+              disabled={distribuindo || (contatosSemDono.length === 0)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50"
             >
-              {distribuindo ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Shuffle className="h-3.5 w-3.5" />
-              )}
-              Distribuir automático (round-robin)
+              {distribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
+              Distribuir automatico (round-robin)
             </button>
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white ">
-              <tr className="border-b border-fio text-tinta-fraca uppercase text-corpo">
+            <thead className="sticky top-0 bg-white dark:bg-slate-900">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
-                    checked={
-                      contatosSemDono.length > 0 && selecionados.size === contatosSemDono.length
-                    }
+                    checked={contatosSemDono.length > 0 && selecionados.size === contatosSemDono.length}
                     onChange={selecionarTodosPool}
                     title="Selecionar todos"
                   />
@@ -528,96 +397,68 @@ export function LeadsTab({
                 <th className="p-3">Origem</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-fio">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {contatosSemDono.map((c) => (
-                <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selecionados.has(c.id)}
-                      onChange={() => alternarSelecao(c.id)}
-                    />
-                  </td>
-                  <td className="p-3 font-semibold text-tinta ">{c.nome}</td>
-                  <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
-                  <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
-                  <td className="p-3 text-tinta-fraca capitalize">{c.origem}</td>
+                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td className="p-3"><input type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
+                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
+                  <td className="p-3 text-slate-500">{c.email || "—"}</td>
+                  <td className="p-3 text-slate-400 capitalize">{c.origem}</td>
                 </tr>
               ))}
               {contatosSemDono.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-tinta-fraca">
-                    Nenhum lead sem dono no momento.
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="p-6 text-center text-slate-400">Nenhum lead sem dono no momento.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="rounded-xl bg-cartao shadow-cartao overflow-hidden">
-        <div className="p-5 border-b border-fio space-y-3">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-titulo text-tinta flex items-center gap-2">
-                <ArrowRightLeft className="h-4 w-4 text-indigo-600" /> Leads com vendedor (
-                {comDonoFiltrados.length})
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 text-indigo-600" /> Leads com vendedor ({comDonoFiltrados.length})
               </h3>
-              <p className="text-corpo text-tinta-suave">
-                {selComDono.size} selecionados · reatribua ou devolva ao pool
-              </p>
+              <p className="text-xs text-slate-500">{selComDono.size} selecionados · reatribua ou devolva ao pool</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-tinta-fraca" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
-                aria-label="Buscar contato"
                 value={buscaComDono}
                 onChange={(e) => setBuscaComDono(e.target.value)}
                 placeholder="Buscar nome/empresa/e-mail..."
-                className="pl-8 pr-3 py-2 text-xs bg-recuo border border-fio rounded-xl w-56"
+                className="pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-56"
               />
             </div>
-            <select
-              aria-label="Filtrar por vendedor"
-              value={filtroVendedor}
-              onChange={(e) => setFiltroVendedor(e.target.value)}
-              className="px-3 py-2 text-xs bg-recuo border border-fio rounded-xl"
-            >
+            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <option value="all">Todos os vendedores</option>
               {vendedores.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                </option>
+                <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
             <div className="flex-1" />
-            <select
-              aria-label="Passar contato para"
-              value={novoResp}
-              onChange={(e) => setNovoResp(e.target.value)}
-              className="px-3 py-2 text-xs bg-recuo border border-fio rounded-xl"
-            >
+            <select value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
               <option value="">Passar para...</option>
               {vendedores.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nome}
-                </option>
+                <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
             <button
               onClick={() => reatribuir(false)}
               disabled={reatribuindo || selComDono.size === 0 || !novoResp}
-              className="px-3 py-2 text-corpo-lg font-medium text-white bg-tinta hover:brightness-125 rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-50"
             >
               {reatribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reatribuir"}
             </button>
             <button
               onClick={() => reatribuir(true)}
               disabled={reatribuindo || selComDono.size === 0}
-              className="px-3 py-2 text-corpo-lg font-medium text-tinta bg-recuo hover:bg-fio rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl disabled:opacity-50"
             >
               Devolver ao pool
             </button>
@@ -625,20 +466,15 @@ export function LeadsTab({
         </div>
         <div className="max-h-[420px] overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white ">
-              <tr className="border-b border-fio text-tinta-fraca uppercase text-corpo">
+            <thead className="sticky top-0 bg-white dark:bg-slate-900">
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
-                    checked={
-                      comDonoFiltrados.length > 0 &&
-                      comDonoFiltrados.every((c) => selComDono.has(c.id))
-                    }
+                    checked={comDonoFiltrados.length > 0 && comDonoFiltrados.every((c) => selComDono.has(c.id))}
                     onChange={() =>
                       setSelComDono((prev) =>
-                        comDonoFiltrados.every((c) => prev.has(c.id))
-                          ? new Set()
-                          : new Set(comDonoFiltrados.map((c) => c.id)),
+                        comDonoFiltrados.every((c) => prev.has(c.id)) ? new Set() : new Set(comDonoFiltrados.map((c) => c.id))
                       )
                     }
                   />
@@ -648,27 +484,17 @@ export function LeadsTab({
                 <th className="p-3">Vendedor</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-fio">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {comDonoFiltrados.map((c) => (
-                <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      checked={selComDono.has(c.id)}
-                      onChange={() => alternarSelComDono(c.id)}
-                    />
-                  </td>
-                  <td className="p-3 font-semibold text-tinta ">{c.nome}</td>
-                  <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
-                  <td className="p-3 text-acento font-semibold">{c.responsavel?.nome || "—"}</td>
+                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
+                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
+                  <td className="p-3 text-indigo-600 dark:text-indigo-400 font-semibold">{c.responsavel?.nome || "—"}</td>
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-6 text-center text-tinta-fraca">
-                    Nenhum lead com vendedor neste filtro.
-                  </td>
-                </tr>
+                <tr><td colSpan={4} className="p-6 text-center text-slate-400">Nenhum lead com vendedor neste filtro.</td></tr>
               )}
             </tbody>
           </table>
@@ -678,21 +504,11 @@ export function LeadsTab({
   );
 }
 
-function ResumoPill({
-  cor,
-  bg,
-  label,
-  valor,
-}: {
-  cor: string;
-  bg: string;
-  label: string;
-  valor: number;
-}) {
+function ResumoPill({ cor, bg, label, valor }: { cor: string; bg: string; label: string; valor: number }) {
   return (
     <div className={`rounded-xl px-3 py-2 ${bg}`}>
-      <p className={`font-serif text-xl tabular-nums ${cor}`}>{valor}</p>
-      <p className="text-rotulo uppercase tracking-wide text-tinta-suave">{label}</p>
+      <p className={`text-lg font-extrabold ${cor}`}>{valor}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
     </div>
   );
 }

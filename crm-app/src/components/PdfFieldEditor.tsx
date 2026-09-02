@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  FileSignature,
-  Plus,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Send,
-  MousePointer2,
-} from "lucide-react";
+import { FileSignature, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, Send, MousePointer2 } from "lucide-react";
 
 export interface CampoAssinatura {
   id: string;
@@ -31,30 +22,10 @@ interface Signatario {
 }
 
 const CORES_SIGNATARIOS = [
-  {
-    bg: "rgba(79,70,229,0.18)",
-    border: "#4f46e5",
-    text: "#4f46e5",
-    label: "bg-indigo-100 text-indigo-700 border-indigo-300",
-  },
-  {
-    bg: "rgba(16,185,129,0.18)",
-    border: "#10b981",
-    text: "#10b981",
-    label: "bg-emerald-100 text-emerald-700 border-emerald-300",
-  },
-  {
-    bg: "rgba(245,158,11,0.18)",
-    border: "#f59e0b",
-    text: "#f59e0b",
-    label: "bg-amber-100 text-amber-700 border-amber-300",
-  },
-  {
-    bg: "rgba(239,68,68,0.18)",
-    border: "#ef4444",
-    text: "#ef4444",
-    label: "bg-rose-100 text-rose-700 border-rose-300",
-  },
+  { bg: "rgba(79,70,229,0.18)", border: "#4f46e5", text: "#4f46e5", label: "bg-indigo-100 text-indigo-700 border-indigo-300" },
+  { bg: "rgba(16,185,129,0.18)", border: "#10b981", text: "#10b981", label: "bg-emerald-100 text-emerald-700 border-emerald-300" },
+  { bg: "rgba(245,158,11,0.18)", border: "#f59e0b", text: "#f59e0b", label: "bg-amber-100 text-amber-700 border-amber-300" },
+  { bg: "rgba(239,68,68,0.18)", border: "#ef4444", text: "#ef4444", label: "bg-rose-100 text-rose-700 border-rose-300" },
 ];
 
 export function PdfFieldEditor({
@@ -111,9 +82,7 @@ export function PdfFieldEditor({
       setCarregando(false);
       await renderizarPagina(1);
     })();
-    return () => {
-      cancelado = true;
-    };
+    return () => { cancelado = true; };
   }, [pdfUrl, renderizarPagina]);
 
   useEffect(() => {
@@ -153,16 +122,13 @@ export function PdfFieldEditor({
     setArrastando(campoId);
   };
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!arrastando || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (e.clientX - rect.left - offsetArrasto.x) / rect.width));
-      const y = Math.max(0, Math.min(1, (e.clientY - rect.top - offsetArrasto.y) / rect.height));
-      setCampos((prev) => prev.map((c) => (c.id === arrastando ? { ...c, x, y } : c)));
-    },
-    [arrastando, offsetArrasto],
-  );
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!arrastando || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left - offsetArrasto.x) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top - offsetArrasto.y) / rect.height));
+    setCampos((prev) => prev.map((c) => (c.id === arrastando ? { ...c, x, y } : c)));
+  }, [arrastando, offsetArrasto]);
 
   const handleMouseUp = useCallback(() => {
     setArrastando(null);
@@ -202,14 +168,13 @@ export function PdfFieldEditor({
 
   const camposPagina = campos.filter((c) => c.pagina === paginaAtual && c.documento === documento);
 
-  const corSignatario = (ordem: number) =>
-    CORES_SIGNATARIOS[(ordem - 2) % CORES_SIGNATARIOS.length] || CORES_SIGNATARIOS[0];
+  const corSignatario = (ordem: number) => CORES_SIGNATARIOS[(ordem - 2) % CORES_SIGNATARIOS.length] || CORES_SIGNATARIOS[0];
 
   if (carregando) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-        <span className="text-corpo-lg ml-2 text-tinta-suave">Carregando documento…</span>
+        <span className="ml-2 text-sm text-slate-500">Carregando documento...</span>
       </div>
     );
   }
@@ -218,8 +183,8 @@ export function PdfFieldEditor({
     <div className="flex flex-col lg:flex-row gap-4">
       {/* Sidebar */}
       <div className="lg:w-64 shrink-0 space-y-4">
-        <div className="rounded-xl bg-recuo p-3">
-          <p className="text-rotulo mb-2 block uppercase text-tinta-fraca">Signatários</p>
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+          <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Signatarios</p>
           {signatarios.map((s) => {
             const cor = corSignatario(s.ordem);
             const selecionado = signatarioSelecionado === s.ordem;
@@ -227,55 +192,37 @@ export function PdfFieldEditor({
               <button
                 key={s.ordem}
                 onClick={() => setSignatarioSelecionado(s.ordem)}
-                className={`text-corpo-lg mb-1 w-full rounded-lg px-3 py-2 text-left font-medium transition-colors duration-150 ease-out ${selecionado ? cor.label : "bg-cartao text-tinta-suave hover:text-tinta"}`}
+                className={`w-full text-left px-3 py-2 rounded-lg mb-1 text-xs font-semibold border transition-all ${selecionado ? cor.label + " border-2" : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`}
               >
-                <span
-                  className="inline-block w-2.5 h-2.5 rounded-full mr-1.5"
-                  style={{ backgroundColor: cor.border }}
-                />
+                <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: cor.border }} />
                 {s.nome || s.email}
               </button>
             );
           })}
         </div>
 
-        <div className="rounded-xl bg-recuo p-3">
-          <p className="text-rotulo mb-2 block uppercase text-tinta-fraca">Campos</p>
-          <button
-            onClick={adicionarCampo}
-            className="text-corpo-lg flex w-full items-center gap-2 rounded-lg bg-cartao px-3 py-2 font-medium text-tinta transition-colors duration-150 ease-out hover:bg-fio"
-          >
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+          <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Campos</p>
+          <button onClick={adicionarCampo} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-lg border border-indigo-200 dark:border-indigo-800">
             <FileSignature className="h-4 w-4" /> Assinatura
           </button>
-          <p className="text-corpo text-tinta-fraca mt-2 leading-relaxed">
-            Clique no botão ou clique diretamente no documento para posicionar o campo de
-            assinatura.
+          <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+            Clique no botão ou clique diretamente no documento para posicionar o campo de assinatura.
           </p>
         </div>
 
-        <div className="rounded-xl bg-recuo p-3">
-          <p className="text-rotulo mb-2 block uppercase text-tinta-fraca">
-            Campos posicionados ({campos.length})
-          </p>
-          {campos.length === 0 && (
-            <p className="text-corpo text-tinta-fraca">Nenhum campo adicionado.</p>
-          )}
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+          <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Campos posicionados ({campos.length})</p>
+          {campos.length === 0 && <p className="text-[10px] text-slate-400">Nenhum campo adicionado.</p>}
           {campos.map((c) => {
             const sig = signatarios.find((s) => s.ordem === c.signatario_ordem);
             const cor = corSignatario(c.signatario_ordem);
             return (
-              <div
-                key={c.id}
-                className="flex items-center justify-between text-corpo px-2 py-1.5 rounded-lg mb-1 border"
-                style={{ backgroundColor: cor.bg, borderColor: cor.border }}
-              >
+              <div key={c.id} className="flex items-center justify-between text-[10px] px-2 py-1.5 rounded-lg mb-1 border" style={{ backgroundColor: cor.bg, borderColor: cor.border }}>
                 <span className="font-semibold truncate" style={{ color: cor.text }}>
                   Pag.{c.pagina} · {sig?.nome || "?"}
                 </span>
-                <button
-                  onClick={() => removerCampo(c.id)}
-                  className="text-tinta-fraca hover:text-rose-600 shrink-0"
-                >
+                <button onClick={() => removerCampo(c.id)} className="text-slate-400 hover:text-rose-600 shrink-0">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -287,15 +234,12 @@ export function PdfFieldEditor({
           <button
             onClick={() => onSalvar(campos)}
             disabled={campos.length === 0 || enviando}
-            className="w-full py-2.5 text-corpo-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-cartao flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Enviar para assinatura
           </button>
-          <button
-            onClick={onCancelar}
-            className="text-corpo-lg w-full rounded-lg py-2 font-medium text-tinta-suave transition-colors duration-150 ease-out hover:bg-recuo hover:text-tinta"
-          >
+          <button onClick={onCancelar} className="w-full py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
             Cancelar
           </button>
         </div>
@@ -303,34 +247,34 @@ export function PdfFieldEditor({
 
       {/* PDF Viewer */}
       <div className="flex-1 min-w-0">
-        <div className="mb-2 flex items-center justify-between rounded-lg bg-recuo px-3 py-2">
+        <div className="flex items-center justify-between mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2">
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
               disabled={paginaAtual <= 1}
-              className="rounded-lg p-1 transition-colors duration-150 ease-out hover:bg-fio disabled:opacity-30"
+              className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-corpo-lg min-w-[80px] text-center font-medium text-tinta-suave">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 min-w-[80px] text-center">
               Pagina {paginaAtual} / {totalPaginas}
             </span>
             <button
               onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
               disabled={paginaAtual >= totalPaginas}
-              className="rounded-lg p-1 transition-colors duration-150 ease-out hover:bg-fio disabled:opacity-30"
+              className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex items-center gap-1 text-corpo text-tinta-fraca">
+          <div className="flex items-center gap-1 text-[10px] text-slate-400">
             <MousePointer2 className="h-3 w-3" /> Clique no documento para posicionar
           </div>
         </div>
 
         <div
           ref={containerRef}
-          className="relative cursor-crosshair overflow-hidden rounded-xl bg-recuo"
+          className="relative border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-900 cursor-crosshair"
           onClick={handleClickCanvas}
         >
           <canvas ref={canvasRef} className="w-full h-auto block" />
@@ -355,15 +299,12 @@ export function PdfFieldEditor({
                 }}
               >
                 <FileSignature className="h-3.5 w-3.5" style={{ color: cor.text }} />
-                <span className="text-[9px] font-medium truncate" style={{ color: cor.text }}>
+                <span className="text-[9px] font-bold truncate" style={{ color: cor.text }}>
                   {sig?.nome?.split(" ")[0] || "Assinar"}
                 </span>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removerCampo(campo.id);
-                  }}
-                  className="absolute -right-2 -top-2 rounded-full bg-cartao p-0.5 opacity-0 shadow-cartao transition-opacity duration-150 ease-out group-hover:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); removerCampo(campo.id); }}
+                  className="absolute -top-2 -right-2 bg-white dark:bg-slate-800 rounded-full p-0.5 shadow-md border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 className="h-2.5 w-2.5 text-rose-500" />
                 </button>

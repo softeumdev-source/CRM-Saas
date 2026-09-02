@@ -1,24 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import clsx from "clsx";
+import { Plus, Layers, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { ordenarPorCadencia } from "@/lib/atividades";
+import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 import { LeadCard } from "@/components/LeadCard";
 
-/**
- * O board no estilo Papel. A coluna tem fundo rebaixado (--recuo) e e isso que
- * faz o card branco sem contorno continuar destacado num board cheio — foi a
- * duvida testada no mockup antes de virar codigo.
- *
- * A cor da etapa ficou num ponto de 6px em vez de tingir a coluna inteira:
- * sete fundos coloridos lado a lado brigavam com os cards.
- *
- * A cadeia h-full/min-h-0 e o que faz cada coluna rolar por dentro em vez de
- * esticar o board. Nao mexer sem conferir rolando.
- */
 export function KanbanBoard({
   etapas,
   negocios,
@@ -33,7 +21,7 @@ export function KanbanBoard({
   const [etapaAlvo, setEtapaAlvo] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState<string | null>(null);
 
-  const soltar = (e: React.DragEvent, etapaId: string) => {
+  const handleDrop = (e: React.DragEvent, etapaId: string) => {
     e.preventDefault();
     setEtapaAlvo(null);
     setArrastando(null);
@@ -43,17 +31,19 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-x-auto px-4 pb-6 sm:px-6">
-      <div className="flex h-full min-w-max gap-3.5">
+    <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
+      <div className="flex gap-4 min-w-max h-full">
         {etapas.map((etapa) => {
-          const daEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
-          const total = daEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
+          const doEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
+          const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
+          const trabalhadosHoje = doEtapa.filter((n) => temAtividadeHoje(n)).length;
+          const atrasados = doEtapa.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
+          const cor = etapa.cor || "#6366f1";
           const alvo = etapaAlvo === etapa.id;
 
           return (
-            <section
+            <div
               key={etapa.id}
-              aria-label={etapa.nome}
               onDragOver={(e) => {
                 e.preventDefault();
                 if (etapaAlvo !== etapa.id) setEtapaAlvo(etapa.id);
@@ -61,52 +51,57 @@ export function KanbanBoard({
               onDragLeave={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) setEtapaAlvo(null);
               }}
-              onDrop={(e) => soltar(e, etapa.id)}
-              className={clsx(
-                "flex h-full max-h-full w-66 shrink-0 flex-col rounded-2xl bg-recuo",
-                "transition-[outline-color] duration-150 ease-out",
-                // outline em vez de ring com offset: nao desloca o layout do
-                // vizinho enquanto o card esta sendo arrastado
-                "outline-2 -outline-offset-2",
-                alvo ? "outline-acento" : "outline-transparent",
-              )}
+              onDrop={(e) => handleDrop(e, etapa.id)}
+              className={`w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-all ${
+                alvo ? "ring-2 ring-indigo-400 ring-offset-2 dark:ring-offset-slate-950" : ""
+              }`}
+              style={{ borderColor: cor + "40", background: cor + (alvo ? "1f" : "0a") }}
             >
-              <div className="flex flex-col gap-1 px-4 pb-3 pt-4">
-                <div className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: etapa.cor || "var(--acento)" }}
-                  />
-                  <h2 className="text-titulo min-w-0 flex-1 truncate text-tinta">{etapa.nome}</h2>
-                  <span className="text-corpo tabular-nums font-medium text-tinta-suave">
-                    {daEtapa.length}
-                  </span>
+              <div className="mb-3 pb-2.5 border-b border-slate-200/80 dark:border-slate-800/80">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h2 className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">{etapa.nome}</h2>
+                    <span
+                      className="px-2 py-0.5 text-xs font-bold rounded-full shrink-0"
+                      style={{ background: cor + "22", color: cor }}
+                    >
+                      {doEtapa.length}
+                    </span>
+                  </div>
                   <button
-                    type="button"
                     onClick={() => onNovoNegocio(etapa.id)}
-                    aria-label={`Novo negócio em ${etapa.nome}`}
-                    title={`Novo negócio em ${etapa.nome}`}
-                    className="-mr-1 shrink-0 rounded-md p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-cartao hover:text-tinta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white/80 dark:hover:bg-slate-800 transition-all shrink-0"
+                    title={`Adicionar negócio em ${etapa.nome}`}
                   >
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                    <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                {/* A probabilidade e da etapa, nao do negocio: e copiada dela em
-                    todo insert e em todo movimento. Aqui ela descreve a coluna. */}
-                <span className="text-corpo tabular-nums pl-3.5 text-tinta-fraca">
-                  {formatarMoeda(total)}
-                  {etapa.probabilidade != null && ` · ${etapa.probabilidade}% de fechamento`}
-                </span>
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span>Valor na etapa:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{formatarMoeda(totalValor)}</span>
+                </div>
+                {doEtapa.length > 0 && (
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] font-bold">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400" title="Negócios com atividade registrada hoje">
+                      <CheckCircle2 className="h-3 w-3" /> {trabalhadosHoje} hoje
+                    </span>
+                    {atrasados > 0 && (
+                      <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400" title="Negócios com próximo passo atrasado">
+                        <AlertTriangle className="h-3 w-3" /> {atrasados} atrasado{atrasados > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-2.5 pb-2.5">
-                {daEtapa.length === 0 ? (
-                  <p className="text-corpo rounded-xl border border-dashed border-fio px-3 py-8 text-center text-tinta-fraca">
-                    {alvo ? "Solte aqui" : "Nenhum negócio nesta etapa"}
-                  </p>
+              <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
+                {doEtapa.length === 0 ? (
+                  <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center p-4 text-center">
+                    <Layers className="h-6 w-6 text-slate-300 dark:text-slate-600 mb-1" />
+                    <p className="text-xs text-slate-400 font-medium">Nenhum negócio nesta etapa</p>
+                  </div>
                 ) : (
-                  daEtapa.map((negocio) => (
+                  doEtapa.map((negocio) => (
                     <div
                       key={negocio.id}
                       draggable
@@ -119,17 +114,16 @@ export function KanbanBoard({
                         setArrastando(null);
                         setEtapaAlvo(null);
                       }}
-                      className={clsx(
-                        "cursor-grab transition-opacity duration-150 ease-out active:cursor-grabbing",
-                        arrastando === negocio.id && "opacity-40",
-                      )}
+                      className={`cursor-grab active:cursor-grabbing transition-opacity ${
+                        arrastando === negocio.id ? "opacity-40" : ""
+                      }`}
                     >
                       <LeadCard negocio={negocio} />
                     </div>
                   ))
                 )}
               </div>
-            </section>
+            </div>
           );
         })}
       </div>

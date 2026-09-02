@@ -34,25 +34,11 @@ export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usua
 export const SELECT_AGENDA =
   "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
 
-/**
- * Abas da tela de negócio. Fica aqui, e não no componente, porque a page
- * (server) valida a query string — importar valor de módulo "use client" no
- * servidor foi o que derrubou os cards em produção.
- *
- * `geral` virou `contato` (a aba é um formulário de contato, não um resumo) e
- * `ia` virou `mensagens` (não havia IA nenhuma dentro dela). Os dois nomes
- * antigos continuam sendo aceitos: há notificações salvas com `?tab=` no banco.
- */
-export type Aba = "cadencia" | "contato" | "proposta" | "mensagens";
+/** Abas da tela de negócio. Fica aqui, e não no componente, porque a page (server) valida a query string. */
+export type Aba = "geral" | "cadencia" | "proposta" | "ia";
 
-const ABAS_ANTIGAS: Record<string, Aba> = { geral: "contato", ia: "mensagens" };
-
-export function normalizarAba(valor: string | undefined): Aba | undefined {
-  if (!valor) return undefined;
-  if (valor === "cadencia" || valor === "contato" || valor === "proposta" || valor === "mensagens") {
-    return valor;
-  }
-  return ABAS_ANTIGAS[valor];
+export function ehAbaValida(valor: string | undefined): valor is Aba {
+  return valor === "geral" || valor === "cadencia" || valor === "proposta" || valor === "ia";
 }
 
 /**
@@ -65,49 +51,6 @@ export function resultadoDaEtapa(etapa: { nome?: string | null } | null | undefi
   if (nome.includes("ganho")) return true;
   if (nome.includes("perdid")) return false;
   return null;
-}
-
-/**
- * Papéis de usuário.
- *
- * O CHECK do banco (usuarios_role_check e convites_role_check) hoje aceita só
- * 'admin' e 'vendedor'. Estas listas existem para que o papel deixe de estar
- * cravado como literal espalhado pelo código — o `sdr` da Fase 4 entra aqui,
- * numa linha, em vez de ser caçado em seis arquivos.
- */
-export const PAPEIS = ["admin", "vendedor"] as const;
-export type Papel = (typeof PAPEIS)[number];
-
-export const ROTULO_PAPEL: Record<string, string> = {
-  admin: "Administrador",
-  vendedor: "Vendedor",
-};
-
-/**
- * Quem forma o time medido no painel: aparece nas metas, no funil por pessoa e
- * nos seletores de responsável. O admin fica de fora de propósito — ele gere,
- * não é medido —, mas continua podendo ser dono de negócio.
- */
-export const PAPEIS_TIME: readonly string[] = ["vendedor"];
-
-export function ehDoTime(usuario: { role?: string | null } | null | undefined): boolean {
-  return !!usuario?.role && PAPEIS_TIME.includes(usuario.role);
-}
-
-export function ehPapelValido(valor: unknown): valor is Papel {
-  return typeof valor === "string" && (PAPEIS as readonly string[]).includes(valor);
-}
-
-/**
- * Abas do painel de admin. Fica aqui, e nao no componente, porque a page
- * (server) valida a query string — mesmo motivo das abas do negocio.
- */
-export type AbaAdmin = "desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos";
-
-const ABAS_ADMIN: AbaAdmin[] = ["desempenho", "vendedores", "funil", "planos", "leads", "descontos"];
-
-export function normalizarAbaAdmin(valor: string | undefined): AbaAdmin | undefined {
-  return ABAS_ADMIN.find((a) => a === valor);
 }
 
 export const PRIORIDADES = ["alta", "media", "baixa"] as const;

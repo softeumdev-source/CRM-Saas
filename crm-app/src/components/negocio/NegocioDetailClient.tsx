@@ -1,49 +1,51 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Building2, Mail, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Mail, MessageCircle, Undo2 } from "lucide-react";
-import clsx from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa, type Aba } from "@/lib/types";
-import { estaAtrasada, proximaAtividade, type AtividadeComUsuario } from "@/lib/atividades";
-import { fecharNegocio, moverEtapa } from "@/lib/negocios";
-import { Alerta, Badge, Button, Rotulo, Select } from "@/components/ui";
-import { FilaDaEtapa } from "@/components/negocio/FilaDaEtapa";
-import { EncerrarNegocioModal } from "@/components/negocio/EncerrarNegocioModal";
-import { ContatoTab } from "@/components/negocio/ContatoTab";
+import {
+  descreverPrazo,
+  diasSemContato,
+  estaAtrasada,
+  formatarDataHora,
+  proximaAtividade,
+  temAtividadeHoje,
+  type AtividadeComUsuario,
+} from "@/lib/atividades";
+import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
-import { MensagensTab } from "@/components/negocio/MensagensTab";
+import { CopilotoTab } from "@/components/negocio/CopilotoTab";
 
 type PropostaComRelacoes = Record<string, unknown>;
-
-/** Cadência primeiro: é o trabalho. O formulário de contato não é a porta. */
 const ABAS: { id: Aba; label: string }[] = [
+  { id: "geral", label: "Visão Geral" },
   { id: "cadencia", label: "Cadência" },
-  { id: "contato", label: "Contato" },
-  { id: "proposta", label: "Proposta" },
-  { id: "mensagens", label: "Mensagens" },
+  { id: "proposta", label: "Proposta & Assinatura" },
+  { id: "ia", label: "Mensagens" },
 ];
-
-const SELECT_PROPOSTA = "*, plano:planos(*), envelopes(*, signatarios(*))";
 
 export function NegocioDetailClient({
   negocioInicial,
-  filaInicial,
   etapas,
   vendedores,
+  planos,
   atividadesIniciais,
+  propostasIniciais,
   usuarioAtual,
-  abaInicial = "cadencia",
+  abaInicial = "geral",
 }: {
   negocioInicial: NegocioComRelacoes;
-  filaInicial: NegocioComRelacoes[];
   etapas: EtapaPipeline[];
   vendedores: Usuario[];
+  planos: Plano[];
   atividadesIniciais: AtividadeComUsuario[];
+  propostasIniciais: PropostaComRelacoes[];
   usuarioAtual: Usuario;
   /** Vem de `?tab=` — as notificações do sino abrem direto na cadência. */
   abaInicial?: Aba;
@@ -51,71 +53,25 @@ export function NegocioDetailClient({
   const router = useRouter();
   const [negocio, setNegocio] = useState(negocioInicial);
   const [atividades, setAtividades] = useState(atividadesIniciais);
+  const [propostas, setPropostas] = useState(propostasIniciais);
   const [aba, setAba] = useState<Aba>(abaInicial);
   const [erro, setErro] = useState<string | null>(null);
-  const [encerrando, setEncerrando] = useState(false);
-  /** Guarda o estado anterior de etapa/responsável para o "desfazer". */
-  const [desfazer, setDesfazer] = useState<{ texto: string; acao: () => Promise<void> } | null>(null);
-
-  // Proposta e planos só chegam quando a aba abre: é o join mais pesado da
-  // tela (proposta → plano → envelope → signatários) e a maioria das visitas
-  // nem passa por lá.
-  const [propostas, setPropostas] = useState<PropostaComRelacoes[] | null>(null);
-  const [planos, setPlanos] = useState<Plano[] | null>(null);
-  const [erroProposta, setErroProposta] = useState<string | null>(null);
 
   const negocioId = negocioInicial.id;
 
-  const carregarProposta = useCallback(async () => {
-    setErroProposta(null);
-    const supabase = createClient();
-
-    // Carregar sob demanda tem um custo que o carregamento pelo servidor não
-    // tinha: se a consulta falha, ou simplesmente pendura, a aba fica em
-    // "carregando" para sempre. Rede ruim não rejeita — ela demora — então
-    // não basta try/catch: precisa de prazo.
-    const prazo = new Promise<"prazo">((r) => setTimeout(() => r("prazo"), 12_000));
-    const carga = Promise.all([
-      supabase.from("propostas").select(SELECT_PROPOSTA).eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
-      supabase.from("planos").select("*").eq("ativo", true).order("valor_plataforma_base"),
-    ]);
-
-    try {
-      const r = await Promise.race([carga, prazo]);
-      if (r === "prazo") {
-        setErroProposta("A consulta demorou demais.");
-        return;
-      }
-      const [props, pl] = r;
-      if (props.error || pl.error) {
-        setErroProposta(props.error?.message ?? pl.error?.message ?? "Falha ao carregar.");
-        return;
-      }
-      setPropostas((props.data as PropostaComRelacoes[]) ?? []);
-      setPlanos((pl.data as Plano[]) ?? []);
-    } catch (e) {
-      setErroProposta(e instanceof Error ? e.message : "Falha ao carregar.");
-    }
-  }, [negocioId]);
-
-  useEffect(() => {
-    if (aba === "proposta" && propostas === null && !erroProposta) void carregarProposta();
-  }, [aba, propostas, erroProposta, carregarProposta]);
-
+  // Tudo desta tela se mantém vivo: o negócio, a cadência de atividades e as
+  // propostas com envelopes/signatários (visualização e assinatura do cliente).
   const recarregar = useCallback(async () => {
     const supabase = createClient();
-    const [neg, ativ] = await Promise.all([
+    const [neg, ativ, props] = await Promise.all([
       supabase.from("negocios").select(SELECT_NEGOCIO_COMPLETO).eq("id", negocioId).single(),
       supabase.from("atividades").select("*, usuario:usuarios(*)").eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
+      supabase.from("propostas").select("*, plano:planos(*), envelopes(*, signatarios(*))").eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
     ]);
     if (neg.data) setNegocio(neg.data as unknown as NegocioComRelacoes);
     if (ativ.data) setAtividades(ativ.data as unknown as AtividadeComUsuario[]);
-    // A proposta só se atualiza se a aba dela já tiver sido aberta.
-    if (propostas !== null) {
-      const { data } = await supabase.from("propostas").select(SELECT_PROPOSTA).eq("negocio_id", negocioId).order("criado_em", { ascending: false });
-      if (data) setPropostas(data as PropostaComRelacoes[]);
-    }
-  }, [negocioId, propostas]);
+    if (props.data) setPropostas(props.data as PropostaComRelacoes[]);
+  }, [negocioId]);
 
   useSincronizacao(recarregar, {
     canal: `negocio-${negocioId}`,
@@ -129,324 +85,263 @@ export function NegocioDetailClient({
     ],
   });
 
-  const salvarCampos = async (campos: Partial<NegocioComRelacoes>) => {
+  const atualizarNegocio = async (campos: Partial<NegocioComRelacoes>) => {
     setNegocio((prev) => ({ ...prev, ...campos }));
+    const supabase = createClient();
     const { etapa, contato, responsavel, atividades_pendentes, ...camposDb } = campos as Record<string, unknown> & {
       etapa?: unknown;
       contato?: unknown;
       responsavel?: unknown;
       atividades_pendentes?: unknown;
     };
-    const { error } = await createClient()
+    const { error } = await supabase
       .from("negocios")
       .update({ ...camposDb, atualizado_em: new Date().toISOString() })
       .eq("id", negocio.id);
     if (error) setErro(`Não foi possível salvar: ${error.message}`);
   };
 
-  const aplicarEtapa = useCallback(
-    async (etapaId: string) => {
-      const nova = etapas.find((et) => et.id === etapaId);
-      if (!nova || etapaId === negocio.etapa_id) return;
-      const anterior = negocio.etapa;
-
-      setNegocio((prev) => ({
-        ...prev,
-        etapa_id: etapaId,
-        etapa: nova,
-        probabilidade: nova.probabilidade ?? prev.probabilidade,
-        ganho: resultadoDaEtapa(nova),
-      }));
-      setErro(null);
-
-      const r = await moverEtapa({
-        negocioId: negocio.id,
-        etapa: nova,
-        nomeEtapaAnterior: anterior?.nome,
-        probabilidadeAtual: negocio.probabilidade,
-        usuarioId: usuarioAtual.id,
-      });
-      if (!r.ok) {
-        setNegocio((prev) => ({ ...prev, etapa_id: anterior?.id ?? null, etapa: anterior }));
-        setErro(`Não foi possível mover o negócio: ${r.erro}`);
-        return;
-      }
-
-      // Trocar etapa aqui não tem o gesto do arrastar para dar contexto, então
-      // o caminho de volta fica explícito em vez de exigir confirmação antes.
-      if (anterior) {
-        setDesfazer({
-          texto: `Movido para "${nova.nome}".`,
-          acao: async () => {
-            setDesfazer(null);
-            await aplicarEtapa(anterior.id);
-          },
-        });
-      }
-      // A fila à esquerda passou a ser a da etapa antiga; quem a monta é o servidor.
-      router.refresh();
-      void recarregar();
-    },
-    [etapas, negocio.etapa, negocio.etapa_id, negocio.id, negocio.probabilidade, usuarioAtual.id, recarregar, router],
-  );
-
-  const aplicarResponsavel = async (id: string) => {
-    const anterior = negocio.responsavel;
-    const novo = vendedores.find((v) => v.id === id) ?? null;
-    await salvarCampos({ responsavel_id: id || null, responsavel: novo });
-    setDesfazer({
-      texto: novo ? `Responsável agora é ${novo.nome}.` : "Negócio devolvido ao pool.",
-      acao: async () => {
-        setDesfazer(null);
-        await salvarCampos({ responsavel_id: anterior?.id ?? null, responsavel: anterior ?? null });
-      },
+  /** Move o negócio de etapa e registra na cadência (mantém o histórico coerente). */
+  const mudarEtapa = async (etapaId: string) => {
+    const nova = etapas.find((et) => et.id === etapaId);
+    if (!nova || etapaId === negocio.etapa_id) return;
+    const anterior = negocio.etapa?.nome ?? "—";
+    await atualizarNegocio({
+      etapa_id: etapaId,
+      etapa: nova,
+      probabilidade: nova.probabilidade ?? negocio.probabilidade,
+      ganho: resultadoDaEtapa(nova),
     });
+    await createClient().from("atividades").insert({
+      negocio_id: negocio.id,
+      usuario_id: usuarioAtual.id,
+      tipo: "mudanca_etapa",
+      titulo: `Etapa alterada para: ${nova.nome}`,
+      descricao: `Movido de "${anterior}" para "${nova.nome}".`,
+    });
+    void recarregar();
   };
 
-  const encerrar = async (ganho: boolean, motivo: string | null) => {
+  const fecharNegocio = async (ganho: boolean) => {
     const etapaAlvo = etapas.find((e) => resultadoDaEtapa(e) === ganho);
     if (!etapaAlvo) {
       setErro(`Não encontrei a etapa de ${ganho ? "ganho" : "perda"} no funil.`);
-      setEncerrando(false);
       return;
     }
-    const r = await fecharNegocio({
-      negocioId: negocio.id,
-      etapaAlvo,
-      ganho,
-      motivo,
-      usuarioId: usuarioAtual.id,
+    if (!confirm(`Marcar este negócio como ${ganho ? "GANHO" : "PERDIDO"}?`)) return;
+    const motivo = ganho ? null : window.prompt("Motivo da perda (opcional):") || null;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("negocios")
+      .update({
+        etapa_id: etapaAlvo.id,
+        ganho,
+        motivo_perda: motivo,
+        probabilidade: ganho ? 100 : 0,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", negocio.id);
+    if (error) {
+      setErro(`Não foi possível fechar o negócio: ${error.message}`);
+      return;
+    }
+    await supabase.from("atividades").insert({
+      negocio_id: negocio.id,
+      usuario_id: usuarioAtual.id,
+      tipo: "mudanca_etapa",
+      titulo: ganho ? "Negócio marcado como GANHO" : "Negócio marcado como PERDIDO",
+      descricao: motivo ? `Motivo da perda: ${motivo}` : null,
     });
-    if (!r.ok) {
-      setErro(`Não foi possível encerrar o negócio: ${r.erro}`);
-      setEncerrando(false);
-      return;
-    }
     router.push("/");
     router.refresh();
   };
 
-  const empresa = negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo;
-  const linhaContato = [negocio.contato?.nome, negocio.contato?.cargo, negocio.contato?.estado]
-    .filter(Boolean)
-    .join(" · ");
+  const comAtividadeHoje = temAtividadeHoje(negocio);
+  const dias = diasSemContato(negocio);
+  const proxima = proximaAtividade(negocio.atividades_pendentes);
+  const proximaAtrasada = estaAtrasada(proxima?.data_agendada);
   const fechado = negocio.ganho !== null && negocio.ganho !== undefined;
-  const proximaAtrasada = estaAtrasada(proximaAtividade(negocio.atividades_pendentes)?.data_agendada);
-  const whatsapp = (negocio.contato?.whatsapp || negocio.contato?.telefone || "").replace(/\D/g, "");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      {/* A fila só aparece onde cabe sem espremer o detalhe. */}
-      <div className="hidden lg:flex lg:min-h-0">
-        <FilaDaEtapa etapa={negocio.etapa} negocios={filaInicial} negocioAbertoId={negocio.id} />
-      </div>
+    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
+      <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600">
+        <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao pipeline
+      </Link>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex flex-col gap-5 px-5 pt-6 sm:px-8">
-          <div className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="font-serif text-[30px] leading-[1.1] tracking-[-0.015em] text-tinta">
-                  {empresa}
-                </h1>
-                {fechado && (
-                  <Badge tom={negocio.ganho ? "sucesso" : "perigo"}>
-                    {negocio.ganho ? "Ganho" : "Perdido"}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-corpo-lg text-tinta-suave">{linhaContato || negocio.titulo}</p>
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Building2 className="h-5 w-5 text-indigo-600" />
+              <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+                {negocio.contato?.empresa || negocio.contato?.nome}
+              </h1>
+              {fechado && (
+                <span
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${
+                    negocio.ganho
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                  }`}
+                >
+                  {negocio.ganho ? "Ganho" : "Perdido"}
+                </span>
+              )}
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{negocio.titulo}</p>
+            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
               {negocio.contato?.email && (
-                <Button
-                  variante="secundario"
-                  icone={Mail}
-                  onClick={() => window.open(`mailto:${negocio.contato!.email}`, "_blank", "noopener")}
-                >
-                  E-mail
-                </Button>
+                <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{negocio.contato.email}</span>
               )}
-              {whatsapp.length >= 10 && (
-                <Button
-                  variante="secundario"
-                  icone={MessageCircle}
-                  onClick={() => window.open(`https://wa.me/55${whatsapp}`, "_blank", "noopener")}
-                >
-                  WhatsApp
-                </Button>
+              {negocio.contato?.telefone && (
+                <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{negocio.contato.telefone}</span>
               )}
-              <Button variante="primario" onClick={() => setAba("cadencia")}>
-                Registrar atividade
-              </Button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-x-7 gap-y-4">
-            <div className="flex flex-col gap-1">
-              <Rotulo>Etapa</Rotulo>
-              {/* Antes era um <select> transparente sem borda que gravava no
-                  change: a troca de etapa acidental mais fácil do app. */}
-              <div className="w-56">
-                <Select
-                  value={negocio.etapa_id || ""}
-                  onChange={(e) => void aplicarEtapa(e.target.value)}
-                  aria-label="Etapa do negócio"
-                >
-                  {etapas.map((et) => (
-                    <option key={et.id} value={et.id}>
-                      {et.nome}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <Rotulo>Responsável</Rotulo>
-              <div className="w-52">
-                <Select
-                  value={negocio.responsavel_id || ""}
-                  onChange={(e) => void aplicarResponsavel(e.target.value)}
-                  aria-label="Vendedor responsável"
-                >
-                  <option value="">Sem dono (pool)</option>
-                  {vendedores.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-0.5">
-              <Rotulo>Valor mensal</Rotulo>
-              <span className="font-serif text-[26px] leading-[1.15] tracking-[-0.01em] tabular-nums text-tinta">
-                {formatarMoeda(negocio.valor)}
-              </span>
-            </div>
-
-            {/* Fora do eixo principal: era o par "Ganhei/Perdi" no topo à
-                direita, sempre habilitado mesmo com o negócio já fechado. */}
-            <div className="ml-auto">
-              <Button
-                variante="secundario"
-                onClick={() => setEncerrando(true)}
-                disabled={fechado}
-                title={
-                  fechado
-                    ? "Este negócio já está encerrado. Para reabrir, mude a etapa acima."
-                    : undefined
-                }
-              >
-                Encerrar negócio
-              </Button>
-            </div>
-          </div>
-
-          {desfazer && (
-            <div className="flex items-center gap-3 rounded-lg bg-recuo px-3 py-2">
-              <span className="text-corpo-lg text-tinta-suave">{desfazer.texto}</span>
-              <Button variante="sutil" tamanho="sm" icone={Undo2} onClick={() => void desfazer.acao()}>
-                Desfazer
-              </Button>
-              <button
-                type="button"
-                onClick={() => setDesfazer(null)}
-                className="text-corpo ml-auto text-tinta-fraca hover:text-tinta"
-              >
-                dispensar
-              </button>
-            </div>
-          )}
-
-          {erro && <Alerta>{erro}</Alerta>}
-
-          <div className="flex items-center gap-7 border-b border-fio">
-            {ABAS.map((t) => {
-              const ativo = aba === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setAba(t.id)}
-                  aria-current={ativo ? "page" : undefined}
-                  className={clsx(
-                    "text-corpo-lg -mb-px flex items-center gap-1.5 border-b-[1.5px] py-3.5 whitespace-nowrap",
-                    "transition-[color,border-color] duration-150 ease-out",
-                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento",
-                    ativo
-                      ? "border-tinta font-medium text-tinta"
-                      : "border-transparent text-tinta-suave hover:text-tinta",
-                  )}
-                >
-                  {t.label}
-                  {t.id === "cadencia" && proximaAtrasada && (
-                    <span
-                      aria-label="há passo atrasado"
-                      className="h-1.5 w-1.5 rounded-full bg-rose-500"
-                    />
-                  )}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fecharNegocio(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors"
+            >
+              <Trophy className="h-3.5 w-3.5" /> Ganhei
+            </button>
+            <button
+              onClick={() => fecharNegocio(false)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors"
+            >
+              <XCircle className="h-3.5 w-3.5" /> Perdi
+            </button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8">
-          {aba === "cadencia" && (
-            <CadenciaTab
-              negocio={negocio}
-              atividadesIniciais={atividades}
-              usuarioAtual={usuarioAtual}
-              onRegistrouAtividade={() => {
-                setNegocio((prev) => ({ ...prev, ultima_atividade_em: new Date().toISOString() }));
-                void recarregar();
+        {/* Termômetro de cadência: o mesmo sinal da bolinha do card */}
+        <div className="flex items-center gap-2 mt-4 flex-wrap">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg ${
+              comAtividadeHoje
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                : "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${comAtividadeHoje ? "bg-emerald-500" : "bg-amber-500"}`} />
+            {comAtividadeHoje
+              ? "Atividade registrada hoje"
+              : dias === null
+                ? "Nenhuma atividade registrada"
+                : `${dias} ${dias === 1 ? "dia" : "dias"} sem contato`}
+          </span>
+
+          {proxima ? (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg ${
+                proximaAtrasada
+                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                  : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+              }`}
+            >
+              {proximaAtrasada ? <AlertTriangle className="h-3 w-3" /> : <CalendarClock className="h-3 w-3" />}
+              {proximaAtrasada ? "Atrasado" : "Próximo passo"}: {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
+            </span>
+          ) : (
+            <button
+              onClick={() => setAba("cadencia")}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 hover:bg-amber-100"
+            >
+              <Clock className="h-3 w-3" /> Sem próximo passo — agendar
+            </button>
+          )}
+
+          {negocio.ultima_atividade_em && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <CheckCircle2 className="h-3 w-3" /> Último contato: {formatarDataHora(negocio.ultima_atividade_em)}
+            </span>
+          )}
+        </div>
+
+        {erro && (
+          <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2 mt-3">{erro}</p>
+        )}
+
+        <div className="grid sm:grid-cols-2 gap-3 mt-4">
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Etapa</p>
+            <select
+              value={negocio.etapa_id || ""}
+              onChange={(e) => mudarEtapa(e.target.value)}
+              className="w-full mt-1 text-sm font-bold bg-transparent focus:outline-hidden"
+            >
+              {etapas.map((et) => (
+                <option key={et.id} value={et.id}>{et.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
+            <p className="text-[10px] font-bold uppercase text-slate-400">Vendedor responsável</p>
+            <select
+              value={negocio.responsavel_id || ""}
+              onChange={(e) => {
+                const resp = vendedores.find((v) => v.id === e.target.value) || null;
+                atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
               }}
-            />
+              className="w-full mt-1 text-sm font-bold bg-transparent focus:outline-hidden"
+            >
+              <option value="">Sem dono (pool)</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+          </div>
+          {(negocio.valor ?? 0) > 0 && (
+            <div className="sm:col-span-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3">
+              <p className="text-[10px] font-bold uppercase text-indigo-500">Valor da proposta</p>
+              <p className="mt-1 text-sm font-extrabold text-indigo-600">
+                {formatarMoeda(negocio.valor)}<span className="text-xs font-semibold text-slate-500">/mês</span>
+              </p>
+            </div>
           )}
-          {aba === "contato" && (
-            <ContatoTab
-              negocio={negocio}
-              onAtualizarContato={(campos) =>
-                setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))
-              }
-              onAtualizarNegocio={salvarCampos}
-            />
-          )}
-          {aba === "proposta" &&
-            (erroProposta ? (
-              <Alerta className="flex flex-wrap items-center gap-3">
-                <span>Não consegui carregar as propostas: {erroProposta}</span>
-                <Button variante="secundario" tamanho="sm" onClick={() => void carregarProposta()}>
-                  Tentar de novo
-                </Button>
-              </Alerta>
-            ) : propostas === null || planos === null ? (
-              <p className="text-corpo-lg text-tinta-fraca">Carregando propostas…</p>
-            ) : (
-              <PropostaTab
-                negocio={negocio}
-                planos={planos}
-                propostasIniciais={propostas}
-                usuarioAtual={usuarioAtual}
-                onAtualizarContato={(campos) =>
-                  setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))
-                }
-              />
-            ))}
-          {aba === "mensagens" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
         </div>
       </div>
 
-      <EncerrarNegocioModal
-        aberto={encerrando}
-        aoFechar={() => setEncerrando(false)}
-        aoConfirmar={encerrar}
-        empresa={empresa}
-      />
+      <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1 w-fit max-w-full overflow-x-auto">
+        {ABAS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setAba(t.id)}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+              aba === t.id ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-xs" : "text-slate-500 dark:text-slate-400"
+            }`}
+          >
+            {t.label}
+            {t.id === "cadencia" && proximaAtrasada && (
+              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-rose-500 align-middle" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {aba === "geral" && (
+        <VisaoGeralTab
+          negocio={negocio}
+          onAtualizarContato={(campos) => setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))}
+        />
+      )}
+      {aba === "cadencia" && (
+        <CadenciaTab
+          negocio={negocio}
+          atividadesIniciais={atividades}
+          usuarioAtual={usuarioAtual}
+          onRegistrouAtividade={() => {
+            setNegocio((prev) => ({ ...prev, ultima_atividade_em: new Date().toISOString() }));
+            void recarregar();
+          }}
+        />
+      )}
+      {aba === "proposta" && (
+        <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
+      )}
+      {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
     </div>
   );
 }

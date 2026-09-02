@@ -26,7 +26,6 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
-import { Alerta, Badge, Button, Confirmar, Input, TOM_PROPOSTA } from "@/components/ui";
 
 /**
  * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
@@ -47,7 +46,12 @@ function exibirMoeda(valor: number): string {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// O mapa de cor proprio saiu: a escala vive uma vez so, em TOM_PROPOSTA.
+const STATUS_COR: Record<string, string> = {
+  rascunho: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  enviada: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  assinada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  cancelada: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+};
 
 // A proposta vale 30 dias para aceite (a partir da emissão). Passado esse prazo,
 // e ainda não assinada, sinaliza que é preciso gerar uma nova.
@@ -74,14 +78,11 @@ export function PropostaTab({
   planos,
   propostasIniciais,
   usuarioAtual,
-  onAtualizarContato,
 }: {
   negocio: NegocioComRelacoes;
   planos: Plano[];
   propostasIniciais: any[];
   usuarioAtual: Usuario;
-  /** Para o CNPJ preenchido aqui refletir no cabecalho sem recarregar. */
-  onAtualizarContato: (campos: Partial<NonNullable<NegocioComRelacoes["contato"]>>) => void;
 }) {
   const isAdmin = usuarioAtual.role === "admin";
   const [propostas, setPropostas] = useEstadoDaProp(propostasIniciais, semDuplicadas);
@@ -236,9 +237,8 @@ export function PropostaTab({
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
-  const handleExcluir = async (): Promise<string | void> => {
-    if (!excluindoProposta) return;
-    const propostaId = excluindoProposta.id;
+  const handleExcluir = async (propostaId: string) => {
+    if (!confirm("Excluir esta proposta? Esta ação não pode ser desfeita.")) return;
     const supabase = createClient();
     const proposta = propostas.find((p) => p.id === propostaId);
     const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter(Boolean);
@@ -246,14 +246,12 @@ export function PropostaTab({
       await supabase.storage.from("documentos").remove(paths);
     }
     const { error } = await supabase.from("propostas").delete().eq("id", propostaId);
-    if (error) return `Falha ao excluir: ${error.message}`;
+    if (error) {
+      setErro("Falha ao excluir proposta: " + error.message);
+      return;
+    }
     setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
   };
-
-  // Confirmação de verdade no lugar do confirm() nativo: os PDFs no Storage
-  // são apagados junto, então a frase precisa dizer isso.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [excluindoProposta, setExcluindoProposta] = useState<any>(null);
 
   const abrirEnvio = (propostaId: string) => {
     setEditandoEnvioId(propostaId);
@@ -348,44 +346,53 @@ export function PropostaTab({
 
   return (
     <div className="space-y-5">
-      {!temCnpj && <CnpjPendente negocio={negocio} onSalvou={onAtualizarContato} />}
+      {!temCnpj && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-2xl flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300">CNPJ obrigatório</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Este contato ainda não tem CNPJ cadastrado. Preencha o CNPJ na aba &quot;Visão Geral&quot; antes de gerar a proposta.
+            </p>
+          </div>
+        </div>
+      )}
 
-      <div className={`rounded-xl bg-cartao shadow-cartao p-5 space-y-4 ${!temCnpj ? "opacity-50 pointer-events-none" : ""}`}>
-        <h3 className="text-titulo text-tinta">Gerar nova proposta</h3>
+      <div className={`bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4 ${!temCnpj ? "opacity-50 pointer-events-none" : ""}`}>
+        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Gerar nova proposta</h3>
 
         <div>
-          <label htmlFor="prop-plano" className="text-rotulo uppercase text-tinta-fraca mb-1 block">Plano</label>
-          <select id="prop-plano" value={planoId} onChange={(e) => {
+          <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Plano</label>
+          <select value={planoId} onChange={(e) => {
             setPlanoId(e.target.value);
             const p = planos.find((x) => x.id === e.target.value);
             const newSetup = (p?.valor_setup_plataforma || 0) + (p?.valor_setup_erp || 0) + (p?.valor_setup_catalogo || 0);
             setValorSetupTexto(exibirMoeda(Math.max(newSetup, minSetup)));
             const newMensal = (p?.valor_plataforma_base || 0) + (p?.valor_uso_base || 0);
             setValorMensalTexto(exibirMoeda(newMensal));
-          }} className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+          }} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — até {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</option>
             ))}
           </select>
         </div>
 
-        <div className="rounded-xl bg-recuo p-4">
-          <label htmlFor="prop-mensal" className="text-rotulo uppercase text-tinta-fraca mb-1 block">Mensalidade do plano</label>
+        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+          <label className="text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-400 block mb-1">Mensalidade do plano</label>
           <div className="flex items-center gap-2">
-            <span className="text-corpo-lg text-tinta-suave">R$</span>
+            <span className="text-sm text-indigo-500">R$</span>
             <input
-              id="prop-mensal"
               type="text"
               inputMode="decimal"
               value={valorMensalTexto}
               onChange={(e) => setValorMensalTexto(e.target.value)}
               onBlur={() => setValorMensalTexto(exibirMoeda(parseMoeda(valorMensalTexto)))}
-              className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 font-serif text-xl tabular-nums text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="flex-1 px-3 py-2 text-lg font-extrabold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded-xl"
             />
-            <span className="text-corpo-lg text-tinta-suave">/mês</span>
+            <span className="text-sm font-semibold text-slate-500">/mês</span>
           </div>
           {!isAdmin && (
-            <p className="text-corpo text-tinta-suave mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
               {descontoAprovado
                 ? `Desconto aprovado: pode cobrar a partir de ${formatarMoeda(minMensal)}.`
                 : `Valor mínimo do plano: ${formatarMoeda(valorMensalBase)}.`}{" "}
@@ -393,27 +400,26 @@ export function PropostaTab({
             </p>
           )}
           {isAdmin && (
-            <p className="text-corpo text-tinta-suave mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
               Valor base do plano: {formatarMoeda(valorMensalBase)}. Admin pode definir qualquer valor. Excedente de {formatarMoeda(plano?.valor_excedente_pedido)}/pedido.
             </p>
           )}
         </div>
 
-        <div className="rounded-xl bg-recuo p-4">
-          <label htmlFor="prop-setup" className="text-rotulo uppercase text-tinta-fraca mb-1 block">Setup (cobrança única)</label>
+        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+          <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 block mb-1">Setup (cobrança única)</label>
           <div className="flex items-center gap-2">
-            <span className="text-corpo-lg text-tinta-suave">R$</span>
+            <span className="text-sm text-slate-500">R$</span>
             <input
-              id="prop-setup"
               type="text"
               inputMode="decimal"
               value={valorSetupTexto}
               onChange={(e) => setValorSetupTexto(e.target.value)}
               onBlur={() => setValorSetupTexto(exibirMoeda(parseMoeda(valorSetupTexto)))}
-              className="min-w-0 flex-1 rounded-lg border border-fio bg-cartao px-3 py-2 font-serif text-xl tabular-nums text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="flex-1 px-3 py-2 text-lg font-extrabold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
           </div>
-          <p className="text-corpo text-tinta-suave mt-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
             Valor padrão do plano: {formatarMoeda(setupPlano)}.{" "}
             {isAdmin ? "Admin pode definir qualquer valor, inclusive R$ 0." : "Mínimo para vendedor: R$ 500,00."}
           </p>
@@ -421,12 +427,12 @@ export function PropostaTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="prop-prazo" className="text-rotulo uppercase text-tinta-fraca mb-1 block">Prazo contrato (meses)</label>
-            <input id="prop-prazo" type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500" />
+            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Prazo contrato (meses)</label>
+            <input type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl" />
           </div>
           <div>
-            <label htmlFor="prop-aviso" className="text-rotulo uppercase text-tinta-fraca mb-1 block">Aviso prévio de rescisão</label>
-            <select id="prop-aviso" value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">
+            <label className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Aviso prévio de rescisão</label>
+            <select value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold">
               {AVISOS_PREVIOS_DIAS.map((d) => (
                 <option key={d} value={d}>{d} dias {d === 180 ? "(padrão)" : ""}</option>
               ))}
@@ -436,34 +442,34 @@ export function PropostaTab({
 
         {/* Aprovação de desconto */}
         {isAdmin && solicPendente && (
-          <div className="rounded-xl bg-amber-50 p-4 space-y-2">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-4 space-y-2">
             <div className="flex items-center gap-2">
               <BadgePercent className="h-4 w-4 text-amber-600" />
-              <p className="text-corpo-lg font-medium text-amber-800">Pedido de desconto aguardando sua aprovação</p>
+              <p className="text-xs font-bold text-amber-800 dark:text-amber-300">Pedido de desconto aguardando sua aprovação</p>
             </div>
-            <p className="text-corpo text-amber-800">
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
               Mensalidade pedida: <strong>{formatarMoeda(Number(solicitacao.valor_mensal_solicitado))}</strong> (base do plano {formatarMoeda(Number(solicitacao.valor_mensal_base))})
               {Number(solicitacao.valor_setup_solicitado) > 0 && <> · Setup: <strong>{formatarMoeda(Number(solicitacao.valor_setup_solicitado))}</strong></>}
             </p>
-            {solicitacao.motivo && <p className="text-corpo text-amber-800">Motivo: {solicitacao.motivo}</p>}
+            {solicitacao.motivo && <p className="text-[11px] text-amber-700 dark:text-amber-400">Motivo: {solicitacao.motivo}</p>}
             <input
               value={respostaAdmin}
               onChange={(e) => setRespostaAdmin(e.target.value)}
               placeholder="Resposta ao vendedor (opcional)"
-              className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800 rounded-lg"
             />
             <div className="flex items-center gap-2">
               <button
                 onClick={() => decidirDesconto(true)}
                 disabled={decidindo}
-                className="text-corpo-lg inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 font-medium text-white transition-[background-color] duration-150 ease-out hover:bg-emerald-800 disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
               >
                 {decidindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
               </button>
               <button
                 onClick={() => decidirDesconto(false)}
                 disabled={decidindo}
-                className="text-corpo-lg inline-flex items-center gap-1.5 rounded-lg bg-rose-700 px-3 py-1.5 font-medium text-white transition-[background-color] duration-150 ease-out hover:bg-rose-800 disabled:opacity-60"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg disabled:opacity-60"
               >
                 <ThumbsDown className="h-3.5 w-3.5" /> Recusar
               </button>
@@ -472,26 +478,26 @@ export function PropostaTab({
         )}
 
         {!isAdmin && solicPendente && (
-          <div className="rounded-xl bg-amber-50 p-3 flex items-center gap-2">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded-xl p-3 flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-600 shrink-0" />
-            <p className="text-corpo text-amber-800">
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
               Desconto de <strong>{formatarMoeda(Number(solicitacao.valor_mensal_solicitado))}</strong> aguardando aprovação do admin. Você será notificado da decisão.
             </p>
           </div>
         )}
 
         {!isAdmin && solicitacao?.status === "recusado" && (
-          <div className="rounded-xl bg-rose-50 p-3">
-            <p className="text-corpo text-rose-800">
+          <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 rounded-xl p-3">
+            <p className="text-[11px] text-rose-700 dark:text-rose-400">
               Último pedido de desconto foi recusado{solicitacao.resposta_admin ? ` — ${solicitacao.resposta_admin}` : ""}. Ajuste o valor ou solicite novamente.
             </p>
           </div>
         )}
 
         {!isAdmin && descontoAprovado && (
-          <div className="rounded-xl bg-emerald-50 p-3 flex items-center gap-2">
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 rounded-xl p-3 flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <p className="text-corpo text-emerald-800">
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
               Desconto aprovado: mensalidade a partir de <strong>{formatarMoeda(minMensal)}</strong>
               {Number(descontoAprovado.valor_setup_solicitado) < 500 && <> e setup a partir de <strong>{formatarMoeda(minSetup)}</strong></>}.
             </p>
@@ -499,12 +505,12 @@ export function PropostaTab({
         )}
 
         {abaixoDoMinimo && !solicPendente && (
-          <div className="rounded-xl bg-indigo-50 p-4 space-y-2">
+          <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-800 rounded-xl p-4 space-y-2">
             <div className="flex items-center gap-2">
               <BadgePercent className="h-4 w-4 text-indigo-600" />
-              <p className="text-corpo-lg font-medium text-indigo-800">Valor abaixo do mínimo do plano</p>
+              <p className="text-xs font-bold text-indigo-800 dark:text-indigo-300">Valor abaixo do mínimo do plano</p>
             </div>
-            <p className="text-corpo text-indigo-800">
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-400">
               Para cobrar {formatarMoeda(valorMensal)}/mês{valorSetup < 500 ? ` e setup de ${formatarMoeda(valorSetup)}` : ""} você precisa de aprovação do admin.
             </p>
             <textarea
@@ -512,12 +518,12 @@ export function PropostaTab({
               onChange={(e) => setMotivoDesconto(e.target.value)}
               placeholder="Justifique o desconto para o admin (ex.: concorrência, volume, relacionamento)"
               rows={2}
-              className="w-full rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg"
             />
             <button
               onClick={solicitarDesconto}
               disabled={enviandoSolic}
-              className="text-corpo-lg inline-flex items-center gap-1.5 rounded-lg bg-tinta px-4 py-2 font-medium text-superficie transition-[filter] duration-150 ease-out hover:brightness-125 disabled:opacity-60"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-60"
             >
               {enviandoSolic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgePercent className="h-3.5 w-3.5" />}
               Solicitar aprovação de desconto
@@ -525,40 +531,40 @@ export function PropostaTab({
           </div>
         )}
 
-        {erro && !editandoEnvioId && <p className="rounded-lg bg-rose-50 px-3 py-2 text-corpo-lg font-medium text-rose-700">{erro}</p>}
+        {erro && !editandoEnvioId && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
         <button
           onClick={handleGerar}
           disabled={gerando || !temCnpj || abaixoDoMinimo}
           title={abaixoDoMinimo ? "Valor abaixo do mínimo — solicite aprovação de desconto." : undefined}
-          className="text-corpo-lg flex w-full items-center justify-center gap-2 rounded-lg bg-tinta py-2.5 font-medium text-superficie transition-[filter] duration-150 ease-out hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-55"
+          className="w-full py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
         >
           {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
           Gerar proposta (Comercial + Técnica)
         </button>
       </div>
 
-      <div className="rounded-xl bg-cartao shadow-cartao overflow-hidden">
-        <div className="p-5 border-b border-fio">
-          <h3 className="text-titulo text-tinta">Propostas geradas ({propostas.length})</h3>
-          <p className="text-corpo text-tinta-suave mt-0.5">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Propostas geradas ({propostas.length})</h3>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
             Cada proposta gera dois arquivos do mesmo documento: a Comercial e a Técnica.
           </p>
         </div>
         {propostas.length === 0 ? (
-          <p className="p-5 text-corpo text-tinta-fraca">Nenhuma proposta gerada ainda.</p>
+          <p className="p-5 text-xs text-slate-400">Nenhuma proposta gerada ainda.</p>
         ) : (
-          <div className="divide-y divide-fio">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {propostas.map((p) => {
               const envelope = p.envelopes?.[0];
               return (
                 <div key={p.id} className="p-5 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
-                      <p className="text-titulo text-tinta">
+                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
                         Proposta {p.numero} v{p.versao} — {p.plano?.nome}
                       </p>
-                      <p className="text-corpo text-tinta-suave">
+                      <p className="text-xs text-slate-500">
                         {formatarMoeda((p.valor_plataforma || 0) + (p.valor_uso || 0))}/mês
                         {(p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0) > 0 && ` + ${formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))} setup`}
                         {" "}· aviso prévio {p.aviso_previo_dias} dias
@@ -566,38 +572,35 @@ export function PropostaTab({
                     </div>
                     <div className="flex items-center gap-2">
                       {propostaVencida(p) && (
-                        <Badge
-                          tom="perigo"
-                          title={`Emitida há ${diasDesde(p.criado_em)} dias — validade de ${VALIDADE_PROPOSTA_DIAS} dias expirada.`}
-                        >
-                          <AlertTriangle className="h-3 w-3" aria-hidden /> Vencida · gere nova
-                        </Badge>
+                        <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-1" title={`Emitida há ${diasDesde(p.criado_em)} dias — validade de ${VALIDADE_PROPOSTA_DIAS} dias expirada.`}>
+                          <AlertTriangle className="h-3 w-3" /> Vencida · gere nova
+                        </span>
                       )}
-                      <Badge tom={TOM_PROPOSTA[p.status] ?? "neutro"} className="capitalize">
+                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full capitalize ${STATUS_COR[p.status]}`}>
                         {p.status}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-rotulo uppercase text-tinta-fraca">Arquivos:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Arquivos:</span>
                     {p.pdf_comercial_path && (
-                      <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="text-corpo flex items-center gap-1 font-medium text-tinta-suave transition-colors duration-150 ease-out hover:text-acento">
+                      <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
                         <Eye className="h-3 w-3" /> Comercial
                       </button>
                     )}
                     {p.pdf_tecnica_path && (
-                      <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="text-corpo flex items-center gap-1 font-medium text-tinta-suave transition-colors duration-150 ease-out hover:text-acento">
+                      <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="text-[11px] flex items-center gap-1 text-slate-500 hover:text-indigo-600 font-semibold">
                         <Eye className="h-3 w-3" /> Técnica
                       </button>
                     )}
                     {p.pdf_assinado_comercial_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="text-corpo flex items-center gap-1 font-medium text-emerald-700 transition-colors duration-150 ease-out hover:text-emerald-900">
+                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="text-[11px] flex items-center gap-1 text-emerald-600 hover:text-emerald-800 font-bold">
                         <Download className="h-3 w-3" /> Assinado (comercial)
                       </button>
                     )}
                     {p.pdf_assinado_tecnica_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="text-corpo flex items-center gap-1 font-medium text-emerald-700 transition-colors duration-150 ease-out hover:text-emerald-900">
+                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="text-[11px] flex items-center gap-1 text-emerald-600 hover:text-emerald-800 font-bold">
                         <Download className="h-3 w-3" /> Assinado (técnica)
                       </button>
                     )}
@@ -605,13 +608,13 @@ export function PropostaTab({
                       <>
                         <button
                           onClick={() => abrirEnvio(p.id)}
-                          className="text-corpo-lg inline-flex items-center gap-1.5 rounded-lg bg-tinta px-3 py-1.5 font-medium text-superficie transition-[filter] duration-150 ease-out hover:brightness-125"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
                         >
                           <Send className="h-3.5 w-3.5" /> Enviar para assinatura
                         </button>
                         <button
-                          onClick={() => setExcluindoProposta(p)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-recuo hover:text-rose-700"
+                          onClick={() => handleExcluir(p.id)}
+                          className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-rose-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -620,10 +623,10 @@ export function PropostaTab({
                   </div>
 
                   {editandoEnvioId === p.id && etapaEnvio === "signatarios" && (
-                    <div className="rounded-xl bg-recuo p-4 space-y-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 space-y-3 border border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-tinta text-[10px] font-semibold text-superficie">1</span>
-                        <p className="text-corpo-lg font-medium text-tinta">Quem vai assinar?</p>
+                        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Quem vai assinar?</p>
                       </div>
                       {signatarios.map((s, i) => (
                         <div key={i} className="flex items-center gap-2">
@@ -631,16 +634,16 @@ export function PropostaTab({
                             value={s.nome}
                             onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
                             placeholder="Nome completo"
-                            className="min-w-0 flex-1 rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                            className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
                           />
                           <input
                             value={s.email}
                             onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))}
                             placeholder="email@empresa.com"
-                            className="min-w-0 flex-1 rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                            className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
                           />
                           {signatarios.length > 1 && (
-                            <button onClick={() => setSignatarios((prev) => prev.filter((_, j) => j !== i))} className="rounded-md p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-rose-700">
+                            <button onClick={() => setSignatarios((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-rose-600">
                               <X className="h-4 w-4" />
                             </button>
                           )}
@@ -648,44 +651,44 @@ export function PropostaTab({
                       ))}
                       <button
                         onClick={() => setSignatarios((prev) => [...prev, { nome: "", email: "" }])}
-                        className="text-corpo flex items-center gap-1 font-medium text-acento transition-colors duration-150 ease-out hover:text-indigo-900"
+                        className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
                       >
                         <Plus className="h-3 w-3" /> Adicionar signatário
                       </button>
 
-                      <div className="border-t border-fio pt-2">
-                        <p className="text-corpo-lg font-medium text-tinta mb-2">Enviar cópia para (opcional)</p>
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Enviar cópia para (opcional)</p>
                         {copias.map((c, i) => (
                           <div key={i} className="flex items-center gap-2 mb-2">
                             <input
                               value={c}
                               onChange={(e) => setCopias((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))}
                               placeholder="email@empresa.com"
-                              className="min-w-0 flex-1 rounded-lg border border-fio bg-cartao px-3 py-2 text-corpo-lg text-tinta placeholder:text-tinta-fraca focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                              className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
                             />
-                            <button onClick={() => setCopias((prev) => prev.filter((_, j) => j !== i))} className="rounded-md p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-rose-700">
+                            <button onClick={() => setCopias((prev) => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-rose-600">
                               <X className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
                         <button
                           onClick={() => setCopias((prev) => [...prev, ""])}
-                          className="text-corpo flex items-center gap-1 font-medium text-acento transition-colors duration-150 ease-out hover:text-indigo-900"
+                          className="text-[11px] font-bold text-indigo-600 flex items-center gap-1"
                         >
                           <Plus className="h-3 w-3" /> Adicionar cópia
                         </button>
                       </div>
 
-                      {erro && <p className="rounded-lg bg-rose-50 px-3 py-2 text-corpo-lg font-medium text-rose-700">{erro}</p>}
+                      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           onClick={avancarParaEditor}
-                          className="text-corpo-lg inline-flex items-center gap-1.5 rounded-lg bg-tinta px-4 py-2 font-medium text-superficie transition-[filter] duration-150 ease-out hover:brightness-125"
+                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
                         >
                           <FileSignature className="h-3.5 w-3.5" /> Preparar documento
                         </button>
-                        <button onClick={() => { setEditandoEnvioId(null); setEtapaEnvio(null); }} className="rounded-lg px-3 py-2 text-corpo-lg font-medium text-tinta-suave transition-colors duration-150 ease-out hover:bg-recuo hover:text-tinta">
+                        <button onClick={() => { setEditandoEnvioId(null); setEtapaEnvio(null); }} className="px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                           Cancelar
                         </button>
                       </div>
@@ -693,19 +696,19 @@ export function PropostaTab({
                   )}
 
                   {editandoEnvioId === p.id && etapaEnvio === "editor" && pdfComercialUrl && (
-                    <div className="rounded-xl bg-recuo p-4 space-y-3">
+                    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-tinta text-[10px] font-semibold text-superficie">2</span>
-                        <p className="text-corpo-lg font-medium text-tinta">Posicione os campos de assinatura no documento</p>
+                        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Posicione os campos de assinatura no documento</p>
                         <button
                           onClick={() => setEtapaEnvio("signatarios")}
-                          className="text-corpo ml-auto font-medium text-tinta-suave transition-colors duration-150 ease-out hover:text-acento"
+                          className="ml-auto text-[11px] text-slate-500 hover:text-indigo-600 font-semibold"
                         >
                           Voltar
                         </button>
                       </div>
 
-                      {erro && <p className="rounded-lg bg-rose-50 px-3 py-2 text-corpo-lg font-medium text-rose-700">{erro}</p>}
+                      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
 
                       <PdfFieldEditor
                         pdfUrl={pdfComercialUrl}
@@ -725,8 +728,8 @@ export function PropostaTab({
                   )}
 
                   {envelope && (
-                    <div className="rounded-xl bg-recuo p-3 space-y-1.5">
-                      <p className="text-rotulo flex items-center gap-1.5 uppercase text-tinta-fraca">
+                    <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase text-slate-400 flex items-center gap-1.5">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -737,19 +740,19 @@ export function PropostaTab({
                         .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
                         .map((s: any) => (
                           <div key={s.id} className="flex items-center justify-between text-xs gap-2 flex-wrap">
-                            <span className="font-medium text-tinta">{s.nome} <span className="text-tinta-fraca">({s.papel})</span></span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{s.nome} <span className="text-slate-400">({s.papel})</span></span>
                             {s.status === "assinado" ? (
-                              <span className="flex items-center gap-1 font-medium text-emerald-700">
+                              <span className="flex items-center gap-1 font-bold text-emerald-600">
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                                 Assinado em {new Date(s.assinado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                               </span>
                             ) : s.status === "visualizado" ? (
-                              <span className="flex items-center gap-1 font-medium text-sky-700">
+                              <span className="flex items-center gap-1 font-bold text-sky-600">
                                 <Eye className="h-3.5 w-3.5" />
                                 Visualizou{s.visualizado_em ? ` em ${new Date(s.visualizado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""} · aguardando assinatura
                               </span>
                             ) : (
-                              <span className="flex items-center gap-1 font-medium text-amber-700">
+                              <span className="flex items-center gap-1 font-bold text-amber-600">
                                 <Clock className="h-3.5 w-3.5" />
                                 Enviado · ainda não visualizou
                               </span>
@@ -760,8 +763,8 @@ export function PropostaTab({
                   )}
 
                   {ultimoResultado && ultimoResultado.propostaId === p.id && (
-                    <div className={`rounded-xl p-3 text-xs ${ultimoResultado.emailEnviado ? "bg-indigo-50" : "bg-amber-50"}`}>
-                      <p className={`font-medium ${ultimoResultado.emailEnviado ? "text-indigo-800" : "text-amber-800"}`}>
+                    <div className={`rounded-xl p-3 text-xs ${ultimoResultado.emailEnviado ? "bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800" : "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"}`}>
+                      <p className={`font-bold ${ultimoResultado.emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
                         {ultimoResultado.emailEnviado
                           ? ultimoResultado.remetenteTest
                             ? "E-mail enviado (remetente de teste — só chega no e-mail da conta Resend)."
@@ -771,12 +774,12 @@ export function PropostaTab({
                             : "RESEND_API_KEY não configurada — copie e envie o link manualmente:"}
                       </p>
                       {!ultimoResultado.emailEnviado && (
-                        <p className="text-amber-800 mt-1">
+                        <p className="text-amber-700 dark:text-amber-400 mt-1">
                           Configure RESEND_API_KEY e RESEND_FROM_EMAIL (domínio verificado) no Vercel.
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1.5">
-                        <code className="flex-1 truncate rounded-lg border border-fio bg-cartao px-2 py-1">
+                        <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
                           {ultimoResultado.linkAssinatura}
                         </code>
                         <button onClick={() => copiarLink(ultimoResultado!.linkAssinatura)} className="text-indigo-600 hover:text-indigo-800">
@@ -791,75 +794,6 @@ export function PropostaTab({
           </div>
         )}
       </div>
-
-      <Confirmar
-        aberto={!!excluindoProposta}
-        titulo="Excluir proposta"
-        rotuloConfirmar="Excluir proposta"
-        aoFechar={() => setExcluindoProposta(null)}
-        aoConfirmar={handleExcluir}
-        descricao={
-          <>
-            A proposta <strong className="font-medium text-tinta">{excluindoProposta?.numero}</strong>{" "}
-            e os PDFs dela no Storage são apagados. Não dá para desfazer.
-          </>
-        }
-      />
     </div>
-  );
-}
-
-/**
- * O CNPJ faltando desabilitava a aba inteira e mandava a pessoa "preencher na
- * aba Visão Geral" — sem link, e a aba nem se chama mais assim. Agora o campo
- * que destrava a proposta fica aqui, no lugar onde a falta aparece.
- */
-function CnpjPendente({
-  negocio,
-  onSalvou,
-}: {
-  negocio: NegocioComRelacoes;
-  onSalvou: (campos: Partial<NonNullable<NegocioComRelacoes["contato"]>>) => void;
-}) {
-  const [cnpj, setCnpj] = useState("");
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const salvar = async () => {
-    const valor = cnpj.trim();
-    if (!valor || !negocio.contato) return;
-    setSalvando(true);
-    setErro(null);
-    const { error } = await createClient()
-      .from("contatos")
-      .update({ cnpj: valor, atualizado_em: new Date().toISOString() })
-      .eq("id", negocio.contato.id);
-    setSalvando(false);
-    if (error) {
-      setErro(error.message);
-      return;
-    }
-    onSalvou({ cnpj: valor });
-  };
-
-  return (
-    <Alerta tom="aviso" className="flex flex-col gap-3">
-      <span>Sem CNPJ a proposta não pode ser gerada. Dá para preencher aqui mesmo.</span>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="w-56">
-          <Input
-            value={cnpj}
-            onChange={(e) => setCnpj(e.target.value)}
-            aria-label="CNPJ do contato"
-            placeholder="00.000.000/0000-00"
-            onKeyDown={(e) => e.key === "Enter" && void salvar()}
-          />
-        </div>
-        <Button variante="primario" carregando={salvando} disabled={!cnpj.trim()} onClick={salvar}>
-          Salvar CNPJ
-        </Button>
-      </div>
-      {erro && <span className="font-normal">{erro}</span>}
-    </Alerta>
   );
 }
