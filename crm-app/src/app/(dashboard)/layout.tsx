@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/Navbar";
+import { BarraLateral } from "@/components/shell/BarraLateral";
 
 export default async function DashboardLayout({
   children,
@@ -27,9 +27,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-superficie text-slate-900 dark:text-slate-100 flex flex-col font-sans">
-      <Navbar usuario={usuario} />
-      <main className="flex-1 min-h-0 flex flex-col overflow-y-auto">{children}</main>
+    // A cadeia min-h-0 e o que faz as colunas do kanban rolarem por dentro em
+    // vez de esticar a pagina. min-w-0 entrou junto com o trilho: sem ele o
+    // scroll horizontal do board empurra a barra lateral para fora da tela.
+    <div className="flex h-screen flex-col overflow-hidden bg-superficie font-sans md:flex-row">
+      <BarraLateral usuario={usuario} />
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">{children}</main>
     </div>
   );
 }

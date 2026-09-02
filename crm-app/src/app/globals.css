@@ -22,6 +22,8 @@
   --color-tinta-fraca: var(--tinta-fraca);
   --color-fio: var(--fio);
   --color-acento: var(--acento);
+  --color-trilho: var(--trilho);
+  --color-trilho-alto: var(--trilho-alto);
 }
 
 :root {
@@ -33,6 +35,12 @@
   --tinta-fraca: #a8a29e;
   --fio: #ebe8e4;          /* filete de separacao */
   --acento: #4338ca;       /* so acao: botao, foco, link */
+
+  /* A barra lateral e a UNICA superficie escura do app. Ela ganha token
+     proprio para ninguem ter de adivinhar qual stone usar; o texto sobre ela
+     usa a rampa stone-50/300/500, que e o inverso da pagina e so existe aqui. */
+  --trilho: #1c1917;
+  --trilho-alto: #292524;  /* item ativo e hover dentro do trilho */
 
   /* Sem modo escuro: o Papel foi desenhado claro, e o escuro dele seria um
      segundo desenho nao validado. Fixar aqui tambem protege as telas que nao
