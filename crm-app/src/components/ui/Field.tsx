@@ -68,13 +68,27 @@ export function Textarea({
   return <textarea className={clsx(CONTROLE, "resize-y", className)} {...props} />;
 }
 
+// appearance-none tira a setinha nativa, entao ela precisa ser reposta — senao
+// o campo fica indistinguivel de um input de texto.
+const SETA =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a8a29e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\")";
+
 export function Select({
   className,
   children,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={clsx(CONTROLE, "cursor-pointer appearance-none pr-8", className)} {...props}>
+    <select
+      className={clsx(CONTROLE, "cursor-pointer appearance-none pr-9", className)}
+      style={{
+        backgroundImage: SETA,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 0.65rem center",
+        backgroundSize: "1rem",
+      }}
+      {...props}
+    >
       {children}
     </select>
   );

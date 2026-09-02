@@ -186,3 +186,67 @@ export type AtividadeComUsuario = Atividade & { usuario: { id: string; nome: str
 export function ehTipoValido(tipo: string): tipo is TipoAtividade {
   return tipo in ROTULOS_ATIVIDADE;
 }
+
+/**
+ * A situacao do negocio numa frase so.
+ *
+ * O card antigo espalhava a mesma informacao de cadencia em tres linhas —
+ * bolinha colorida, "N dias sem contato" e "Proximo: ..." — que se
+ * contradiziam quando havia atividade hoje E proximo passo atrasado. Aqui a
+ * regra e uma so, na ordem do que exige acao primeiro.
+ *
+ * Fica em lib (nao em componente) porque a tela de detalhe do negocio vai
+ * precisar da mesma frase, e um modulo "use client" nao pode ser lido do
+ * servidor.
+ */
+export type TomSituacao = "ok" | "neutro" | "atencao" | "perigo";
+export type Situacao = { texto: string; detalhe: string; tom: TomSituacao };
+
+export function situacaoDoNegocio(negocio: NegocioComRelacoes, agora = new Date()): Situacao {
+  const proxima = proximaAtividade(negocio.atividades_pendentes);
+
+  if (proxima && estaAtrasada(proxima.data_agendada, agora)) {
+    return {
+      texto: `Atrasado ${descreverPrazo(proxima.data_agendada, agora)}`,
+      detalhe: `${resumirTexto(proxima.titulo || "", "Passo agendado")} · ${formatarDataHora(proxima.data_agendada)}`,
+      tom: "perigo",
+    };
+  }
+
+  if (proxima) {
+    const quando = descreverPrazo(proxima.data_agendada, agora);
+    return {
+      texto: `${resumirTexto(proxima.titulo || "", "Próximo passo")} · ${quando}`,
+      detalhe: formatarDataHora(proxima.data_agendada),
+      tom: "ok",
+    };
+  }
+
+  // Daqui para baixo nao ha proximo passo, que e sempre um furo de cadencia.
+  const dias = diasSemContato(negocio, agora);
+
+  if (temAtividadeHoje(negocio, agora)) {
+    // Sem sufixo de dias: "trabalhado hoje" ja e dito pela posicao do card (a
+    // ordenacao empurra esses para o fim da coluna), e a frase inteira nao
+    // cabia na largura do card.
+    return {
+      texto: "Sem próximo passo",
+      detalhe: "Trabalhado hoje — registre o próximo passo para o negócio não esfriar",
+      tom: "atencao",
+    };
+  }
+
+  if (dias === null) {
+    return {
+      texto: "Nunca contatado",
+      detalhe: "Nenhuma atividade registrada neste negócio",
+      tom: "atencao",
+    };
+  }
+
+  return {
+    texto: `Sem próximo passo · ${dias} ${dias === 1 ? "dia" : "dias"}`,
+    detalhe: `Último contato há ${dias} ${dias === 1 ? "dia" : "dias"}`,
+    tom: "atencao",
+  };
+}

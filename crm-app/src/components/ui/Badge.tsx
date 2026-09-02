@@ -49,6 +49,13 @@ export const TOM_PRIORIDADE: Record<string, Tom> = {
   baixa: "neutro",
 };
 
+/** O valor gravado no banco e sem acento; capitalize por CSS dava "Media". */
+export const ROTULO_PRIORIDADE: Record<string, string> = {
+  alta: "Alta",
+  media: "Média",
+  baixa: "Baixa",
+};
+
 /** Status da proposta (era STATUS_COR em PropostaTab). */
 export const TOM_PROPOSTA: Record<string, Tom> = {
   rascunho: "neutro",
