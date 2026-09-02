@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminClient } from "@/components/admin/AdminClient";
+import { normalizarAbaAdmin } from "@/lib/types";
 
-export default async function AdminPage() {
+/** Quantos leads sem dono o painel carrega de uma vez. */
+const TETO_LEADS_SEM_DONO = 500;
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
+  const { aba } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +28,16 @@ export default async function AdminPage() {
     supabase.from("planos").select("*").order("valor_plataforma_base"),
     supabase.from("negocios").select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)"),
     supabase.from("etapas_pipeline").select("*").order("ordem"),
-    supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }),
+    // Teto explícito: a consulta era ilimitada e, no volume alvo de 500–2000
+    // leads/mês que o SDR vai gerar, derrubava a página. A paginação de verdade
+    // é entrega própria; aqui o teto impede o penhasco, e a tela avisa quando
+    // bate nele para "distribuir todos" não mentir sobre o que alcançou.
+    supabase
+      .from("contatos")
+      .select("*")
+      .is("responsavel_id", null)
+      .order("criado_em", { ascending: false })
+      .limit(TETO_LEADS_SEM_DONO),
     supabase.from("contatos").select("*, responsavel:usuarios(id, nome)").not("responsavel_id", "is", null).order("criado_em", { ascending: false }).limit(1000),
     supabase.from("negocio_etapa_historico").select("negocio_id, etapa_id"),
     supabase
@@ -36,10 +54,12 @@ export default async function AdminPage() {
       negocios={(negocios as any) || []}
       etapas={etapas || []}
       contatosSemDono={contatosSemDono || []}
+      tetoLeadsSemDono={TETO_LEADS_SEM_DONO}
       contatosComDono={(contatosComDono as any) || []}
       historicoEtapas={historicoEtapas || []}
       solicitacoesDesconto={(solicitacoesDesconto as any) || []}
       usuarioAtual={usuarioAtual}
+      abaInicial={normalizarAbaAdmin(aba) ?? "desempenho"}
     />
   );
 }

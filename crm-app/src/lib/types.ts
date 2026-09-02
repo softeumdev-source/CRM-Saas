@@ -98,6 +98,18 @@ export function ehPapelValido(valor: unknown): valor is Papel {
   return typeof valor === "string" && (PAPEIS as readonly string[]).includes(valor);
 }
 
+/**
+ * Abas do painel de admin. Fica aqui, e nao no componente, porque a page
+ * (server) valida a query string — mesmo motivo das abas do negocio.
+ */
+export type AbaAdmin = "desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos";
+
+const ABAS_ADMIN: AbaAdmin[] = ["desempenho", "vendedores", "funil", "planos", "leads", "descontos"];
+
+export function normalizarAbaAdmin(valor: string | undefined): AbaAdmin | undefined {
+  return ABAS_ADMIN.find((a) => a === valor);
+}
+
 export const PRIORIDADES = ["alta", "media", "baixa"] as const;
 export type Prioridade = (typeof PRIORIDADES)[number];
 

@@ -6,3 +6,4 @@ export { Field, Input, Textarea, Select } from "./Field";
 export { Cartao, Recuo, Rotulo, Alerta, Vazio } from "./Superficie";
 export { Modal } from "./Modal";
 export { Segmentado } from "./Segmentado";
+export { Confirmar } from "./Confirmar";
