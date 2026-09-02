@@ -42,15 +42,32 @@ export function ehAbaValida(valor: string | undefined): valor is Aba {
 }
 
 /**
- * Ganho/perda derivados do nome da etapa — o funil padrão usa
- * "Fechado (Ganho)" e "Perdido". `null` = negócio ainda em aberto.
- * É o que alimenta `fechado_em` e, por consequência, as métricas de conversão.
+ * Ganho/perda da etapa. `null` = etapa em aberto. É o que alimenta
+ * `fechado_em` e, por consequência, as métricas de conversão.
+ *
+ * Lê a coluna `etapas_pipeline.resultado`. Antes era adivinhado pelo NOME
+ * ("contém ganho" / "contém perdid") — uma coluna de SDR chamada
+ * "Perdido/Descartado" fecharia negócios sozinha.
+ *
+ * O fallback pelo nome continua aqui só para etapas criadas antes da coluna
+ * existir e que ainda não tenham sido classificadas.
  */
-export function resultadoDaEtapa(etapa: { nome?: string | null } | null | undefined): boolean | null {
-  const nome = (etapa?.nome || "").toLowerCase();
-  if (nome.includes("ganho")) return true;
-  if (nome.includes("perdid")) return false;
+export function resultadoDaEtapa(
+  etapa: { nome?: string | null; resultado?: string | null } | null | undefined,
+): boolean | null {
+  if (etapa?.resultado === "ganho") return true;
+  if (etapa?.resultado === "perdido") return false;
+  if (etapa?.resultado === null || etapa?.resultado === undefined) {
+    const nome = (etapa?.nome || "").toLowerCase();
+    if (nome.includes("ganho")) return true;
+    if (nome.includes("perdid")) return false;
+  }
   return null;
+}
+
+/** A etapa que encerra o negócio como perda — não mais "a de maior ordem". */
+export function ehEtapaDePerda(etapa: { resultado?: string | null } | null | undefined): boolean {
+  return etapa?.resultado === "perdido";
 }
 
 /**

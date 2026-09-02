@@ -259,6 +259,7 @@ export type Database = {
       }
       etapas_pipeline: {
         Row: {
+          resultado: string | null
           cor: string | null
           id: string
           nome: string
@@ -267,6 +268,7 @@ export type Database = {
           tenant_id: string | null
         }
         Insert: {
+          resultado?: string | null
           cor?: string | null
           id?: string
           nome: string
@@ -275,6 +277,7 @@ export type Database = {
           tenant_id?: string | null
         }
         Update: {
+          resultado?: string | null
           cor?: string | null
           id?: string
           nome?: string
