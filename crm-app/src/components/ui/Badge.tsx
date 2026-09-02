@@ -22,14 +22,18 @@ const TOM: Record<Tom, string> = {
 export function Badge({
   tom = "neutro",
   className,
+  title,
   children,
 }: {
   tom?: Tom;
   className?: string;
+  /** Explicacao no hover, para o selo nao precisar de um span aninhado so por isso. */
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <span
+      title={title}
       className={clsx(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1",
         "text-corpo font-medium whitespace-nowrap",
