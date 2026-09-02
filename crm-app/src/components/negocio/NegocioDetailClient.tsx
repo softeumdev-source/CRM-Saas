@@ -21,6 +21,7 @@ import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { CopilotoTab } from "@/components/negocio/CopilotoTab";
+import { fecharNegocio, moverEtapa } from "@/lib/negocios";
 
 type PropostaComRelacoes = Record<string, unknown>;
 const ABAS: { id: Aba; label: string }[] = [
@@ -105,24 +106,29 @@ export function NegocioDetailClient({
   const mudarEtapa = async (etapaId: string) => {
     const nova = etapas.find((et) => et.id === etapaId);
     if (!nova || etapaId === negocio.etapa_id) return;
-    const anterior = negocio.etapa?.nome ?? "—";
-    await atualizarNegocio({
+    // Otimista; o caminho de escrita é o mesmo do board (lib/negocios).
+    setNegocio((prev) => ({
+      ...prev,
       etapa_id: etapaId,
       etapa: nova,
-      probabilidade: nova.probabilidade ?? negocio.probabilidade,
+      probabilidade: nova.probabilidade ?? prev.probabilidade,
       ganho: resultadoDaEtapa(nova),
+    }));
+    const r = await moverEtapa({
+      negocioId: negocio.id,
+      etapa: nova,
+      nomeEtapaAnterior: negocio.etapa?.nome,
+      probabilidadeAtual: negocio.probabilidade,
+      usuarioId: usuarioAtual.id,
     });
-    await createClient().from("atividades").insert({
-      negocio_id: negocio.id,
-      usuario_id: usuarioAtual.id,
-      tipo: "mudanca_etapa",
-      titulo: `Etapa alterada para: ${nova.nome}`,
-      descricao: `Movido de "${anterior}" para "${nova.nome}".`,
-    });
+    if (!r.ok) {
+      setErro(`Não foi possível mover o negócio: ${r.erro}`);
+      return;
+    }
     void recarregar();
   };
 
-  const fecharNegocio = async (ganho: boolean) => {
+  const encerrarNegocio = async (ganho: boolean) => {
     const etapaAlvo = etapas.find((e) => resultadoDaEtapa(e) === ganho);
     if (!etapaAlvo) {
       setErro(`Não encontrei a etapa de ${ganho ? "ganho" : "perda"} no funil.`);
@@ -131,28 +137,17 @@ export function NegocioDetailClient({
     if (!confirm(`Marcar este negócio como ${ganho ? "GANHO" : "PERDIDO"}?`)) return;
     const motivo = ganho ? null : window.prompt("Motivo da perda (opcional):") || null;
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("negocios")
-      .update({
-        etapa_id: etapaAlvo.id,
-        ganho,
-        motivo_perda: motivo,
-        probabilidade: ganho ? 100 : 0,
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq("id", negocio.id);
-    if (error) {
-      setErro(`Não foi possível fechar o negócio: ${error.message}`);
+    const r = await fecharNegocio({
+      negocioId: negocio.id,
+      etapaAlvo,
+      ganho,
+      motivo,
+      usuarioId: usuarioAtual.id,
+    });
+    if (!r.ok) {
+      setErro(`Não foi possível fechar o negócio: ${r.erro}`);
       return;
     }
-    await supabase.from("atividades").insert({
-      negocio_id: negocio.id,
-      usuario_id: usuarioAtual.id,
-      tipo: "mudanca_etapa",
-      titulo: ganho ? "Negócio marcado como GANHO" : "Negócio marcado como PERDIDO",
-      descricao: motivo ? `Motivo da perda: ${motivo}` : null,
-    });
     router.push("/");
     router.refresh();
   };
@@ -202,13 +197,13 @@ export function NegocioDetailClient({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => fecharNegocio(true)}
+              onClick={() => encerrarNegocio(true)}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors"
             >
               <Trophy className="h-3.5 w-3.5" /> Ganhei
             </button>
             <button
-              onClick={() => fecharNegocio(false)}
+              onClick={() => encerrarNegocio(false)}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors"
             >
               <XCircle className="h-3.5 w-3.5" /> Perdi

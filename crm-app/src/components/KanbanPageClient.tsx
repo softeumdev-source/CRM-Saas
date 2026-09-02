@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
+import { moverEtapa } from "@/lib/negocios";
 import { Alerta, Button, Input, Segmentado, Select } from "@/components/ui";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
@@ -60,21 +61,23 @@ export function KanbanPageClient({
       const atual = negocios.find((n) => n.id === negocioId);
       if (!atual || atual.etapa_id === etapaId) return;
       const etapa = etapas.find((et) => et.id === etapaId);
+      if (!etapa) return;
       const anterior = negocios;
       const agora = new Date().toISOString();
       // Arrastar para "Fechado (Ganho)"/"Perdido" fecha o negócio; arrastar de
       // volta para o funil o reabre. Sem isso as métricas ficavam sem fechado_em.
       const ganho = resultadoDaEtapa(etapa);
 
-      // Otimista: a coluna, a probabilidade e a bolinha verde mudam na hora.
+      // Otimista: a coluna, a probabilidade e a situação mudam na hora.
+      // `ultima_atividade_em` é do gatilho do banco — aqui só antecipamos.
       setNegocios((prev) =>
         prev.map((n) =>
           n.id === negocioId
             ? {
                 ...n,
                 etapa_id: etapaId,
-                etapa: etapa ?? n.etapa,
-                probabilidade: etapa?.probabilidade ?? n.probabilidade,
+                etapa,
+                probabilidade: etapa.probabilidade ?? n.probabilidade,
                 ganho,
                 ultima_atividade_em: agora,
               }
@@ -83,25 +86,19 @@ export function KanbanPageClient({
       );
       setErro(null);
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("negocios")
-        .update({ etapa_id: etapaId, probabilidade: etapa?.probabilidade ?? 10, ganho, atualizado_em: agora })
-        .eq("id", negocioId);
+      const r = await moverEtapa({
+        negocioId,
+        etapa,
+        nomeEtapaAnterior: atual.etapa?.nome,
+        probabilidadeAtual: atual.probabilidade,
+        usuarioId: usuarioAtual.id,
+      });
 
-      if (error) {
+      if (!r.ok) {
         setNegocios(anterior);
-        setErro(`Não foi possível mover o negócio: ${error.message}`);
+        setErro(`Não foi possível mover o negócio: ${r.erro}`);
         return;
       }
-
-      await supabase.from("atividades").insert({
-        negocio_id: negocioId,
-        usuario_id: usuarioAtual.id,
-        tipo: "mudanca_etapa",
-        titulo: `Etapa alterada para: ${etapa?.nome ?? "—"}`,
-        descricao: `Movido de "${atual.etapa?.nome ?? "—"}" para "${etapa?.nome ?? "—"}" no pipeline.`,
-      });
       void recarregar();
     },
     [negocios, etapas, usuarioAtual.id, recarregar],
