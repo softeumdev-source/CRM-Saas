@@ -57,7 +57,7 @@ export default function AceitarConvitePage({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100/70 dark:bg-slate-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-superficie px-4">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6">
         <div className="flex items-center gap-2 mb-2">
           <UserPlus className="h-5 w-5 text-indigo-600" />

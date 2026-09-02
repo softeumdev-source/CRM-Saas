@@ -45,7 +45,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100/70 dark:bg-slate-950 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-superficie px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 p-0.5 flex items-center justify-center shadow-md shadow-indigo-500/20 mb-3">
