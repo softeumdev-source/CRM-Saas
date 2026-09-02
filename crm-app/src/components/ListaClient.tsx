@@ -2,22 +2,41 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Search } from "lucide-react";
+import clsx from "clsx";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda } from "@/lib/types";
 import {
-  descreverPrazo,
   diasSemContato,
-  estaAtrasada,
-  formatarDataHora,
   proximaAtividade,
-  temAtividadeHoje,
+  situacaoDoNegocio,
+  type TomSituacao,
 } from "@/lib/atividades";
+import { Badge, Cartao, Input, Select, Vazio } from "@/components/ui";
 
 type Ordem = "recentes" | "sem_contato" | "valor" | "proxima_acao";
+
+const TOM_TEXTO: Record<TomSituacao, string> = {
+  ok: "text-emerald-700",
+  neutro: "text-tinta-suave",
+  atencao: "text-amber-700",
+  perigo: "text-rose-700",
+};
+
+// whitespace-nowrap em tudo: sem isso a tabela se espreme ate quebrar nome de
+// empresa, etapa e CNPJ em tres linhas cada. Quem quebra a linha e a coluna da
+// empresa, de proposito; o resto rola na horizontal.
+const CELULA = "whitespace-nowrap px-4 py-3 align-middle";
+// Constante propria em vez de "whitespace-normal" por cima de CELULA: duas
+// classes do mesmo grupo sao decididas pela ordem no CSS gerado, nao pela
+// ordem em que foram escritas.
+// min-width, nao width: em tabela de layout automatico a largura e so uma
+// sugestao, e a coluna da empresa (a unica que quebra linha) acabava
+// absorvendo toda a sobra e espremendo em tres linhas.
+const CELULA_EMPRESA = "min-w-[240px] px-4 py-3 align-middle";
 
 export function ListaClient({
   negocios: negociosIniciais,
@@ -71,135 +90,157 @@ export function ListaClient({
     });
   }, [negocios, busca, etapaFiltro, ordem]);
 
+  const total = filtrados.reduce((acc, n) => acc + (n.valor || 0), 0);
+
   return (
-    <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-          Lista de Negócios ({filtrados.length})
-        </h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
+    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 px-4 py-6 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="font-serif text-display text-tinta">Lista</h1>
+          <p className="text-corpo-lg tabular-nums text-tinta-suave">
+            {filtrados.length} {filtrados.length === 1 ? "negócio" : "negócios"} ·{" "}
+            {formatarMoeda(total)}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-56 sm:w-72">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-tinta-fraca"
+              aria-hidden
+            />
+            <Input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar empresa, contato, e-mail ou CNPJ..."
-              className="pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl w-64"
+              aria-label="Buscar negócio"
+              placeholder="Buscar empresa, contato, e-mail ou CNPJ…"
+              className="pl-9"
             />
           </div>
-          <select
-            value={etapaFiltro}
-            onChange={(e) => setEtapaFiltro(e.target.value)}
-            className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-          >
-            <option value="all">Todas as etapas</option>
-            {etapas.map((et) => (
-              <option key={et.id} value={et.id}>{et.nome}</option>
-            ))}
-          </select>
-          <select
-            value={ordem}
-            onChange={(e) => setOrdem(e.target.value as Ordem)}
-            className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
-          >
-            <option value="recentes">Mais recentes</option>
-            <option value="sem_contato">Mais tempo sem contato</option>
-            <option value="proxima_acao">Próxima ação</option>
-            <option value="valor">Maior valor</option>
-          </select>
+          <div className="w-44">
+            <Select
+              value={etapaFiltro}
+              onChange={(e) => setEtapaFiltro(e.target.value)}
+              aria-label="Filtrar por etapa"
+            >
+              <option value="all">Todas as etapas</option>
+              {etapas.map((et) => (
+                <option key={et.id} value={et.id}>
+                  {et.nome}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="w-52">
+            <Select
+              value={ordem}
+              onChange={(e) => setOrdem(e.target.value as Ordem)}
+              aria-label="Ordenar por"
+            >
+              <option value="recentes">Mais recentes</option>
+              <option value="sem_contato">Mais tempo sem contato</option>
+              <option value="proxima_acao">Próxima ação</option>
+              <option value="valor">Maior valor</option>
+            </Select>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      <Cartao className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[900px] border-collapse text-left">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-bold text-[10px]">
-                <th className="p-4">Empresa / Contato</th>
-                <th className="p-4">Etapa</th>
-                <th className="p-4">Valor</th>
-                <th className="p-4">Último contato</th>
-                <th className="p-4">Próxima ação</th>
-                <th className="p-4">Vendedor</th>
-                <th className="p-4">CNPJ</th>
-                <th className="p-4 text-right">Ação</th>
+              <tr className="text-rotulo uppercase text-tinta-fraca">
+                <th className={CELULA_EMPRESA}>Empresa / contato</th>
+                <th className={CELULA}>Etapa</th>
+                <th className={clsx(CELULA, "text-right")}>Valor</th>
+                <th className={CELULA}>Situação</th>
+                <th className={clsx(CELULA, "text-right")}>Sem contato</th>
+                <th className={CELULA}>Responsável</th>
+                <th className={CELULA}>CNPJ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {filtrados.map((n) => {
-                const hoje = temAtividadeHoje(n);
+                const situacao = situacaoDoNegocio(n);
                 const dias = diasSemContato(n);
-                const proxima = proximaAtividade(n.atividades_pendentes);
-                const atrasada = estaAtrasada(proxima?.data_agendada);
                 return (
-                  <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="p-4">
-                      <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full shrink-0 ${hoje ? "bg-emerald-500" : "bg-amber-500"}`} />
-                        {n.contato?.empresa || n.contato?.nome}
-                      </p>
-                      <p className="text-[11px] text-slate-500 pl-3.5">{n.contato?.nome}</p>
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className="px-2.5 py-1 text-[11px] font-bold rounded-full"
-                        style={{ background: (n.etapa?.cor || "#6366f1") + "22", color: n.etapa?.cor || "#6366f1" }}
-                      >
-                        {n.etapa?.nome}
-                      </span>
-                    </td>
-                    <td className="p-4 font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(n.valor)}</td>
-                    <td className="p-4">
-                      {hoje ? (
-                        <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="h-3 w-3" /> Hoje
-                        </span>
-                      ) : dias === null ? (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold">Nunca</span>
-                      ) : (
-                        <span className={dias >= 7 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-500"}>
-                          há {dias} {dias === 1 ? "dia" : "dias"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {proxima ? (
-                        <span className={`font-semibold ${atrasada ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-300"}`}>
-                          {atrasada && <AlertTriangle className="h-3 w-3 inline mr-1" />}
-                          {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
-                        </span>
-                      ) : (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold">Sem agendamento</span>
-                      )}
-                    </td>
-                    <td className="p-4 font-medium text-slate-600 dark:text-slate-400">{n.responsavel?.nome || "Sem dono"}</td>
-                    <td className="p-4">
-                      {n.contato?.cnpj ? (
-                        <span className="text-emerald-600 font-semibold">OK</span>
-                      ) : (
-                        <span className="text-amber-600 font-semibold">Faltando</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
+                  <tr
+                    key={n.id}
+                    className="border-t border-fio transition-colors duration-150 ease-out hover:bg-recuo"
+                  >
+                    <td className={CELULA_EMPRESA}>
                       <Link
                         href={`/negocios/${n.id}`}
-                        className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl transition-all whitespace-nowrap"
+                        className="text-titulo text-tinta transition-colors duration-150 ease-out hover:text-acento focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
                       >
-                        Ver detalhes
+                        {n.contato?.empresa || n.contato?.nome || n.titulo}
                       </Link>
+                      <p className="text-corpo text-tinta-suave">
+                        {[n.contato?.nome, n.contato?.cargo].filter(Boolean).join(" · ")}
+                      </p>
+                    </td>
+                    <td className={CELULA}>
+                      <span className="text-corpo-lg flex items-center gap-2 text-tinta-suave">
+                        <span
+                          aria-hidden
+                          className="h-1.5 w-1.5 shrink-0 rounded-full"
+                          style={{ background: n.etapa?.cor || "var(--acento)" }}
+                        />
+                        {n.etapa?.nome ?? "—"}
+                      </span>
+                    </td>
+                    <td className={clsx(CELULA, "text-right")}>
+                      <span className="font-serif text-lg tabular-nums text-tinta">
+                        {formatarMoeda(n.valor)}
+                      </span>
+                    </td>
+                    <td className={CELULA}>
+                      <span
+                        title={situacao.detalhe}
+                        className={clsx("text-corpo-lg font-medium", TOM_TEXTO[situacao.tom])}
+                      >
+                        {situacao.texto}
+                      </span>
+                    </td>
+                    <td className={clsx(CELULA, "text-corpo-lg tabular-nums text-right")}>
+                      {dias === null ? (
+                        <span className="text-tinta-fraca">—</span>
+                      ) : (
+                        <span className={dias >= 7 ? "text-amber-700" : "text-tinta-suave"}>
+                          {dias}d
+                        </span>
+                      )}
+                    </td>
+                    <td className={clsx(CELULA, "text-corpo-lg")}>
+                      {n.responsavel?.nome ?? <span className="text-tinta-fraca">Pool</span>}
+                    </td>
+                    <td className={CELULA} title={n.contato?.cnpj ?? undefined}>
+                      {/* Sinal binario, nao o numero: com os 18 digitos a coluna
+                          empurrava a tabela para a rolagem horizontal, e o que o
+                          vendedor precisa saber aqui e se a proposta esta
+                          bloqueada. O numero fica no title e no card. */}
+                      {n.contato?.cnpj ? (
+                        <span className="text-corpo-lg text-tinta-fraca">ok</span>
+                      ) : (
+                        <Badge tom="atencao">falta</Badge>
+                      )}
                     </td>
                   </tr>
                 );
               })}
-              {filtrados.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400">Nenhum negócio encontrado.</td>
-                </tr>
-              )}
             </tbody>
           </table>
+
+          {filtrados.length === 0 && (
+            <Vazio
+              icone={Search}
+              titulo="Nenhum negócio encontrado"
+              descricao="Tente outro termo de busca ou limpe o filtro de etapa."
+            />
+          )}
         </div>
-      </div>
+      </Cartao>
     </div>
   );
 }

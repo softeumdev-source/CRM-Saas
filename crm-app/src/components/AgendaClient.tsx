@@ -3,20 +3,18 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
   BadgeCheck,
-  CalendarClock,
-  CheckCircle2,
+  CalendarCheck2,
   ChevronRight,
-  Clock,
+  FileText,
   Mail,
   MessageSquare,
   PhoneCall,
   RotateCcw,
   Users,
   Video,
-  FileText,
 } from "lucide-react";
+import clsx from "clsx";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -32,6 +30,7 @@ import {
   paraInputDataHora,
 } from "@/lib/atividades";
 import { SELECT_AGENDA } from "@/lib/types";
+import { Alerta, Button, Cartao, Input, Rotulo, Segmentado, Vazio } from "@/components/ui";
 
 export type AtividadeAgenda = Atividade & {
   negocio: {
@@ -55,7 +54,7 @@ const ICONES: Record<string, React.ComponentType<{ className?: string }>> = {
 
 const UM_DIA_MS = 86_400_000;
 
-type Grupo = { chave: string; titulo: string; itens: AtividadeAgenda[]; tom: "atrasado" | "hoje" | "futuro" };
+type Grupo = { chave: string; titulo: string; itens: AtividadeAgenda[]; atrasado: boolean };
 
 export function AgendaClient({
   atividadesIniciais,
@@ -109,10 +108,10 @@ export function AgendaClient({
     }
 
     return [
-      { chave: "atrasadas", titulo: "Atrasadas", itens: atrasadas, tom: "atrasado" as const },
-      { chave: "hoje", titulo: "Hoje", itens: hoje, tom: "hoje" as const },
-      { chave: "semana", titulo: "Próximos 7 dias", itens: semana, tom: "futuro" as const },
-      { chave: "depois", titulo: "Mais adiante", itens: depois, tom: "futuro" as const },
+      { chave: "atrasadas", titulo: "Atrasadas", itens: atrasadas, atrasado: true },
+      { chave: "hoje", titulo: "Hoje", itens: hoje, atrasado: false },
+      { chave: "semana", titulo: "Próximos 7 dias", itens: semana, atrasado: false },
+      { chave: "depois", titulo: "Mais adiante", itens: depois, atrasado: false },
     ].filter((g) => g.itens.length > 0);
   }, [visiveis]);
 
@@ -155,186 +154,175 @@ export function AgendaClient({
     }
   };
 
-  const totalAtrasadas = grupos.find((g) => g.chave === "atrasadas")?.itens.length ?? 0;
-  const totalHoje = grupos.find((g) => g.chave === "hoje")?.itens.length ?? 0;
+  const atrasadas = grupos.find((g) => g.chave === "atrasadas")?.itens.length ?? 0;
+  const hoje = grupos.find((g) => g.chave === "hoje")?.itens.length ?? 0;
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-indigo-600" /> Agenda de cadência
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Todos os próximos passos agendados. Conclua, reagende ou confirme sem sair da tela.
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="font-serif text-display text-tinta">Agenda</h1>
+          {/* Os tres cartoes de indicador sairam: os mesmos numeros ja estao no
+              titulo de cada grupo, e ali eles dizem onde clicar. */}
+          <p className="text-corpo-lg tabular-nums text-tinta-suave">
+            {visiveis.length} {visiveis.length === 1 ? "passo agendado" : "passos agendados"}
+            {atrasadas > 0 && <span className="text-rose-700"> · {atrasadas} atrasados</span>}
+            {hoje > 0 && <span className="text-emerald-700"> · {hoje} para hoje</span>}
           </p>
         </div>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl cursor-pointer">
-          <input
-            type="checkbox"
-            checked={apenasMinhas}
-            onChange={(e) => setApenasMinhas(e.target.checked)}
-            className="h-4 w-4 accent-indigo-600"
-          />
-          Somente minhas
-        </label>
+
+        <Segmentado
+          rotulo="Filtrar por responsável"
+          valor={apenasMinhas ? "minhas" : "todas"}
+          aoTrocar={(v) => setApenasMinhas(v === "minhas")}
+          opcoes={[
+            { chave: "minhas" as const, label: "Minhas" },
+            { chave: "todas" as const, label: "Todas" },
+          ]}
+        />
       </div>
 
-      <div className="grid grid-cols-3 gap-2.5">
-        <Indicador rotulo="Atrasadas" valor={totalAtrasadas} cor={totalAtrasadas > 0 ? "text-rose-600 dark:text-rose-400" : undefined} />
-        <Indicador rotulo="Para hoje" valor={totalHoje} cor="text-indigo-600 dark:text-indigo-400" />
-        <Indicador rotulo="Total agendado" valor={visiveis.length} />
-      </div>
-
-      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+      {erro && <Alerta>{erro}</Alerta>}
 
       {grupos.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center">
-          <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Nenhum passo agendado</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Abra um negócio, registre a atividade e já agende a próxima ação para ele não sumir do radar.
-          </p>
-        </div>
+        <Cartao className="p-0">
+          <Vazio
+            icone={CalendarCheck2}
+            titulo="Nenhum passo agendado"
+            descricao="Abra um negócio, registre a atividade e já agende a próxima ação para ele não sumir do radar."
+          />
+        </Cartao>
       )}
 
       {grupos.map((grupo) => (
-        <div key={grupo.chave} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-          <div
-            className={`px-5 py-3 border-b flex items-center gap-2 ${
-              grupo.tom === "atrasado"
-                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900"
-                : grupo.tom === "hoje"
-                  ? "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
-            }`}
-          >
-            {grupo.tom === "atrasado" ? (
-              <AlertTriangle className="h-4 w-4 text-rose-600" />
-            ) : (
-              <Clock className="h-4 w-4 text-indigo-600" />
-            )}
-            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              {grupo.titulo} ({grupo.itens.length})
-            </h2>
-          </div>
+        <section key={grupo.chave} className="flex flex-col gap-2">
+          <Rotulo tom={grupo.atrasado ? "perigo" : "fraco"}>
+            {grupo.titulo} · {grupo.itens.length}
+          </Rotulo>
 
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {grupo.itens.map((a) => {
-              const Icon = ICONES[a.tipo] || MessageSquare;
+          <Cartao className="flex flex-col p-0">
+            {grupo.itens.map((a, i) => {
+              const Icone = ICONES[a.tipo] || MessageSquare;
               const atrasada = estaAtrasada(a.data_agendada);
-              const empresa = a.negocio?.contato?.empresa || a.negocio?.contato?.nome || a.negocio?.titulo || "Negócio";
-              return (
-                <div key={a.id} className="p-4 flex items-start gap-3 flex-wrap sm:flex-nowrap">
-                  <div
-                    className={`h-9 w-9 rounded-full text-white flex items-center justify-center shrink-0 ${
-                      atrasada ? "bg-rose-600" : "bg-indigo-600"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
+              const empresa =
+                a.negocio?.contato?.empresa || a.negocio?.contato?.nome || a.negocio?.titulo || "Negócio";
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{a.titulo}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap mt-0.5">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{empresa}</span>
-                      <span>·</span>
+              return (
+                <div
+                  key={a.id}
+                  className={clsx(
+                    "flex flex-wrap items-start gap-3 px-5 py-4 sm:flex-nowrap",
+                    i > 0 && "border-t border-fio",
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={clsx(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                      atrasada ? "bg-rose-50 text-rose-700" : "bg-recuo text-tinta-suave",
+                    )}
+                  >
+                    <Icone className="h-3.5 w-3.5" />
+                  </span>
+
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-titulo text-tinta">{a.titulo}</span>
+                    <p className="text-corpo flex flex-wrap items-center gap-x-1.5 text-tinta-suave">
+                      <span className="font-medium text-tinta">{empresa}</span>
+                      <span aria-hidden>·</span>
                       <span>{ROTULOS_ATIVIDADE[a.tipo] || a.tipo}</span>
-                      <span>·</span>
-                      <span className={atrasada ? "font-bold text-rose-600 dark:text-rose-400" : ""}>
+                      <span aria-hidden>·</span>
+                      <span className={atrasada ? "font-medium text-rose-700" : undefined}>
                         {formatarDataHora(a.data_agendada)} ({descreverPrazo(a.data_agendada)})
                       </span>
                       {a.confirmada && (
-                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                          <BadgeCheck className="h-3 w-3" /> confirmada
+                        <span className="flex items-center gap-1 font-medium text-emerald-700">
+                          <BadgeCheck className="h-3 w-3" aria-hidden /> confirmada
                         </span>
                       )}
+                      {a.negocio?.contato?.telefone && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <span className="tabular-nums text-tinta-fraca">
+                            {a.negocio.contato.telefone}
+                          </span>
+                        </>
+                      )}
                     </p>
-                    {a.negocio?.contato?.telefone && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">{a.negocio.contato.telefone}</p>
-                    )}
 
                     {reagendando === a.id && (
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <input
-                          type="datetime-local"
-                          value={novaData}
-                          onChange={(e) => setNovaData(e.target.value)}
-                          className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
-                        />
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {/* O Input nasce w-full para servir dentro do Field;
+                            solto numa linha de acoes, quem manda e o involucro. */}
+                        <div className="w-52">
+                          <Input
+                            type="datetime-local"
+                            value={novaData}
+                            onChange={(e) => setNovaData(e.target.value)}
+                            aria-label="Nova data e hora"
+                          />
+                        </div>
                         {PRESETS_AGENDAMENTO.slice(0, 4).map((p) => (
-                          <button
+                          <Button
                             key={p.rotulo}
+                            tamanho="sm"
                             onClick={() => setNovaData(paraInputDataHora(dataDoPreset(p)))}
-                            className="px-2 py-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg"
                           >
                             {p.rotulo}
-                          </button>
+                          </Button>
                         ))}
-                        <button
-                          onClick={() => reagendar(a.id)}
+                        <Button
+                          variante="primario"
+                          tamanho="sm"
                           disabled={!novaData}
-                          className="px-2.5 py-1.5 text-[11px] font-bold text-white bg-indigo-600 rounded-lg disabled:opacity-50"
+                          onClick={() => reagendar(a.id)}
                         >
                           Salvar
-                        </button>
-                        <button onClick={() => setReagendando(null)} className="px-2 py-1.5 text-[11px] font-semibold text-slate-500">
+                        </Button>
+                        <Button variante="sutil" tamanho="sm" onClick={() => setReagendando(null)}>
                           Cancelar
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex shrink-0 items-center gap-1">
                     {!a.confirmada && (
-                      <button
-                        onClick={() => confirmar(a.id)}
-                        className="text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-2 py-1.5 rounded-lg"
-                      >
+                      <Button variante="sutil" tamanho="sm" onClick={() => confirmar(a.id)}>
                         Confirmar
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variante="sutil"
+                      tamanho="sm"
+                      icone={RotateCcw}
+                      aria-label="Reagendar"
+                      title="Reagendar"
                       onClick={() => {
                         setReagendando(a.id);
                         setNovaData(a.data_agendada ? paraInputDataHora(new Date(a.data_agendada)) : "");
                       }}
-                      title="Reagendar"
-                      className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => concluir(a.id)}
-                      className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-2 py-1.5 rounded-lg"
-                    >
+                    />
+                    <Button variante="secundario" tamanho="sm" onClick={() => concluir(a.id)}>
                       Concluir
-                    </button>
+                    </Button>
                     {a.negocio && (
                       <Link
                         href={`/negocios/${a.negocio.id}?tab=cadencia`}
-                        className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg"
                         title="Abrir negócio"
+                        aria-label={`Abrir ${empresa}`}
+                        className="rounded-lg p-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-recuo hover:text-tinta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4" aria-hidden />
                       </Link>
                     )}
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
+          </Cartao>
+        </section>
       ))}
-    </div>
-  );
-}
-
-function Indicador({ rotulo, valor, cor }: { rotulo: string; valor: number; cor?: string }) {
-  return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{rotulo}</p>
-      <p className={`text-xl font-extrabold ${cor || "text-slate-900 dark:text-slate-100"}`}>{valor}</p>
     </div>
   );
 }

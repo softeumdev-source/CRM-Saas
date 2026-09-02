@@ -16,7 +16,10 @@ const VARIANTE: Record<Variante, string> = {
   // O escuro carrega a acao principal; o indigo fica para foco e link, para a
   // tela nao ter dois azuis disputando atencao.
   primario: "bg-tinta text-superficie hover:brightness-125 active:brightness-110",
-  secundario: "bg-cartao text-tinta shadow-cartao hover:bg-recuo",
+  // Fundo rebaixado e nao branco-com-sombra: a maioria dos botoes vive DENTRO
+  // de um cartao branco, e branco sobre branco simplesmente sumia. Sombra aqui
+  // tambem seria errada — no Papel sombra quer dizer "flutua", e botao nao flutua.
+  secundario: "bg-recuo text-tinta hover:bg-fio active:bg-fio",
   sutil: "text-tinta-suave hover:bg-recuo hover:text-tinta",
   perigo: "bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800",
 };

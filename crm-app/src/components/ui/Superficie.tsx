@@ -33,10 +33,32 @@ export function Recuo({
   );
 }
 
-/** Rotulo em caixa alta. Substitui o text-[10px] fora de escala repetido no app. */
-export function Rotulo({ className, children }: { className?: string; children: React.ReactNode }) {
+/**
+ * Rotulo em caixa alta. Substitui o text-[10px] fora de escala repetido no app.
+ *
+ * A cor vem por `tom` e nao por className: duas classes de cor no mesmo
+ * elemento sao decididas pela ordem no CSS gerado, nao pela ordem em que foram
+ * escritas — passar "text-rose-700" por className simplesmente nao pegava.
+ */
+export function Rotulo({
+  tom = "fraco",
+  className,
+  children,
+}: {
+  tom?: "fraco" | "perigo";
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <span className={clsx("text-rotulo uppercase text-tinta-fraca", className)}>{children}</span>
+    <span
+      className={clsx(
+        "text-rotulo uppercase",
+        tom === "perigo" ? "text-rose-700" : "text-tinta-fraca",
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
