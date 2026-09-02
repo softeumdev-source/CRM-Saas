@@ -26,7 +26,7 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
-import { Alerta, Badge, Button, Input, TOM_PROPOSTA } from "@/components/ui";
+import { Alerta, Badge, Button, Confirmar, Input, TOM_PROPOSTA } from "@/components/ui";
 
 /**
  * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
@@ -236,8 +236,9 @@ export function PropostaTab({
     if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
-  const handleExcluir = async (propostaId: string) => {
-    if (!confirm("Excluir esta proposta? Esta ação não pode ser desfeita.")) return;
+  const handleExcluir = async (): Promise<string | void> => {
+    if (!excluindoProposta) return;
+    const propostaId = excluindoProposta.id;
     const supabase = createClient();
     const proposta = propostas.find((p) => p.id === propostaId);
     const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter(Boolean);
@@ -245,12 +246,14 @@ export function PropostaTab({
       await supabase.storage.from("documentos").remove(paths);
     }
     const { error } = await supabase.from("propostas").delete().eq("id", propostaId);
-    if (error) {
-      setErro("Falha ao excluir proposta: " + error.message);
-      return;
-    }
+    if (error) return `Falha ao excluir: ${error.message}`;
     setPropostas((prev) => prev.filter((p) => p.id !== propostaId));
   };
+
+  // Confirmação de verdade no lugar do confirm() nativo: os PDFs no Storage
+  // são apagados junto, então a frase precisa dizer isso.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [excluindoProposta, setExcluindoProposta] = useState<any>(null);
 
   const abrirEnvio = (propostaId: string) => {
     setEditandoEnvioId(propostaId);
@@ -607,7 +610,7 @@ export function PropostaTab({
                           <Send className="h-3.5 w-3.5" /> Enviar para assinatura
                         </button>
                         <button
-                          onClick={() => handleExcluir(p.id)}
+                          onClick={() => setExcluindoProposta(p)}
                           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-recuo hover:text-rose-700"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -788,6 +791,20 @@ export function PropostaTab({
           </div>
         )}
       </div>
+
+      <Confirmar
+        aberto={!!excluindoProposta}
+        titulo="Excluir proposta"
+        rotuloConfirmar="Excluir proposta"
+        aoFechar={() => setExcluindoProposta(null)}
+        aoConfirmar={handleExcluir}
+        descricao={
+          <>
+            A proposta <strong className="font-medium text-tinta">{excluindoProposta?.numero}</strong>{" "}
+            e os PDFs dela no Storage são apagados. Não dá para desfazer.
+          </>
+        }
+      />
     </div>
   );
 }

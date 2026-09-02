@@ -44,6 +44,7 @@ import {
   Segmentado,
   Select,
   Textarea,
+  Confirmar,
 } from "@/components/ui";
 
 const ICONES: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -91,6 +92,7 @@ export function CadenciaTab({
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [buscaHistorico, setBuscaHistorico] = useState("");
   const [reagendando, setReagendando] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<AtividadeComUsuario | null>(null);
   const [novaData, setNovaData] = useState("");
 
   const empresa = negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo;
@@ -228,14 +230,15 @@ export function CadenciaTab({
     }
   };
 
-  const excluirAtividade = async (id: string) => {
-    if (!confirm("Excluir este passo da cadência?")) return;
+  const excluirAtividade = async (): Promise<string | void> => {
+    if (!excluindo) return;
     const antes = atividades;
+    const id = excluindo.id;
     setAtividades((prev) => prev.filter((a) => a.id !== id));
     const { error } = await createClient().from("atividades").delete().eq("id", id);
     if (error) {
       setAtividades(antes);
-      setErro(`Não foi possível excluir: ${error.message}`);
+      return error.message;
     }
   };
 
@@ -348,7 +351,7 @@ export function CadenciaTab({
                       icone={Trash2}
                       aria-label="Excluir passo"
                       title="Excluir"
-                      onClick={() => excluirAtividade(a.id)}
+                      onClick={() => setExcluindo(a)}
                     />
                   </div>
                 </div>
@@ -584,6 +587,20 @@ export function CadenciaTab({
           </ol>
         )}
       </section>
+
+      <Confirmar
+        aberto={!!excluindo}
+        titulo="Excluir passo da cadência"
+        rotuloConfirmar="Excluir passo"
+        aoFechar={() => setExcluindo(null)}
+        aoConfirmar={excluirAtividade}
+        descricao={
+          <>
+            <strong className="font-medium text-tinta">{excluindo?.titulo}</strong> sai do histórico
+            deste negócio. Não dá para desfazer.
+          </>
+        }
+      />
     </div>
   );
 }
