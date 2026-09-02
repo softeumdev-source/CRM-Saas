@@ -67,6 +67,37 @@ export function resultadoDaEtapa(etapa: { nome?: string | null } | null | undefi
   return null;
 }
 
+/**
+ * Papéis de usuário.
+ *
+ * O CHECK do banco (usuarios_role_check e convites_role_check) hoje aceita só
+ * 'admin' e 'vendedor'. Estas listas existem para que o papel deixe de estar
+ * cravado como literal espalhado pelo código — o `sdr` da Fase 4 entra aqui,
+ * numa linha, em vez de ser caçado em seis arquivos.
+ */
+export const PAPEIS = ["admin", "vendedor"] as const;
+export type Papel = (typeof PAPEIS)[number];
+
+export const ROTULO_PAPEL: Record<string, string> = {
+  admin: "Administrador",
+  vendedor: "Vendedor",
+};
+
+/**
+ * Quem forma o time medido no painel: aparece nas metas, no funil por pessoa e
+ * nos seletores de responsável. O admin fica de fora de propósito — ele gere,
+ * não é medido —, mas continua podendo ser dono de negócio.
+ */
+export const PAPEIS_TIME: readonly string[] = ["vendedor"];
+
+export function ehDoTime(usuario: { role?: string | null } | null | undefined): boolean {
+  return !!usuario?.role && PAPEIS_TIME.includes(usuario.role);
+}
+
+export function ehPapelValido(valor: unknown): valor is Papel {
+  return typeof valor === "string" && (PAPEIS as readonly string[]).includes(valor);
+}
+
 export const PRIORIDADES = ["alta", "media", "baixa"] as const;
 export type Prioridade = (typeof PRIORIDADES)[number];
 

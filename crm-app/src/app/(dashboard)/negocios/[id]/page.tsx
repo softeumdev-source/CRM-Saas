@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
-import { SELECT_NEGOCIO_COMPLETO, normalizarAba } from "@/lib/types";
+import { SELECT_NEGOCIO_COMPLETO, normalizarAba, PAPEIS_TIME } from "@/lib/types";
 import type { NegocioComRelacoes } from "@/lib/types";
 
 export default async function NegocioPage({
@@ -24,7 +24,7 @@ export default async function NegocioPage({
     await Promise.all([
       supabase.from("negocios").select(SELECT_NEGOCIO_COMPLETO).eq("id", id).single(),
       supabase.from("etapas_pipeline").select("*").order("ordem"),
-      supabase.from("usuarios").select("*").eq("role", "vendedor").eq("ativo", true),
+      supabase.from("usuarios").select("*").in("role", PAPEIS_TIME).eq("ativo", true),
       supabase
         .from("atividades")
         .select("*, usuario:usuarios(*)")

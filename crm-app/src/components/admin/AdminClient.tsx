@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
+import { ehDoTime } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
@@ -61,7 +62,9 @@ export function AdminClient({
     };
   }, [router]);
 
-  const vendedores = usuarios.filter((u) => u.role === "vendedor");
+  // Era `u.role === "vendedor"` cravado: qualquer papel novo ficava invisível
+  // no painel inteiro — inclusive nas listas de quem pode receber lead.
+  const vendedores = usuarios.filter(ehDoTime);
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
   const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
 

@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { EtapaPipeline, Usuario } from "@/lib/types";
+import { ehDoTime } from "@/lib/types";
 import { Alerta, Button, Field, Input, Modal, Rotulo, Select } from "@/components/ui";
 
 export function NewLeadModal({
@@ -32,9 +33,8 @@ export function NewLeadModal({
   const [cnpj, setCnpj] = useState("");
   const [titulo, setTitulo] = useState("");
   const [etapaId, setEtapaId] = useState(etapaInicial || etapas[0]?.id || "");
-  const [responsavelId, setResponsavelId] = useState(
-    usuarioAtual.role === "vendedor" ? usuarioAtual.id : "",
-  );
+  // Quem opera negócio já entra como dono; admin deixa no pool de propósito.
+  const [responsavelId, setResponsavelId] = useState(ehDoTime(usuarioAtual) ? usuarioAtual.id : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
