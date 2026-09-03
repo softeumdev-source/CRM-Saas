@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
-import { ESCOPOS_AGENDA } from "@/lib/google/config";
 import { emailDoIdToken, trocarCodigoPorTokens } from "@/lib/google/oauth";
 import { COOKIE_STATE, lerStateDoCookie, stateConfere } from "@/lib/google/estado";
 
@@ -54,7 +53,12 @@ export async function GET(request: Request) {
     p_usuario_id: user.id,
     p_email: emailDoIdToken(tokens.id_token) || user.email || "conta Google",
     p_refresh_token: tokens.refresh_token,
-    p_escopos: (tokens.scope || ESCOPOS_AGENDA.join(" ")).split(" "),
+    // Sem fallback para ESCOPOS_AGENDA: gravar um escopo que a Google NAO
+    // confirmou e registrar uma permissao que talvez nao exista, e depois o
+    // sync tentaria para sempre e tomaria 403 sem ninguem entender por que.
+    // No fluxo de authorization_code `tokens.scope` vem sempre preenchido com
+    // a uniao; lista vazia e mais honesto do que um chute.
+    p_escopos: (tokens.scope || "").split(" ").filter(Boolean),
   });
   if (error) return voltar(destino, error.message);
 

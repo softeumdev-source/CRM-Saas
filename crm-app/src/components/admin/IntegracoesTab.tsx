@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Calendar, Check, Link2, Loader2, Unlink } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { Botao, Confirmar } from "@/components/ui";
+import { Botao, Confirmar, Selo } from "@/components/ui";
+import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
 import { formatarDataHora } from "@/lib/atividades";
+import { temGmail } from "@/lib/google/escopos";
 import type { Tables } from "@/lib/supabase/types";
 
 type Integracao = Tables<"integracoes_google"> & { usuario: { nome: string } | null };
@@ -136,17 +138,26 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
                     </p>
                     <p className="text-rotulo text-tinta-suave truncate">{c.email_google}</p>
                   </div>
-                  {c.ultimo_erro ? (
-                    <span className="text-rotulo font-medium text-risco shrink-0">precisa reconectar</span>
-                  ) : (
-                    <span className="text-rotulo font-medium text-ok shrink-0">ativa</span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {temGmail(c.escopos) && (
+                      <Selo tom="acento" icone={Inbox}>
+                        inbox
+                      </Selo>
+                    )}
+                    {c.ultimo_erro ? (
+                      <span className="text-rotulo font-medium text-risco">precisa reconectar</span>
+                    ) : (
+                      <span className="text-rotulo font-medium text-ok">ativa</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      <CaixaDeEntradaGoogle integracao={minha ?? null} />
 
       <Confirmar
         aberto={desconectando !== null}

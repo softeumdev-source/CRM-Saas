@@ -11,19 +11,17 @@ export function temGoogleConfigurado(): boolean {
 }
 
 /**
- * Agenda primeiro, Gmail depois — é a ordem decidida no plano. `calendar.events`
- * já entrega o convite de reunião, que é o que a cadência precisa; pedir
- * `gmail.send` junto aumentaria o susto da tela de consentimento sem entregar
- * nada a mais nesta fase.
- *
- * `openid email` é o que permite saber QUAL conta foi conectada — sem isso a
- * tela só poderia dizer "conectado", sem dizer a quem.
+ * Os escopos moraram aqui, e saíram para `escopos.ts`: a tela de integrações é
+ * componente de cliente e precisa deles, mas este arquivo lê
+ * `GOOGLE_CLIENT_SECRET` — importá-lo de lá levaria o módulo do segredo para o
+ * grafo do navegador. Reexportados para os chamadores de servidor não mudarem.
  */
-export const ESCOPOS_AGENDA = [
-  "openid",
-  "email",
-  "https://www.googleapis.com/auth/calendar.events",
-];
+export {
+  ESCOPOS_AGENDA,
+  ESCOPO_GMAIL,
+  ESCOPOS_COM_GMAIL,
+  temGmail,
+} from "@/lib/google/escopos";
 
 /**
  * O redirect_uri precisa bater EXATAMENTE com o cadastrado no Google Cloud,

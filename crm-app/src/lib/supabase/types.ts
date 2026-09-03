@@ -538,6 +538,9 @@ export type Database = {
           conectado_em: string | null
           email_google: string
           escopos: string[]
+          gmail_erro: string | null
+          gmail_history_id: string | null
+          gmail_sincronizado_em: string | null
           id: string
           refresh_token_id: string | null
           tenant_id: string | null
@@ -549,6 +552,9 @@ export type Database = {
           conectado_em?: string | null
           email_google: string
           escopos?: string[]
+          gmail_erro?: string | null
+          gmail_history_id?: string | null
+          gmail_sincronizado_em?: string | null
           id?: string
           refresh_token_id?: string | null
           tenant_id?: string | null
@@ -560,6 +566,9 @@ export type Database = {
           conectado_em?: string | null
           email_google?: string
           escopos?: string[]
+          gmail_erro?: string | null
+          gmail_history_id?: string | null
+          gmail_sincronizado_em?: string | null
           id?: string
           refresh_token_id?: string | null
           tenant_id?: string | null
@@ -724,6 +733,79 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens_sem_negocio: {
+        Row: {
+          assunto: string | null
+          canal: string
+          candidatos: Json | null
+          criado_em: string
+          externo_id: string | null
+          id: string
+          motivo: string
+          recebida_em: string | null
+          remetente: string
+          resolvido_em: string | null
+          resolvido_negocio_id: string | null
+          tenant_id: string | null
+          thread_externo: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          assunto?: string | null
+          canal: string
+          candidatos?: Json | null
+          criado_em?: string
+          externo_id?: string | null
+          id?: string
+          motivo: string
+          recebida_em?: string | null
+          remetente: string
+          resolvido_em?: string | null
+          resolvido_negocio_id?: string | null
+          tenant_id?: string | null
+          thread_externo?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          assunto?: string | null
+          canal?: string
+          candidatos?: Json | null
+          criado_em?: string
+          externo_id?: string | null
+          id?: string
+          motivo?: string
+          recebida_em?: string | null
+          remetente?: string
+          resolvido_em?: string | null
+          resolvido_negocio_id?: string | null
+          tenant_id?: string | null
+          thread_externo?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_sem_negocio_resolvido_negocio_id_fkey"
+            columns: ["resolvido_negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_sem_negocio_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_sem_negocio_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -1556,6 +1638,14 @@ export type Database = {
           total: number
         }[]
       }
+      contatos_por_telefone: {
+        Args: { p_numero: string }
+        Returns: {
+          id: string
+          nome: string
+          tenant_id: string
+        }[]
+      }
       convidar_usuario: {
         Args: { p_email: string; p_nome: string; p_role: string }
         Returns: {
@@ -1742,6 +1832,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      telefone_chave: { Args: { p: string }; Returns: string }
       transferir_negocio_de_funil: {
         Args: {
           p_descricao?: string
