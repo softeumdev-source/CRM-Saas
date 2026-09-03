@@ -1,5 +1,6 @@
 import { accessTokenDe } from "@/lib/google/calendar";
 import type { MensagemGmail } from "@/lib/gmail/mime";
+import { bytesDeBase64Url } from "@/lib/base64url";
 
 /**
  * As chamadas do Gmail que a sincronização usa, agrupadas numa caixa.
@@ -87,6 +88,8 @@ export type Caixa = {
   pagina(cursor: string, pageToken?: string | null): Promise<PaginaHistorico>;
   /** Metadados: quem escreveu, para quem, quando. Sem corpo. */
   metadados(id: string): Promise<MensagemGmail>;
+  /** Os bytes de um anexo. `attachmentId` sai de `anexosDaMensagem`. */
+  anexo(mensagemId: string, attachmentId: string): Promise<Buffer>;
   /**
    * A mensagem inteira, com corpo. Chamada **só** para quem já casou com um
    * negócio: e-mail que não casa nunca tem o corpo lido nem gravado, e é essa
@@ -144,6 +147,15 @@ export async function abrirCaixa(usuarioId: string): Promise<Caixa> {
 
     completa(id) {
       return pedir<MensagemGmail>(token, `/messages/${encodeURIComponent(id)}?format=full`);
+    },
+
+    async anexo(mensagemId, attachmentId) {
+      const r = await pedir<{ data?: string; size?: number }>(
+        token,
+        `/messages/${encodeURIComponent(mensagemId)}/attachments/${encodeURIComponent(attachmentId)}`,
+      );
+      // A Google devolve base64url, o mesmo do corpo — e sem padding.
+      return bytesDeBase64Url(r.data || "");
     },
   };
 }

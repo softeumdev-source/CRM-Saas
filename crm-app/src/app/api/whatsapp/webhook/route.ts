@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { resolverPorTelefone } from "@/lib/entrada/resolver";
 import { gravarEntrada } from "@/lib/entrada/gravar";
+import { guardarAnexo } from "@/lib/anexos";
+import { baixarMidia } from "@/lib/whatsapp/cliente";
 import {
   assinaturaConfere,
   corpoDaMensagem,
+  midiaDaMensagem,
   recebidaEm,
   valoresDoPayload,
   type ValorMeta,
@@ -132,7 +135,7 @@ async function processar(
   // no empate honesto, para a quarentena.
   const resolucao = await resolverPorTelefone(admin, m.from, null, tenantId);
 
-  const desfecho = await gravarEntrada(
+  const resultado = await gravarEntrada(
     admin,
     resolucao,
     {
@@ -153,11 +156,32 @@ async function processar(
     { tenantId, usuarioId: null },
   );
 
-  return desfecho === "gravada"
+  // A mídia, que até agora virava só o marcador "[imagem]" com o id descartado.
+  //
+  // NUNCA propaga erro: a Meta reentrega tudo o que não responder 200, e
+  // derrubar o webhook por causa de um arquivo faria a mensagem inteira voltar.
+  // `guardarAnexo` grava a linha com o id da mídia mesmo quando o download
+  // falha, e é isso que deixa a busca retentável — o link da Meta expira, o id
+  // não.
+  const midia = midiaDaMensagem(m);
+  if (resultado.desfecho === "gravada" && resultado.mensagemId && midia && resolucao.tipo === "negocio") {
+    await guardarAnexo(admin, {
+      tenantId,
+      negocioId: resolucao.negocioId,
+      mensagemId: resultado.mensagemId,
+      nome: midia.nome,
+      mime: midia.mime,
+      origem: "whatsapp",
+      externoId: midia.id,
+      baixar: () => baixarMidia(midia.id),
+    });
+  }
+
+  return resultado.desfecho === "gravada"
     ? "gravadas"
-    : desfecho === "duplicada"
+    : resultado.desfecho === "duplicada"
       ? "duplicadas"
-      : desfecho === "quarentena"
+      : resultado.desfecho === "quarentena"
         ? "quarentena"
         : "ignoradas";
 }

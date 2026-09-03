@@ -53,9 +53,45 @@ export type MensagemMeta = {
     button_reply?: { title?: string };
     list_reply?: { title?: string };
   };
-  document?: { filename?: string };
+  /**
+   * Mídia. Cada tipo traz `id` (para `GET /{media-id}`) e `mime_type`; imagem e
+   * vídeo trazem `caption`, e documento traz `filename`.
+   *
+   * Nada disto existia no tipo, e por isso era descartado antes de qualquer
+   * decisão — inclusive a LEGENDA, que é texto que o cliente digitou e que se
+   * perdia inteira numa foto com comentário.
+   */
+  image?: { id?: string; mime_type?: string; caption?: string };
+  video?: { id?: string; mime_type?: string; caption?: string };
+  audio?: { id?: string; mime_type?: string };
+  sticker?: { id?: string; mime_type?: string };
+  document?: { id?: string; mime_type?: string; filename?: string; caption?: string };
   errors?: { title?: string }[];
 };
+
+export type MidiaMeta = { id: string; mime: string | null; nome: string };
+
+/**
+ * O arquivo anexado à mensagem, quando há um.
+ *
+ * O `id` é o que torna o download possível — e é ele que era jogado fora. O
+ * link da Meta expira, então guardar a URL não adiantaria; guardar o id, sim.
+ */
+export function midiaDaMensagem(m: MensagemMeta): MidiaMeta | null {
+  const mapa: [string, { id?: string; mime_type?: string; filename?: string } | undefined, string][] = [
+    ["image", m.image, "imagem"],
+    ["video", m.video, "video"],
+    ["audio", m.audio, "audio"],
+    ["sticker", m.sticker, "figurinha"],
+    ["document", m.document, "documento"],
+  ];
+  for (const [tipo, obj, padrao] of mapa) {
+    if (m.type === tipo && obj?.id) {
+      return { id: obj.id, mime: obj.mime_type || null, nome: obj.filename || `${padrao}-${obj.id}` };
+    }
+  }
+  return null;
+}
 
 export type ValorMeta = {
   metadata?: { phone_number_id?: string };
@@ -97,20 +133,26 @@ export function corpoDaMensagem(m: MensagemMeta): string | null {
         m.interactive?.list_reply?.title?.trim() ||
         null
       );
+    // A legenda vem em `image.caption`/`video.caption`, NUNCA em `text.body` —
+    // por isso uma foto com comentario perdia o comentario inteiro. O marcador
+    // continua quando nao ha legenda, para a linha nao ficar vazia.
     case "image":
-      return "[imagem]";
+      return m.image?.caption?.trim() || "[imagem]";
     case "sticker":
       return "[figurinha]";
     case "audio":
       return "[áudio]";
     case "video":
-      return "[vídeo]";
+      return m.video?.caption?.trim() || "[vídeo]";
     case "location":
       return "[localização]";
     case "contacts":
       return "[contato]";
     case "document":
-      return m.document?.filename ? `[documento: ${m.document.filename}]` : "[documento]";
+      return (
+        m.document?.caption?.trim() ||
+        (m.document?.filename ? `[documento: ${m.document.filename}]` : "[documento]")
+      );
     // `unsupported` é a Meta dizendo que ELA não conseguiu processar. Registrar
     // ajuda quem for entender por que a conversa tem um buraco.
     case "unsupported":

@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      anexos: {
+        Row: {
+          baixado_em: string | null
+          caminho: string | null
+          criado_em: string
+          erro: string | null
+          externo_id: string | null
+          id: string
+          mensagem_id: string | null
+          mime: string | null
+          negocio_id: string
+          nome: string
+          origem: string
+          tamanho: number | null
+          tenant_id: string | null
+        }
+        Insert: {
+          baixado_em?: string | null
+          caminho?: string | null
+          criado_em?: string
+          erro?: string | null
+          externo_id?: string | null
+          id?: string
+          mensagem_id?: string | null
+          mime?: string | null
+          negocio_id: string
+          nome: string
+          origem: string
+          tamanho?: number | null
+          tenant_id?: string | null
+        }
+        Update: {
+          baixado_em?: string | null
+          caminho?: string | null
+          criado_em?: string
+          erro?: string | null
+          externo_id?: string | null
+          id?: string
+          mensagem_id?: string | null
+          mime?: string | null
+          negocio_id?: string
+          nome?: string
+          origem?: string
+          tamanho?: number | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_mensagem_id_fkey"
+            columns: ["mensagem_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atividades: {
         Row: {
           compareceu: boolean | null

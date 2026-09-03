@@ -138,3 +138,31 @@ async function mandar(
     return { enviado: false, erro: e instanceof Error ? e.message : String(e), codigo: "rede" };
   }
 }
+
+/**
+ * Baixa a mídia de uma mensagem recebida.
+ *
+ * Duas idas, e a Meta exige as duas: `GET /{media-id}` devolve uma URL
+ * temporária, e só ela dá os bytes — com o token de novo, porque a URL não é
+ * pública. É por isso que guardar a URL não resolveria nada: ela expira, e o
+ * que precisa durar é o `id`.
+ */
+export async function baixarMidia(mediaId: string): Promise<Buffer> {
+  const token = process.env.WHATSAPP_TOKEN;
+  if (!token) throw new Error("WHATSAPP_TOKEN não configurado.");
+
+  const meta = await fetch(`https://graph.facebook.com/${VERSAO}/${encodeURIComponent(mediaId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!meta.ok) throw new Error(`Meta ${meta.status} ao pedir o link da mídia.`);
+  const { url } = (await meta.json()) as { url?: string };
+  if (!url) throw new Error("A Meta não devolveu URL para esta mídia.");
+
+  const arquivo = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!arquivo.ok) throw new Error(`Meta ${arquivo.status} ao baixar a mídia.`);
+  return Buffer.from(await arquivo.arrayBuffer());
+}

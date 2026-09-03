@@ -5,6 +5,8 @@ import { abrirCaixa, CursorExpirado } from "@/lib/gmail/api";
 import { lerMensagem } from "@/lib/gmail/mime";
 import { resolverPorEmail } from "@/lib/entrada/resolver";
 import { gravarEntrada } from "@/lib/entrada/gravar";
+import { anexosDaMensagem } from "@/lib/gmail/mime";
+import { ANEXOS_POR_MENSAGEM, guardarAnexo } from "@/lib/anexos";
 
 /**
  * A sincronização do Gmail.
@@ -246,12 +248,13 @@ async function processar(
   // não é um negócio. Guardá-la seria só copiar a caixa pessoal dele.
   if (resolucao.tipo !== "negocio" && lida.direcao === "saida") return "ignorada";
 
-  const corpo =
-    resolucao.tipo === "negocio"
-      ? lerMensagem(await caixa.completa(id), i.usuario_id, i.email_google).corpo
-      : "";
+  // A mensagem completa é lida UMA vez e reusada: o corpo sai dela, e os anexos
+  // também. Buscar de novo só para enumerar arquivo seria uma ida a mais por
+  // e-mail, dentro do orçamento de 45s da rodada.
+  const completa = resolucao.tipo === "negocio" ? await caixa.completa(id) : null;
+  const corpo = completa ? lerMensagem(completa, i.usuario_id, i.email_google).corpo : "";
 
-  return gravarEntrada(
+  const resultado = await gravarEntrada(
     admin,
     resolucao,
     {
@@ -269,6 +272,30 @@ async function processar(
     },
     { tenantId: i.tenant_id!, usuarioId: i.usuario_id },
   );
+
+  // Os anexos, que até agora eram descartados na leitura. Só depois de a
+  // mensagem existir, e só quando ela é nova: numa reentrega o índice único de
+  // `anexos` já barraria, mas nem vale gastar a chamada.
+  if (resultado.desfecho === "gravada" && resultado.mensagemId && completa && resolucao.tipo === "negocio") {
+    for (const a of anexosDaMensagem(completa).slice(0, ANEXOS_POR_MENSAGEM)) {
+      // Sem `throw`: anexo que falha não pode invalidar uma mensagem que já
+      // está gravada. `guardarAnexo` registra o erro na própria linha, com o
+      // `attachmentId`, e a busca fica retentável.
+      await guardarAnexo(admin, {
+        tenantId: i.tenant_id,
+        negocioId: resolucao.negocioId,
+        mensagemId: resultado.mensagemId,
+        nome: a.nome,
+        mime: a.mime,
+        origem: "gmail",
+        externoId: a.attachmentId,
+        tamanhoDeclarado: a.tamanho,
+        baixar: () => caixa.anexo(id, a.attachmentId),
+      });
+    }
+  }
+
+  return resultado.desfecho;
 }
 
 function contar(r: Resumo, d: "gravada" | "duplicada" | "quarentena" | "ignorada") {

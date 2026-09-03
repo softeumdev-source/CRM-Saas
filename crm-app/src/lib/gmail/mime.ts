@@ -12,7 +12,7 @@ export type ParteGmail = {
   mimeType?: string;
   filename?: string;
   headers?: { name: string; value: string }[];
-  body?: { data?: string; size?: number };
+  body?: { data?: string; size?: number; attachmentId?: string };
   parts?: ParteGmail[];
 };
 
@@ -129,6 +129,41 @@ function acharParte(parte: ParteGmail | undefined, mime: string): ParteGmail | u
     if (achou) return achou;
   }
   return undefined;
+}
+
+export type AnexoDoGmail = {
+  nome: string;
+  mime: string | null;
+  tamanho: number | null;
+  /** Id para buscar os bytes em `messages/{id}/attachments/{attachmentId}`. */
+  attachmentId: string;
+};
+
+/**
+ * Os anexos da mensagem — exatamente as partes que `acharParte` descarta.
+ *
+ * A árvore é a mesma; muda o critério: ali interessa a parte SEM `filename` (o
+ * corpo), aqui interessa a parte COM `filename` e com `attachmentId` (o
+ * arquivo). Uma parte com `filename` mas só `body.data` inline é rara e
+ * pequena, e fica de fora de propósito: quase sempre é imagem embutida na
+ * assinatura de e-mail, não um anexo que alguém quis mandar.
+ */
+export function anexosDaMensagem(m: MensagemGmail): AnexoDoGmail[] {
+  const achados: AnexoDoGmail[] = [];
+  const andar = (parte: ParteGmail | undefined) => {
+    if (!parte) return;
+    if (parte.filename && parte.body?.attachmentId) {
+      achados.push({
+        nome: decodificarCabecalho(parte.filename),
+        mime: parte.mimeType || null,
+        tamanho: parte.body.size ?? null,
+        attachmentId: parte.body.attachmentId,
+      });
+    }
+    for (const p of parte.parts || []) andar(p);
+  };
+  andar(m.payload);
+  return achados;
 }
 
 /**
