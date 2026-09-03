@@ -139,7 +139,9 @@ export async function transferirDeFunil({
   const { error } = await createClient().rpc("transferir_negocio_de_funil", {
     p_negocio_id: negocioId,
     p_etapa_destino_id: etapaDestino.id,
-    p_responsavel_id: responsavelId,
+    // `undefined` omite o parametro, e o default da funcao e null — que e
+    // exatamente "deixar no pool do funil de destino".
+    p_responsavel_id: responsavelId ?? undefined,
     p_titulo: titulo,
     p_descricao: descricao,
   });

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -76,6 +76,218 @@ export type Database = {
             columns: ["usuario_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cadencia_inscricoes: {
+        Row: {
+          cadencia_id: string
+          criado_em: string | null
+          id: string
+          inscrito_por: string | null
+          negocio_id: string
+          passo_atual: number
+          proximo_envio_em: string | null
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          cadencia_id: string
+          criado_em?: string | null
+          id?: string
+          inscrito_por?: string | null
+          negocio_id: string
+          passo_atual?: number
+          proximo_envio_em?: string | null
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          cadencia_id?: string
+          criado_em?: string | null
+          id?: string
+          inscrito_por?: string | null
+          negocio_id?: string
+          passo_atual?: number
+          proximo_envio_em?: string | null
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadencia_inscricoes_cadencia_id_fkey"
+            columns: ["cadencia_id"]
+            isOneToOne: false
+            referencedRelation: "cadencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadencia_inscricoes_inscrito_por_fkey"
+            columns: ["inscrito_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadencia_inscricoes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadencia_inscricoes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cadencia_passos: {
+        Row: {
+          atraso_horas: number
+          cadencia_id: string
+          canal: string
+          id: string
+          ordem: number
+          parar_se_respondeu: boolean
+          template_id: string | null
+        }
+        Insert: {
+          atraso_horas?: number
+          cadencia_id: string
+          canal?: string
+          id?: string
+          ordem: number
+          parar_se_respondeu?: boolean
+          template_id?: string | null
+        }
+        Update: {
+          atraso_horas?: number
+          cadencia_id?: string
+          canal?: string
+          id?: string
+          ordem?: number
+          parar_se_respondeu?: boolean
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadencia_passos_cadencia_id_fkey"
+            columns: ["cadencia_id"]
+            isOneToOne: false
+            referencedRelation: "cadencias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadencia_passos_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates_mensagem"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cadencias: {
+        Row: {
+          ativa: boolean
+          autonoma: boolean
+          criado_em: string | null
+          id: string
+          nome: string
+          pipeline_id: string | null
+          tenant_id: string | null
+          tipo: string
+        }
+        Insert: {
+          ativa?: boolean
+          autonoma?: boolean
+          criado_em?: string | null
+          id?: string
+          nome: string
+          pipeline_id?: string | null
+          tenant_id?: string | null
+          tipo?: string
+        }
+        Update: {
+          ativa?: boolean
+          autonoma?: boolean
+          criado_em?: string | null
+          id?: string
+          nome?: string
+          pipeline_id?: string | null
+          tenant_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadencias_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cadencias_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consentimentos: {
+        Row: {
+          aceito_em: string | null
+          canal: string
+          contato_id: string
+          id: string
+          ip: string | null
+          origem: string | null
+          revogado_em: string | null
+          tenant_id: string | null
+          texto_aceito: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          aceito_em?: string | null
+          canal: string
+          contato_id: string
+          id?: string
+          ip?: string | null
+          origem?: string | null
+          revogado_em?: string | null
+          tenant_id?: string | null
+          texto_aceito?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          aceito_em?: string | null
+          canal?: string
+          contato_id?: string
+          id?: string
+          ip?: string | null
+          origem?: string | null
+          revogado_em?: string | null
+          tenant_id?: string | null
+          texto_aceito?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consentimentos_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consentimentos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -262,36 +474,36 @@ export type Database = {
       }
       etapas_pipeline: {
         Row: {
-          resultado: string | null
-          funcao: string | null
-          pipeline_id: string | null
           cor: string | null
+          funcao: string | null
           id: string
           nome: string
           ordem: number
+          pipeline_id: string | null
           probabilidade: number | null
+          resultado: string | null
           tenant_id: string | null
         }
         Insert: {
-          resultado?: string | null
-          funcao?: string | null
-          pipeline_id?: string | null
           cor?: string | null
+          funcao?: string | null
           id?: string
           nome: string
           ordem: number
+          pipeline_id?: string | null
           probabilidade?: number | null
+          resultado?: string | null
           tenant_id?: string | null
         }
         Update: {
-          resultado?: string | null
-          funcao?: string | null
-          pipeline_id?: string | null
           cor?: string | null
+          funcao?: string | null
           id?: string
           nome?: string
           ordem?: number
+          pipeline_id?: string | null
           probabilidade?: number | null
+          resultado?: string | null
           tenant_id?: string | null
         }
         Relationships: [
@@ -304,6 +516,127 @@ export type Database = {
           },
           {
             foreignKeyName: "etapas_pipeline_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensagens: {
+        Row: {
+          agendada_para: string | null
+          aprovada_em: string | null
+          aprovada_por: string | null
+          assunto: string | null
+          canal: string
+          contato_id: string | null
+          corpo: string
+          criado_em: string | null
+          destino: string | null
+          direcao: string
+          enviada_em: string | null
+          gerado_por: string
+          id: string
+          idempotency_key: string | null
+          inscricao_id: string | null
+          negocio_id: string | null
+          passo_id: string | null
+          provedor_id: string | null
+          proxima_tentativa_em: string | null
+          status: string
+          tenant_id: string | null
+          tentativas: number
+          ultimo_erro: string | null
+        }
+        Insert: {
+          agendada_para?: string | null
+          aprovada_em?: string | null
+          aprovada_por?: string | null
+          assunto?: string | null
+          canal?: string
+          contato_id?: string | null
+          corpo: string
+          criado_em?: string | null
+          destino?: string | null
+          direcao?: string
+          enviada_em?: string | null
+          gerado_por?: string
+          id?: string
+          idempotency_key?: string | null
+          inscricao_id?: string | null
+          negocio_id?: string | null
+          passo_id?: string | null
+          provedor_id?: string | null
+          proxima_tentativa_em?: string | null
+          status?: string
+          tenant_id?: string | null
+          tentativas?: number
+          ultimo_erro?: string | null
+        }
+        Update: {
+          agendada_para?: string | null
+          aprovada_em?: string | null
+          aprovada_por?: string | null
+          assunto?: string | null
+          canal?: string
+          contato_id?: string | null
+          corpo?: string
+          criado_em?: string | null
+          destino?: string | null
+          direcao?: string
+          enviada_em?: string | null
+          gerado_por?: string
+          id?: string
+          idempotency_key?: string | null
+          inscricao_id?: string | null
+          negocio_id?: string | null
+          passo_id?: string | null
+          provedor_id?: string | null
+          proxima_tentativa_em?: string | null
+          status?: string
+          tenant_id?: string | null
+          tentativas?: number
+          ultimo_erro?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_aprovada_por_fkey"
+            columns: ["aprovada_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_contato_id_fkey"
+            columns: ["contato_id"]
+            isOneToOne: false
+            referencedRelation: "contatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_inscricao_id_fkey"
+            columns: ["inscricao_id"]
+            isOneToOne: false
+            referencedRelation: "cadencia_inscricoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_passo_id_fkey"
+            columns: ["passo_id"]
+            isOneToOne: false
+            referencedRelation: "cadencia_passos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -366,9 +699,9 @@ export type Database = {
           motivo_perda: string | null
           pipeline_id: string | null
           prioridade: string | null
-          retomar_em: string | null
           probabilidade: number | null
           responsavel_id: string | null
+          retomar_em: string | null
           tenant_id: string | null
           titulo: string
           ultima_atividade_em: string | null
@@ -386,9 +719,9 @@ export type Database = {
           motivo_perda?: string | null
           pipeline_id?: string | null
           prioridade?: string | null
-          retomar_em?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
+          retomar_em?: string | null
           tenant_id?: string | null
           titulo: string
           ultima_atividade_em?: string | null
@@ -406,9 +739,9 @@ export type Database = {
           motivo_perda?: string | null
           pipeline_id?: string | null
           prioridade?: string | null
-          retomar_em?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
+          retomar_em?: string | null
           tenant_id?: string | null
           titulo?: string
           ultima_atividade_em?: string | null
@@ -919,6 +1252,53 @@ export type Database = {
           },
         ]
       }
+      templates_mensagem: {
+        Row: {
+          assunto: string | null
+          ativo: boolean
+          canal: string
+          categoria: string
+          corpo: string
+          criado_em: string | null
+          id: string
+          nome: string
+          template_externo_id: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          assunto?: string | null
+          ativo?: boolean
+          canal?: string
+          categoria?: string
+          corpo: string
+          criado_em?: string | null
+          id?: string
+          nome: string
+          template_externo_id?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          assunto?: string | null
+          ativo?: boolean
+          canal?: string
+          categoria?: string
+          corpo?: string
+          criado_em?: string | null
+          id?: string
+          nome?: string
+          template_externo_id?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "templates_mensagem_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           cor_primaria: string | null
@@ -1001,6 +1381,22 @@ export type Database = {
           email: string
         }[]
       }
+      concluir_envio: {
+        Args: {
+          p_erro?: string
+          p_id: string
+          p_ok: boolean
+          p_provedor_id?: string
+        }
+        Returns: string
+      }
+      contagem_negocios_por_etapa: {
+        Args: { p_pipeline_id: string }
+        Returns: {
+          etapa_id: string
+          total: number
+        }[]
+      }
       convidar_usuario: {
         Args: { p_email: string; p_nome: string; p_role: string }
         Returns: {
@@ -1038,7 +1434,38 @@ export type Database = {
         }
       }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
+      negocios_do_board: {
+        Args: { p_pipeline_id: string; p_por_etapa?: number }
+        Returns: {
+          atualizado_em: string | null
+          contato_id: string | null
+          criado_em: string | null
+          data_fechamento_prevista: string | null
+          etapa_id: string | null
+          fechado_em: string | null
+          ganho: boolean | null
+          id: string
+          motivo_perda: string | null
+          pipeline_id: string | null
+          prioridade: string | null
+          probabilidade: number | null
+          responsavel_id: string | null
+          retomar_em: string | null
+          tenant_id: string | null
+          titulo: string
+          ultima_atividade_em: string | null
+          valor: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "negocios"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
+      pipelines_do_meu_papel: { Args: never; Returns: string[] }
+      processar_cadencias: { Args: never; Returns: number }
       processar_lembretes: { Args: never; Returns: number }
       registrar_assinatura: {
         Args: {
@@ -1051,6 +1478,41 @@ export type Database = {
         }
         Returns: Json
       }
+      reservar_mensagens: {
+        Args: { p_limite?: number }
+        Returns: {
+          agendada_para: string | null
+          aprovada_em: string | null
+          aprovada_por: string | null
+          assunto: string | null
+          canal: string
+          contato_id: string | null
+          corpo: string
+          criado_em: string | null
+          destino: string | null
+          direcao: string
+          enviada_em: string | null
+          gerado_por: string
+          id: string
+          idempotency_key: string | null
+          inscricao_id: string | null
+          negocio_id: string | null
+          passo_id: string | null
+          provedor_id: string | null
+          proxima_tentativa_em: string | null
+          status: string
+          tenant_id: string | null
+          tentativas: number
+          ultimo_erro: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "mensagens"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      retomar_leads_em_nutricao: { Args: never; Returns: number }
       salvar_pdf_assinado: {
         Args: {
           p_comercial_url: string
@@ -1090,26 +1552,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      usuario_role: { Args: never; Returns: string }
-      usuario_tenant_id: { Args: never; Returns: string }
-      negocios_do_board: {
-        Args: { p_pipeline_id: string; p_por_etapa?: number }
-        Returns: Database["public"]["Tables"]["negocios"]["Row"][]
-      }
-      contagem_negocios_por_etapa: {
-        Args: { p_pipeline_id: string }
-        Returns: { etapa_id: string; total: number }[]
-      }
       transferir_negocio_de_funil: {
         Args: {
-          p_descricao: string
+          p_descricao?: string
           p_etapa_destino_id: string
           p_negocio_id: string
-          p_responsavel_id: string | null
-          p_titulo: string
+          p_responsavel_id?: string
+          p_titulo?: string
         }
         Returns: string
       }
+      usuario_role: { Args: never; Returns: string }
+      usuario_tenant_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -1128,12 +1582,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1157,11 +1611,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1182,11 +1636,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1207,11 +1661,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1224,11 +1678,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
