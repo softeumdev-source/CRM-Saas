@@ -36,7 +36,9 @@ export async function gravarEntrada(
   supabase: Cliente,
   r: Resolucao,
   m: MensagemRecebida,
-  contexto: { tenantId: string; usuarioId: string },
+  // `usuarioId` é nulo quando quem recebeu não é uma PESSOA: o número de
+  // WhatsApp é da empresa, e não há dono de caixa como há no Gmail.
+  contexto: { tenantId: string; usuarioId: string | null },
 ): Promise<Desfecho> {
   if (r.tipo === "desconhecido") return "ignorada";
 
