@@ -20,7 +20,6 @@ import { comPrazo } from "@/lib/prazo";
 import type { NegocioComRelacoes, Usuario } from "@/lib/types";
 import {
   ROTULO_STATUS_INSCRICAO,
-  ROTULO_STATUS_MENSAGEM,
   aprovarMensagem,
   cancelarMensagem,
   inscrever,
@@ -31,17 +30,18 @@ import {
   type Inscricao,
   type Mensagem,
 } from "@/lib/cadencia";
-import { AreaTexto, Botao, Entrada, Modal, Selecao } from "@/components/ui";
-
-const COR_STATUS: Record<string, string> = {
-  aguardando_aprovacao: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  aprovada: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
-  enviando: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
-  enviada: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-  falhou: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
-  cancelada: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
-  recebida: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-};
+import {
+  Apoio,
+  AreaTexto,
+  Botao,
+  Cartao,
+  Entrada,
+  Modal,
+  Rotulo,
+  Selecao,
+  useIdDeAbas,
+} from "@/components/ui";
+import { Conversa } from "@/components/negocio/Conversa";
 
 export function MensagensTab({
   negocio,
@@ -65,6 +65,14 @@ export function MensagensTab({
   const [editando, setEditando] = useState<Mensagem | null>(null);
   const [assuntoEdit, setAssuntoEdit] = useState("");
   const [corpoEdit, setCorpoEdit] = useState("");
+
+  /** Estado real do canal. `null` enquanto carrega — o compositor não chuta. */
+  const [whatsapp, setWhatsapp] = useState<{
+    configurado: boolean;
+    pausado: boolean;
+    motivo: string | null;
+  } | null>(null);
+  const idDasAbas = useIdDeAbas("conversa");
 
   const carregar = useCallback(async () => {
     const supabase = createClient();
@@ -110,6 +118,20 @@ export function MensagensTab({
       setCadencias((cad.data || []) as unknown as CadenciaComPassos[]);
       setInscricoes((insc.data || []) as never);
       setMensagens(msg.data || []);
+
+      // Estado do canal, para o compositor dizer a verdade em vez de oferecer
+      // uma caixa de texto que nao manda nada. Fora do Promise.all porque a
+      // falha aqui nao pode derrubar a conversa: sem esta linha o compositor
+      // fica em `null` e mostra o estado neutro, que ja e o certo.
+      const { data: cfg } = await supabase
+        .from("whatsapp_config")
+        .select("pausado, pausado_motivo, numero_id")
+        .maybeSingle();
+      setWhatsapp({
+        configurado: !!cfg?.numero_id,
+        pausado: !!cfg?.pausado,
+        motivo: cfg?.pausado_motivo ?? null,
+      });
     } catch (e) {
       setErroCarga(e instanceof Error ? e.message : "Não foi possível carregar as mensagens.");
     } finally {
@@ -120,6 +142,28 @@ export function MensagensTab({
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  /**
+   * Abrir a conversa marca as respostas como lidas — e apaga o sinal do card
+   * no board, em todas as abas abertas, porque o UPDATE em `negocios` viaja
+   * pelo realtime que o board ja assina.
+   *
+   * Vai direto do cliente, sem RPC: `negocios_update` tem o USING IDENTICO ao
+   * `negocios_select` e, sem WITH CHECK proprio, o Postgres reaproveita o
+   * USING. Ou seja, quem enxerga o card pode atualiza-lo — a mesma permissao
+   * que `moverEtapa` ja usa.
+   *
+   * Depende so do id: nao deve disparar de novo a cada resposta que chega
+   * enquanto a aba esta aberta, senao o contador zeraria antes de ser visto.
+   */
+  useEffect(() => {
+    if (!negocio.respostas_nao_lidas) return;
+    void createClient()
+      .from("negocios")
+      .update({ respostas_nao_lidas: 0, respostas_lidas_em: new Date().toISOString() })
+      .eq("id", negocio.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [negocio.id]);
 
   useSincronizacao(carregar, {
     canal: `mensagens-${negocio.id}`,
@@ -427,49 +471,23 @@ export function MensagensTab({
       </div>
 
       {/* ---------------------------------------------------------------- */}
-      {/* Linha do tempo — o que a máquina fez, está fazendo e vai fazer    */}
+      {/* A conversa com o cliente: WhatsApp e e-mail, no mesmo card        */}
       {/* ---------------------------------------------------------------- */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3">
-          Mensagens ({mensagens.length})
-        </h3>
-        {mensagens.length === 0 ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Nenhuma mensagem ainda. Ao inscrever o lead numa cadência, os toques aparecem aqui —
-            primeiro esperando aprovação, depois com a data em que saíram.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {mensagens.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800"
-              >
-                <div className="h-8 w-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Mail className="h-4 w-4 text-slate-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                    {m.assunto || "(sem assunto)"}
-                  </p>
-                  <p className="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap mt-0.5">
-                    <span className={`px-1.5 py-0.5 rounded font-bold ${COR_STATUS[m.status] || ""}`}>
-                      {ROTULO_STATUS_MENSAGEM[m.status] || m.status}
-                    </span>
-                    {m.enviada_em
-                      ? `enviada em ${formatarDataHora(m.enviada_em)}`
-                      : `criada em ${formatarDataHora(m.criado_em)}`}
-                    {m.tentativas > 1 && <span>· {m.tentativas} tentativas</span>}
-                  </p>
-                  {m.ultimo_erro && (
-                    <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">{m.ultimo_erro}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Cartao>
+        <div className="mb-3">
+          <Rotulo>Conversa</Rotulo>
+          <Apoio>
+            O histórico segue o negócio: passar do SDR para o vendedor não perde nada, porque a
+            transferência não mexe no dono das mensagens.
+          </Apoio>
+        </div>
+        <Conversa
+          negocio={negocio}
+          mensagens={mensagens}
+          whatsapp={whatsapp}
+          idBase={idDasAbas}
+        />
+      </Cartao>
 
       <Modal
         aberto={editando !== null}
