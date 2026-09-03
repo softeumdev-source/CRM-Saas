@@ -17,6 +17,7 @@ import {
   type ResumoImportacao,
   type StatusLinha,
 } from "@/lib/importarLeads";
+import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Vazio } from "@/components/ui";
 
 type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | null };
 
@@ -256,17 +257,17 @@ export function LeadsTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-3">
-        <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+      <Cartao className="space-y-3">
+        <Rotulo className="flex items-center gap-2">
           <Upload className="h-4 w-4 text-acento" /> Importar base de contatos (CSV ou XLSX)
-        </h3>
+        </Rotulo>
         <p className="text-rotulo text-tinta-suave">
           Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj. Repetidos (por e-mail ou
           CNPJ) — tanto no arquivo quanto já cadastrados — são detectados e mostrados numa prévia antes de gravar.
           Os leads importados entram no pool &quot;sem dono&quot; até serem distribuídos.
         </p>
         {!preview && (
-          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md cursor-pointer w-fit">
+          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl cursor-pointer w-fit foco">
             {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {processando ? progresso || "Processando..." : "Escolher arquivo"}
             <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
@@ -277,22 +278,18 @@ export function LeadsTab({
             <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados).
           </p>
         )}
-        {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
+        {erro && <Alerta tom="risco" icone={AlertTriangle}>{erro}</Alerta>}
 
         {preview && (
           <div className="border border-fio rounded-2xl overflow-hidden">
             <div className="p-4 bg-recuo border-b border-fio flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-rotulo font-medium text-tinta-suave truncate">Prévia — {preview.arquivo}</p>
+                <p className="text-rotulo text-tinta-suave truncate">Prévia — {preview.arquivo}</p>
                 <p className="text-rotulo text-tinta-suave">{preview.resumo.total} linhas analisadas</p>
               </div>
-              <button
-                onClick={() => setPreview(null)}
-                disabled={confirmando}
-                className="flex items-center gap-1 text-rotulo font-medium text-tinta-suave hover:text-tinta disabled:opacity-50"
-              >
-                <X className="h-3.5 w-3.5" /> Cancelar
-              </button>
+              <Botao variante="sutil" tamanho="sm" onClick={() => setPreview(null)} disabled={confirmando} icone={X}>
+                Cancelar
+              </Botao>
             </div>
 
             <div className="p-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -337,25 +334,25 @@ export function LeadsTab({
             </div>
 
             <div className="p-4 border-t border-fio flex items-center justify-end gap-2">
-              <button
+              <Botao
+                variante="primario"
                 onClick={confirmarImportacao}
                 disabled={confirmando || preview.resumo.novos === 0}
-                className="flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-xl shadow-md disabled:opacity-50"
+                icone={confirmando ? Loader2 : CheckCircle2}
               >
-                {confirmando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {confirmando ? progresso || "Importando..." : preview.resumo.novos === 0 ? "Nada novo para importar" : `Importar ${preview.resumo.novos} novos`}
-              </button>
+              </Botao>
             </div>
           </div>
         )}
-      </div>
+      </Cartao>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+      <Cartao preenchimento="nenhum" className="overflow-hidden">
         <div className="p-5 border-b border-fio flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <Rotulo className="flex items-center gap-2">
               <Users2 className="h-4 w-4 text-alerta" /> Leads sem dono ({contatosSemDono.length})
-            </h3>
+            </Rotulo>
             <p className="text-rotulo text-tinta-suave">
               {selecionados.size} selecionados
               {teto !== undefined && contatosSemDono.length >= teto && (
@@ -366,27 +363,28 @@ export function LeadsTab({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select aria-label="Vendedor que vai receber os leads selecionados" value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <Selecao aria-label="Vendedor que vai receber os leads selecionados" value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)}>
               <option value="">Escolher vendedor...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
-            </select>
-            <button
+            </Selecao>
+            <Botao
+              tamanho="sm"
               onClick={distribuirManual}
               disabled={!vendedorManual || selecionados.size === 0 || distribuindo}
-              className="px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl disabled:opacity-50"
             >
               Atribuir selecionados
-            </button>
-            <button
+            </Botao>
+            <Botao
+              variante="primario"
+              tamanho="sm"
               onClick={distribuirAutomatico}
-              disabled={distribuindo || (contatosSemDono.length === 0)}
-              className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-50"
+              disabled={distribuindo || contatosSemDono.length === 0}
+              icone={distribuindo ? Loader2 : Shuffle}
             >
-              {distribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
-              Distribuir automatico (round-robin)
-            </button>
+              Distribuir automático (round-robin)
+            </Botao>
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
@@ -418,60 +416,65 @@ export function LeadsTab({
                 </tr>
               ))}
               {contatosSemDono.length === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-tinta-fraca">Nenhum lead sem dono no momento.</td></tr>
+                <tr>
+                  <td colSpan={5}>
+                    <Vazio icone={Users2} titulo="Nenhum lead sem dono">
+                      Importe uma base acima ou aguarde novos leads — eles caem aqui antes de ir para um vendedor.
+                    </Vazio>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </Cartao>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+      <Cartao preenchimento="nenhum" className="overflow-hidden">
         <div className="p-5 border-b border-fio space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+              <Rotulo className="flex items-center gap-2">
                 <ArrowRightLeft className="h-4 w-4 text-acento" /> Leads com vendedor ({comDonoFiltrados.length})
-              </h3>
+        </Rotulo>
               <p className="text-rotulo text-tinta-suave">{selComDono.size} selecionados · reatribua ou devolva ao pool</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-tinta-fraca" />
-              <input
+              <Entrada
+                aria-label="Buscar leads por nome, empresa ou e-mail"
                 value={buscaComDono}
                 onChange={(e) => setBuscaComDono(e.target.value)}
-                placeholder="Buscar nome/empresa/e-mail..."
-                className="pl-8 pr-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl w-56"
+                placeholder="Buscar nome/empresa/e-mail…"
+                className="pl-8 w-56"
               />
             </div>
-            <select aria-label="Filtrar leads por vendedor" value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <Selecao aria-label="Filtrar leads por vendedor" value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)}>
               <option value="all">Todos os vendedores</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
-            </select>
+            </Selecao>
             <div className="flex-1" />
-            <select aria-label="Passar os leads selecionados para outro vendedor" value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <Selecao aria-label="Passar os leads selecionados para outro vendedor" value={novoResp} onChange={(e) => setNovoResp(e.target.value)}>
               <option value="">Passar para...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
-            </select>
-            <button
+            </Selecao>
+            <Botao
+              variante="primario"
+              tamanho="sm"
               onClick={() => reatribuir(false)}
               disabled={reatribuindo || selComDono.size === 0 || !novoResp}
-              className="px-3 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl disabled:opacity-50"
+              icone={reatribuindo ? Loader2 : undefined}
             >
-              {reatribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reatribuir"}
-            </button>
-            <button
-              onClick={() => reatribuir(true)}
-              disabled={reatribuindo || selComDono.size === 0}
-              className="px-3 py-2 text-rotulo font-medium text-tinta-suave bg-recuo hover:bg-fio rounded-xl disabled:opacity-50"
-            >
+              Reatribuir
+            </Botao>
+            <Botao tamanho="sm" onClick={() => reatribuir(true)} disabled={reatribuindo || selComDono.size === 0}>
               Devolver ao pool
-            </button>
+            </Botao>
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
@@ -504,12 +507,18 @@ export function LeadsTab({
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
-                <tr><td colSpan={4} className="p-6 text-center text-tinta-fraca">Nenhum lead com vendedor neste filtro.</td></tr>
+                <tr>
+                  <td colSpan={4}>
+                    <Vazio icone={Search} titulo="Nenhum lead neste filtro">
+                      Tente outro vendedor ou limpe a busca.
+                    </Vazio>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </Cartao>
     </div>
   );
 }
@@ -518,7 +527,7 @@ function ResumoPill({ cor, bg, label, valor }: { cor: string; bg: string; label:
   return (
     <div className={`rounded-xl px-3 py-2 ${bg}`}>
       <p className={`text-titulo font-medium ${cor}`}>{valor}</p>
-      <p className="text-rotulo font-medium uppercase tracking-wide text-tinta-suave">{label}</p>
+      <p className="text-rotulo font-medium text-tinta-suave">{label}</p>
     </div>
   );
 }

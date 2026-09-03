@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Check, Inbox } from "lucide-react";
-import { Botao, Cartao } from "@/components/ui";
+import { Botao, Cartao, Rotulo } from "@/components/ui";
 import { formatarDataHora } from "@/lib/atividades";
 import { temGmail } from "@/lib/google/escopos";
 import type { Tables } from "@/lib/supabase/types";
@@ -32,9 +32,9 @@ export function CaixaDeEntradaGoogle({
   return (
     <Cartao className="space-y-4">
       <div>
-        <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+        <Rotulo className="flex items-center gap-2">
           <Inbox className="h-4 w-4 text-acento" /> Caixa de entrada no card
-        </h3>
+        </Rotulo>
         <p className="text-rotulo text-tinta-suave mt-1">
           Autorizando a leitura do Gmail, a resposta do cliente aparece dentro do card do negócio,
           e o card acende no board. É <strong>somente leitura</strong>: o CRM não manda e-mail pela

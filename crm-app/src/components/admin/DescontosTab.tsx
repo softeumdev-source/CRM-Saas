@@ -6,7 +6,7 @@ import { BadgePercent, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, Loade
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { formatarMoeda } from "@/lib/types";
-import { Cartao } from "@/components/ui";
+import { Alerta, Botao, Cartao } from "@/components/ui";
 
 const SELECT =
   "*, negocio:negocios(id, titulo, contato:contatos(nome, empresa)), vendedor:usuarios!solicitacoes_desconto_vendedor_id_fkey(nome), plano:planos(nome)";
@@ -81,7 +81,7 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
         </span>
       </div>
 
-      {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
+      {erro && <Alerta tom="risco">{erro}</Alerta>}
 
       {ordenadas.length === 0 ? (
         <Cartao className="p-10 text-center">
@@ -156,20 +156,24 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
                       className="w-full px-3 py-2 text-rotulo bg-recuo border border-fio rounded-lg"
                     />
                     <div className="flex items-center gap-2">
-                      <button
+                      <Botao
+                        tamanho="sm"
+                        variante="primario"
                         onClick={() => decidir(s.id, true)}
                         disabled={decidindo === s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-lg disabled:opacity-60"
+                        icone={decidindo === s.id ? Loader2 : ThumbsUp}
                       >
-                        {decidindo === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
-                      </button>
-                      <button
+                        Aprovar
+                      </Botao>
+                      <Botao
+                        tamanho="sm"
+                        variante="perigo"
                         onClick={() => decidir(s.id, false)}
                         disabled={decidindo === s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-risco-tinta bg-risco-solido hover:bg-risco-solido-hover rounded-lg disabled:opacity-60"
+                        icone={ThumbsDown}
                       >
-                        <ThumbsDown className="h-3.5 w-3.5" /> Recusar
-                      </button>
+                        Recusar
+                      </Botao>
                     </div>
                   </div>
                 ) : (

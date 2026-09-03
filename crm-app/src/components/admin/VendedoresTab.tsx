@@ -5,7 +5,7 @@ import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserChec
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
 import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
-import { Botao, Cartao, Confirmar, Selecao } from "@/components/ui";
+import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selecao } from "@/components/ui";
 
 export function VendedoresTab({
   membros,
@@ -109,9 +109,9 @@ export function VendedoresTab({
     <div className="space-y-6">
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
         <Cartao className="space-y-4 h-fit">
-          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Rotulo className="flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-acento" /> Convidar para o time
-          </h3>
+          </Rotulo>
           <form onSubmit={handleConvidar} className="space-y-3">
             <input
               required
@@ -142,15 +142,10 @@ export function VendedoresTab({
               </Selecao>
               <p className="mt-1 px-1 text-rotulo text-tinta-fraca">{DESCRICAO_PAPEL[papel]}</p>
             </div>
-            {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
-            <button
-              type="submit"
-              disabled={enviando}
-              className="w-full py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {enviando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {erro && <Alerta tom="risco">{erro}</Alerta>}
+            <Botao type="submit" variante="primario" larguraTotal disabled={enviando} icone={enviando ? Loader2 : undefined}>
               Enviar convite
-            </button>
+            </Botao>
           </form>
 
           {linkGerado && (
@@ -171,7 +166,7 @@ export function VendedoresTab({
               )}
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate bg-superficie px-2 py-1 rounded-lg border border-fio">{linkGerado}</code>
-                <button onClick={copiarLink} className="text-acento">{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>
+                <Botao variante="sutil" tamanho="sm" onClick={copiarLink} aria-label="Copiar o link do convite" icone={copiado ? Check : Copy} />
               </div>
             </div>
           )}
@@ -194,7 +189,7 @@ export function VendedoresTab({
                         type="button"
                         onClick={() => handleReenviar(c.id)}
                         disabled={reenviandoId === c.id}
-                        className="flex items-center gap-1 font-medium text-acento hover:text-acento disabled:opacity-50"
+                        className="foco flex items-center gap-1 font-medium text-acento hover:text-tinta rounded disabled:opacity-50"
                       >
                         {reenviandoId === c.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -269,13 +264,14 @@ export function VendedoresTab({
                       <p className="text-rotulo text-tinta-fraca">leads em mãos</p>
                     </div>
                   )}
-                  <button
+                  <Botao
+                    variante="sutil"
+                    tamanho="sm"
                     onClick={() => setDesativando(v)}
                     title={`Remover ${ROTULO_PAPEL[v.role || ""] || "membro"} do time`}
-                    className="p-2 text-tinta-fraca hover:text-risco hover:bg-risco-fraco rounded-xl transition-colors"
-                  >
-                    <UserX className="h-4 w-4" />
-                  </button>
+                    aria-label={`Remover ${v.nome} do time`}
+                    icone={UserX}
+                  />
                 </div>
               </div>
             );
@@ -296,13 +292,9 @@ export function VendedoresTab({
                         <p className="text-rotulo text-tinta-fraca truncate">{v.email}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => void definirAtivo(v, true)}
-                      title="Reativar acesso"
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-rotulo font-medium text-ok hover:bg-ok-fraco rounded-lg"
-                    >
-                      <UserCheck className="h-3.5 w-3.5" /> Reativar
-                    </button>
+                    <Botao variante="sutil" tamanho="sm" onClick={() => void definirAtivo(v, true)} icone={UserCheck}>
+                      Reativar
+                    </Botao>
                   </div>
                 ))}
               </div>

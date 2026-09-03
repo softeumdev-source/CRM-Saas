@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { Cartao } from "@/components/ui";
+import { Cartao, Rotulo, Selecao } from "@/components/ui";
 
 export function FunilTab({
   vendedores,
@@ -39,7 +39,7 @@ export function FunilTab({
       <Cartao className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div>
-            <label htmlFor="funiltab-1" className="text-rotulo font-medium text-tinta-suave uppercase tracking-wider block mb-1">Buscar vendedor</label>
+            <label htmlFor="funiltab-1" className="text-rotulo font-medium text-tinta-suave block mb-1">Buscar vendedor</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-tinta-fraca" />
               <input id="funiltab-1"
@@ -51,18 +51,14 @@ export function FunilTab({
             </div>
           </div>
           <div>
-            <label htmlFor="funiltab-2" className="text-rotulo font-medium text-tinta-suave uppercase tracking-wider block mb-1">Filtrar funil</label>
-            <select id="funiltab-2"
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              className="px-4 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-xl w-full"
-            >
+            <label htmlFor="funiltab-2" className="text-rotulo font-medium text-tinta-suave block mb-1">Filtrar funil</label>
+            <Selecao id="funiltab-2" value={filtro} onChange={(e) => setFiltro(e.target.value)} className="w-full">
               <option value="all">Visão geral (todos os vendedores)</option>
               <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
               {vendedoresFiltrados.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
-            </select>
+            </Selecao>
           </div>
         </div>
         <div className="text-right">
@@ -73,7 +69,7 @@ export function FunilTab({
       </Cartao>
 
       <Cartao className="space-y-4">
-        <h3 className="font-medium text-tinta text-corpo-lg">Distribuição por etapa</h3>
+        <Rotulo>Distribuição por etapa</Rotulo>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {etapas.map((etapa) => {
             const doEtapa = negociosFiltrados.filter((n) => n.etapa_id === etapa.id);

@@ -5,7 +5,7 @@ import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { Botao, Campo, Entrada, Modal } from "@/components/ui";
+import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal } from "@/components/ui";
 import { Confirmar } from "@/components/ui";
 
 const PLANO_VAZIO = {
@@ -93,9 +93,9 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
           <h3 className="text-titulo font-medium text-tinta">Planos usados nas propostas</h3>
           <p className="text-rotulo text-tinta-suave">Os vendedores só podem cobrar igual ou acima destes valores base.</p>
         </div>
-        <button onClick={abrirNovo} className="px-5 py-2.5 bg-acento-solido hover:bg-acento-solido-hover text-acento-tinta font-medium text-rotulo rounded-2xl shadow-md flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Novo plano
-        </button>
+        <Botao variante="primario" onClick={abrirNovo} icone={Plus}>
+          Novo plano
+        </Botao>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -107,8 +107,8 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
                 <p className="text-rotulo text-tinta-suave mt-0.5">{p.descricao}</p>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => abrirEdicao(p)} className="p-1.5 text-tinta-fraca hover:text-acento"><Edit3 className="h-4 w-4" /></button>
-                <button onClick={() => setExcluindo(p)} className="p-1.5 text-tinta-fraca hover:text-risco"><Trash2 className="h-4 w-4" /></button>
+                <Botao variante="sutil" tamanho="sm" onClick={() => abrirEdicao(p)} aria-label={`Editar o plano ${p.nome}`} icone={Edit3} />
+                <Botao variante="sutil" tamanho="sm" onClick={() => setExcluindo(p)} aria-label={`Excluir o plano ${p.nome}`} icone={Trash2} />
               </div>
             </div>
             <div className="py-2 border-y border-fio text-rotulo space-y-1">
@@ -130,18 +130,18 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
             Escape, sem foco preso e sem portal — para leitor de tela, um monte
             de conteudo solto por cima da pagina. */}
         <form onSubmit={salvar} className="flex flex-col gap-3">
-              <input required placeholder="Nome do plano" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
-              <textarea placeholder="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
+              <Entrada required aria-label="Nome do plano" placeholder="Nome do plano" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <AreaTexto rows={3} aria-label="Descrição do plano" placeholder="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
                 <CampoNumero label="Franquia de pedidos/mês" value={form.franquia_pedidos} onChange={(v) => setForm({ ...form, franquia_pedidos: v })} />
                 <CampoNumero label="Excedente por pedido (R$)" value={form.valor_excedente_pedido} onChange={(v) => setForm({ ...form, valor_excedente_pedido: v })} step="0.01" />
                 <CampoNumero label="Mensalidade base (R$/mês)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
                 <CampoNumero label="Setup (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
               </div>
-              {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
+              {erro && <Alerta tom="risco">{erro}</Alerta>}
               <div className="pt-3 border-t border-fio flex justify-end gap-2">
-                <button type="button" onClick={() => setModalAberto(false)} className="px-4 py-2 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl">Cancelar</button>
-                <button type="submit" disabled={salvando} className="px-5 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-60">{salvando ? "Salvando..." : "Salvar plano"}</button>
+                <Botao type="button" variante="sutil" onClick={() => setModalAberto(false)}>Cancelar</Botao>
+                <Botao type="submit" variante="primario" disabled={salvando}>{salvando ? "Salvando…" : "Salvar plano"}</Botao>
               </div>
             </form>
       </Modal>

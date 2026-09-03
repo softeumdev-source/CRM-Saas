@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { Botao, Cartao, Confirmar, Selo } from "@/components/ui";
+import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selo } from "@/components/ui";
 import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
 import { formatarDataHora } from "@/lib/atividades";
 import { temGmail } from "@/lib/google/escopos";
@@ -74,16 +74,14 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
   return (
     <div className="space-y-5">
       {(erroDaVolta || erro) && (
-        <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
-          {erroDaVolta || erro}
-        </p>
+        <Alerta tom="risco">{erroDaVolta || erro}</Alerta>
       )}
 
       <Cartao className="space-y-4">
         <div>
-          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Rotulo className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-acento" /> Google Agenda
-          </h3>
+          </Rotulo>
           <p className="text-rotulo text-tinta-suave mt-1">
             Conectando sua conta, o CRM cria o evento na <strong>sua</strong> agenda, com link do
             Meet, e manda o convite para o cliente. Cada pessoa conecta a própria conta — o convite

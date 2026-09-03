@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { AreaTexto, Botao, Cartao, Entrada, Modal } from "@/components/ui";
+import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo } from "@/components/ui";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
 import { formatarDataHora } from "@/lib/atividades";
@@ -140,9 +140,9 @@ export function CadenciasTab() {
 
       <Cartao className="space-y-4">
         <div>
-          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Rotulo className="flex items-center gap-2">
             <Send className="h-4 w-4 text-acento" /> Cadências ({cadencias.length})
-          </h3>
+          </Rotulo>
           <p className="text-rotulo text-tinta-suave mt-1">
             O interruptor que importa é o de autonomia. Com ele desligado, cada mensagem espera
             alguém aprovar antes de sair. Ligue só quando confiar no que está sendo escrito — o
@@ -218,9 +218,9 @@ export function CadenciasTab() {
       {whats && (
         <Cartao className="space-y-4">
           <div>
-            <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <Rotulo className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-ok" /> WhatsApp
-            </h3>
+            </Rotulo>
             <p className="text-rotulo text-tinta-suave mt-1">
               Mensagem iniciada pela empresa só sai por template aprovado pela Meta. Use um número
               separado do comercial: se ele for bloqueado a ponto de ser banido, você perde o
@@ -288,9 +288,9 @@ export function CadenciasTab() {
 
       <Cartao className="space-y-4">
         <div>
-          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Rotulo className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-acento" /> Modelos de mensagem ({templates.length})
-          </h3>
+          </Rotulo>
           <p className="text-rotulo text-tinta-suave mt-1">
             O texto aceita <code className="font-mono">{"{{primeiro_nome}}"}</code>,{" "}
             <code className="font-mono">{"{{contato}}"}</code>,{" "}
