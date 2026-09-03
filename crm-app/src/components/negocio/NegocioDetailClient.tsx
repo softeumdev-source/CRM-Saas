@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRightLeft, Building2, Mail, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,7 @@ export function NegocioDetailClient({
   const [erro, setErro] = useState<string | null>(null);
 
   const negocioId = negocioInicial.id;
+  const idRetomada = useId();
 
   // Tudo desta tela se mantém vivo: o negócio, a cadência de atividades e as
   // propostas com envelopes/signatários (visualização e assinatura do cliente).
@@ -398,6 +399,36 @@ export function NegocioDetailClient({
               ))}
             </select>
           </div>
+          {/* Etapa de nutrição: o lead está parado esperando uma data. Sem a
+              data ele fica parado para sempre — é por isso que o campo avisa
+              quando está vazio, em vez de só existir. */}
+          {negocio.etapa?.funcao === "nutricao" && (
+            <div className="sm:col-span-2 bg-violet-50 dark:bg-violet-950/30 rounded-xl p-3">
+              <label
+                htmlFor={idRetomada}
+                className="text-[10px] font-bold uppercase text-violet-600 dark:text-violet-400"
+              >
+                Voltar a procurar em
+              </label>
+              <input
+                id={idRetomada}
+                type="date"
+                value={negocio.retomar_em ? negocio.retomar_em.slice(0, 10) : ""}
+                onChange={(e) =>
+                  atualizarNegocio({
+                    retomar_em: e.target.value ? new Date(`${e.target.value}T09:00`).toISOString() : null,
+                  })
+                }
+                className="mt-1 w-full max-w-xs px-3 py-2 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              />
+              <p className="mt-1.5 text-[11px] text-violet-700 dark:text-violet-300">
+                {negocio.retomar_em
+                  ? `O lead volta sozinho para o início do funil em ${formatarDataHora(negocio.retomar_em)}.`
+                  : "Sem data, este lead fica parado aqui para sempre — ninguém vai ser lembrado dele."}
+              </p>
+            </div>
+          )}
+
           {(negocio.valor ?? 0) > 0 && (
             <div className="sm:col-span-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3">
               <p className="text-[10px] font-bold uppercase text-indigo-500">Valor da proposta</p>

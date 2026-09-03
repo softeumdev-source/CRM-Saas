@@ -24,6 +24,7 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
   const dias = diasSemContato(negocio);
   const proxima = proximaAtividade(negocio.atividades_pendentes);
   const proximaAtrasada = estaAtrasada(proxima?.data_agendada);
+  const emNutricao = negocio.etapa?.funcao === "nutricao";
 
   const semCnpj = !negocio.contato?.cnpj;
   const statusContato = comAtividadeHoje
@@ -99,7 +100,20 @@ export function LeadCard({ negocio }: { negocio: NegocioComRelacoes }) {
             {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
           </p>
         )}
-        {!proxima && !comAtividadeHoje && (
+        {/* Lead parado em nutrição TEM próximo passo: a data em que o
+            sistema o devolve. Sem isto ele aparecia como "sem próximo passo",
+            em âmbar, como se estivesse esquecido — e é o contrário. */}
+        {emNutricao && negocio.retomar_em && (
+          <p className="text-[11px] font-semibold flex items-center gap-1 text-violet-600 dark:text-violet-400">
+            <CalendarClock className="h-3 w-3" /> Volta em {formatarDataHora(negocio.retomar_em)}
+          </p>
+        )}
+        {emNutricao && !negocio.retomar_em && (
+          <p className="text-[11px] font-semibold flex items-center gap-1 text-amber-600 dark:text-amber-400">
+            <CircleAlert className="h-3 w-3" /> Em nutrição sem data de retomada
+          </p>
+        )}
+        {!emNutricao && !proxima && !comAtividadeHoje && (
           <p className="text-[11px] font-semibold flex items-center gap-1 text-amber-600 dark:text-amber-400">
             <CircleAlert className="h-3 w-3" /> Sem próximo passo agendado
           </p>
