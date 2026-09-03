@@ -23,6 +23,9 @@ export type Database = {
           criado_em: string | null
           data_agendada: string | null
           descricao: string | null
+          google_evento_id: string | null
+          google_meet_link: string | null
+          google_resposta: string | null
           id: string
           lembrete_data: string | null
           lembrete_enviado: boolean | null
@@ -39,6 +42,9 @@ export type Database = {
           criado_em?: string | null
           data_agendada?: string | null
           descricao?: string | null
+          google_evento_id?: string | null
+          google_meet_link?: string | null
+          google_resposta?: string | null
           id?: string
           lembrete_data?: string | null
           lembrete_enviado?: boolean | null
@@ -55,6 +61,9 @@ export type Database = {
           criado_em?: string | null
           data_agendada?: string | null
           descricao?: string | null
+          google_evento_id?: string | null
+          google_meet_link?: string | null
+          google_resposta?: string | null
           id?: string
           lembrete_data?: string | null
           lembrete_enviado?: boolean | null
@@ -519,6 +528,57 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracoes_google: {
+        Row: {
+          atualizado_em: string | null
+          conectado_em: string | null
+          email_google: string
+          escopos: string[]
+          id: string
+          refresh_token_id: string | null
+          tenant_id: string | null
+          ultimo_erro: string | null
+          usuario_id: string
+        }
+        Insert: {
+          atualizado_em?: string | null
+          conectado_em?: string | null
+          email_google: string
+          escopos?: string[]
+          id?: string
+          refresh_token_id?: string | null
+          tenant_id?: string | null
+          ultimo_erro?: string | null
+          usuario_id: string
+        }
+        Update: {
+          atualizado_em?: string | null
+          conectado_em?: string | null
+          email_google?: string
+          escopos?: string[]
+          id?: string
+          refresh_token_id?: string | null
+          tenant_id?: string | null
+          ultimo_erro?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_google_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integracoes_google_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -1433,7 +1493,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      disparar_despacho: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
+      google_guardar_refresh_token: {
+        Args: {
+          p_email: string
+          p_escopos?: string[]
+          p_refresh_token: string
+          p_usuario_id: string
+        }
+        Returns: string
+      }
+      google_obter_refresh_token: {
+        Args: { p_usuario_id: string }
+        Returns: string
+      }
+      google_registrar_erro: {
+        Args: { p_erro: string; p_usuario_id: string }
+        Returns: undefined
+      }
       negocios_do_board: {
         Args: { p_pipeline_id: string; p_por_etapa?: number }
         Returns: {

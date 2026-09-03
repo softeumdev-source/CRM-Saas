@@ -19,7 +19,13 @@ export class PrazoEsgotado extends Error {
   }
 }
 
-export function comPrazo<T>(promessa: Promise<T>, ms: number = PRAZO_PADRAO_MS): Promise<T> {
+/**
+ * Aceita `PromiseLike`, e não `Promise`, porque o query builder do Supabase é
+ * um thenable: ele tem `.then()` mas não `.catch()` nem `.finally()`. Exigir
+ * `Promise` obrigaria todo chamador a embrulhar a consulta em
+ * `Promise.resolve(...)` — cerimônia que não protege de nada.
+ */
+export function comPrazo<T>(promessa: PromiseLike<T>, ms: number = PRAZO_PADRAO_MS): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = setTimeout(() => reject(new PrazoEsgotado(ms)), ms);
     promessa.then(

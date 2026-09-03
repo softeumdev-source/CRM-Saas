@@ -20,9 +20,12 @@ import {
   Search,
   Trash2,
   RotateCcw,
+  CalendarPlus,
+  CalendarCheck,
 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { Confirmar } from "@/components/ui";
+import { comPrazo } from "@/lib/prazo";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, TipoAtividade, Usuario } from "@/lib/types";
 import type { TablesInsert } from "@/lib/supabase/types";
@@ -242,6 +245,44 @@ export function CadenciaTab({
     setAtividades((prev) =>
       prev.map((a) => (a.id === id ? { ...a, compareceu, concluida: true } : a)),
     );
+  };
+
+  const [agendandoGoogle, setAgendandoGoogle] = useState<string | null>(null);
+
+  /**
+   * Cria o convite de verdade na agenda de quem clicou e manda para o cliente.
+   * O botão some depois, porque a atividade passa a ter `google_evento_id` — é
+   * o que impede um clique duplo virar dois convites na caixa do cliente.
+   */
+  const criarConviteGoogle = async (id: string) => {
+    setAgendandoGoogle(id);
+    try {
+      const resp = await comPrazo(
+        fetch("/api/google/agendar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atividadeId: id, minutos: 30 }),
+        }),
+        20_000,
+      );
+      const dados = await resp.json();
+      if (!resp.ok) {
+        setErro(dados.error || "Não foi possível criar o convite.");
+        return;
+      }
+      setAtividades((prev) =>
+        prev.map((a) =>
+          a.id === id
+            ? { ...a, google_evento_id: dados.id, google_meet_link: dados.meetLink, google_resposta: "sem_resposta" }
+            : a,
+        ),
+      );
+      setErro(null);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível criar o convite.");
+    } finally {
+      setAgendandoGoogle(null);
+    }
   };
 
   const [excluindo, setExcluindo] = useState<AtividadeComUsuario | null>(null);
@@ -542,6 +583,44 @@ export function CadenciaTab({
                           </span>
                         </div>
                       )}
+
+                    {/* Reunião com hora marcada e sem convite ainda. Só
+                        aparece para reunião/demo: convite de Google para uma
+                        ligação interna seria ruído na caixa do cliente. */}
+                    {(a.tipo === "reuniao" || a.tipo === "demo") && a.data_agendada && (
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        {a.google_evento_id ? (
+                          <>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                              <CalendarCheck className="h-3 w-3" /> convite enviado
+                            </span>
+                            {a.google_meet_link && (
+                              <a
+                                href={a.google_meet_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] font-bold text-indigo-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 rounded"
+                              >
+                                abrir o Meet
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => void criarConviteGoogle(a.id)}
+                            disabled={agendandoGoogle === a.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                          >
+                            {agendandoGoogle === a.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <CalendarPlus className="h-3 w-3" />
+                            )}
+                            Criar convite no Google
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {reagendando === a.id && (
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
