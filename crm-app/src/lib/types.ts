@@ -34,11 +34,30 @@ export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usua
 export const SELECT_AGENDA =
   "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
 
-/** Abas da tela de negócio. Fica aqui, e não no componente, porque a page (server) valida a query string. */
-export type Aba = "geral" | "cadencia" | "proposta" | "ia";
+/**
+ * Abas da tela de negócio. Fica aqui, e não no componente, porque a page
+ * (server) valida a query string.
+ *
+ * `ia` virou `conversa`: o id não batia com nada — o rótulo era "Mensagens", o
+ * componente se chamava `CopilotoTab`, e não havia IA nenhuma dentro. Agora a
+ * aba é a conversa com o cliente, e o nome diz isso.
+ */
+export type Aba = "geral" | "cadencia" | "proposta" | "conversa";
+
+const ABAS_VALIDAS: readonly string[] = ["geral", "cadencia", "proposta", "conversa"];
+
+/**
+ * Aceita `?tab=ia` como apelido de `conversa`. Links antigos existem em
+ * notificações já enviadas e em favoritos; quebrá-los levaria a pessoa para a
+ * aba errada sem explicação.
+ */
+export function normalizarAba(valor: string | undefined): Aba | undefined {
+  if (valor === "ia") return "conversa";
+  return ehAbaValida(valor) ? valor : undefined;
+}
 
 export function ehAbaValida(valor: string | undefined): valor is Aba {
-  return valor === "geral" || valor === "cadencia" || valor === "proposta" || valor === "ia";
+  return valor !== undefined && ABAS_VALIDAS.includes(valor);
 }
 
 /**

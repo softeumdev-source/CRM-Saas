@@ -23,14 +23,25 @@ import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
 import type { Pipeline } from "@/lib/pipelines";
-import { AreaTexto, Botao, Campo, Modal, Selecao } from "@/components/ui";
+import {
+  Abas,
+  AreaTexto,
+  Botao,
+  Campo,
+  Modal,
+  Selecao,
+  useAbaNaUrl,
+  useIdDeAbas,
+  type Aba as ItemDeAba,
+} from "@/components/ui";
+import { MoverDeFunil } from "@/components/negocio/MoverDeFunil";
 
 type PropostaComRelacoes = Record<string, unknown>;
-const ABAS: { id: Aba; label: string }[] = [
-  { id: "geral", label: "Visão Geral" },
-  { id: "cadencia", label: "Cadência" },
-  { id: "proposta", label: "Proposta & Assinatura" },
-  { id: "ia", label: "Mensagens" },
+const ABAS: readonly ItemDeAba<Aba>[] = [
+  { chave: "geral", rotulo: "Visão Geral" },
+  { chave: "cadencia", rotulo: "Cadência" },
+  { chave: "proposta", rotulo: "Proposta & Assinatura" },
+  { chave: "conversa", rotulo: "Conversa" },
 ];
 
 /** Para onde este negócio pode ser entregue (SDR → vendedor). */
@@ -68,7 +79,11 @@ export function NegocioDetailClient({
   const [negocio, setNegocio] = useState(negocioInicial);
   const [atividades, setAtividades] = useState(atividadesIniciais);
   const [propostas, setPropostas] = useState(propostasIniciais);
-  const [aba, setAba] = useState<Aba>(abaInicial);
+  // A troca de aba agora vai para a URL: F5 e link compartilhado caem na mesma
+  // aba. Antes so `?tab=` da entrada era respeitado, e clicar numa aba nao
+  // mudava o endereco.
+  const [aba, setAba] = useAbaNaUrl<Aba>(abaInicial);
+  const idDasAbas = useIdDeAbas("negocio");
   const [erro, setErro] = useState<string | null>(null);
 
   const negocioId = negocioInicial.id;
@@ -173,6 +188,11 @@ export function NegocioDetailClient({
   // O board de onde este negócio veio — para onde voltar depois de fechar ou
   // de entregar. Um SDR que entrega um lead não pode cair no board do vendedor.
   const voltarPara = pipeline?.chave === "sdr" ? "/sdr" : "/";
+
+  // O outro lado do corredor: para quem este funil entrega, ou de quem ele
+  // recebe. Os dois já vêm do servidor, então mover nos dois sentidos não
+  // custa consulta nenhuma a mais.
+  const outroFunil = entrega?.funil ?? devolucao?.funil ?? null;
 
   // Ganhei/Perdi só existem em funil que tenha etapa de fechamento. O funil do
   // SDR não tem etapa de ganho de propósito: entregar o lead não é vender.
@@ -291,7 +311,22 @@ export function NegocioDetailClient({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Mover de funil nos DOIS sentidos, sempre disponível. O botão
+                "Entregar ao vendedor" abaixo continua existindo porque ele faz
+                outra coisa: escolhe UMA pessoa para assumir. Este aqui é a
+                saída geral — inclusive a volta de Vendas para prospecção, que
+                antes só acontecia como resposta a "não compareceu". */}
+            {outroFunil && (
+              <MoverDeFunil
+                negocio={negocio}
+                outroFunil={outroFunil}
+                aoMover={() => {
+                  router.push(voltarPara);
+                  router.refresh();
+                }}
+              />
+            )}
             {/* O SDR não fecha venda: o que ele faz com um lead pronto é
                 entregar. Por isso a ação principal do funil de prospecção é
                 esta, e "Ganhei" nem chega a existir lá. */}
@@ -440,22 +475,18 @@ export function NegocioDetailClient({
         </div>
       </div>
 
-      <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1 w-fit max-w-full overflow-x-auto">
-        {ABAS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setAba(t.id)}
-            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap ${
-              aba === t.id ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-xs" : "text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            {t.label}
-            {t.id === "cadencia" && proximaAtrasada && (
-              <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-rose-500 align-middle" />
-            )}
-          </button>
-        ))}
-      </div>
+      <Abas
+        abas={ABAS.map((t) =>
+          t.chave === "cadencia"
+            ? { ...t, alerta: proximaAtrasada }
+            : t.chave === "conversa" && (negocio.respostas_nao_lidas ?? 0) > 0
+              ? { ...t, contagem: negocio.respostas_nao_lidas ?? 0 }
+              : t,
+        )}
+        valor={aba}
+        aoTrocar={setAba}
+        idBase={idDasAbas}
+      />
 
       {aba === "geral" && (
         <VisaoGeralTab
@@ -478,7 +509,7 @@ export function NegocioDetailClient({
       {aba === "proposta" && (
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
-      {aba === "ia" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
+      {aba === "conversa" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
 
       {entrega && (
         <Modal

@@ -7,7 +7,7 @@ import {
   carregarPipelinePorId,
   etapaComFuncao,
 } from "@/lib/pipelines";
-import { SELECT_NEGOCIO_COMPLETO, ehAbaValida } from "@/lib/types";
+import { SELECT_NEGOCIO_COMPLETO, normalizarAba } from "@/lib/types";
 
 export default async function NegocioPage({
   params,
@@ -90,7 +90,7 @@ export default async function NegocioPage({
       atividadesIniciais={(atividades as never) || []}
       propostasIniciais={(propostas as never) || []}
       usuarioAtual={usuarioAtual!}
-      abaInicial={ehAbaValida(tab) ? tab : "geral"}
+      abaInicial={normalizarAba(tab) ?? "geral"}
     />
   );
 }
