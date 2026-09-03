@@ -260,6 +260,7 @@ export type Database = {
       etapas_pipeline: {
         Row: {
           resultado: string | null
+          pipeline_id: string | null
           cor: string | null
           id: string
           nome: string
@@ -269,6 +270,7 @@ export type Database = {
         }
         Insert: {
           resultado?: string | null
+          pipeline_id?: string | null
           cor?: string | null
           id?: string
           nome: string
@@ -278,6 +280,7 @@ export type Database = {
         }
         Update: {
           resultado?: string | null
+          pipeline_id?: string | null
           cor?: string | null
           id?: string
           nome?: string
@@ -286,6 +289,13 @@ export type Database = {
           tenant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "etapas_pipeline_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "etapas_pipeline_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -348,6 +358,7 @@ export type Database = {
           ganho: boolean | null
           id: string
           motivo_perda: string | null
+          pipeline_id: string | null
           prioridade: string | null
           probabilidade: number | null
           responsavel_id: string | null
@@ -366,6 +377,7 @@ export type Database = {
           ganho?: boolean | null
           id?: string
           motivo_perda?: string | null
+          pipeline_id?: string | null
           prioridade?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
@@ -384,6 +396,7 @@ export type Database = {
           ganho?: boolean | null
           id?: string
           motivo_perda?: string | null
+          pipeline_id?: string | null
           prioridade?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
@@ -405,6 +418,13 @@ export type Database = {
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "etapas_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negocios_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
           {
@@ -460,6 +480,51 @@ export type Database = {
             columns: ["usuario_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipelines: {
+        Row: {
+          chave: string
+          criado_em: string | null
+          id: string
+          nome: string
+          pipeline_destino_id: string | null
+          role_operador: string
+          tenant_id: string | null
+        }
+        Insert: {
+          chave: string
+          criado_em?: string | null
+          id?: string
+          nome: string
+          pipeline_destino_id?: string | null
+          role_operador?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          chave?: string
+          criado_em?: string | null
+          id?: string
+          nome?: string
+          pipeline_destino_id?: string | null
+          role_operador?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipelines_pipeline_destino_id_fkey"
+            columns: ["pipeline_destino_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipelines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

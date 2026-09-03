@@ -8,12 +8,15 @@ import { ehDoTime } from "@/lib/types";
 import { Botao, Campo, Entrada, Modal, Selecao } from "@/components/ui";
 
 export function NewLeadModal({
+  pipelineId,
   etapas,
   etapaInicial,
   vendedores,
   usuarioAtual,
   onClose,
 }: {
+  /** Funil em que o negócio nasce. Ver o comentário do insert abaixo. */
+  pipelineId: string | null;
   etapas: EtapaPipeline[];
   /** Etapa em que o card será criado (vem do botão "+" da coluna). */
   etapaInicial?: string | null;
@@ -74,6 +77,10 @@ export function NewLeadModal({
         contato_id: contato.id,
         responsavel_id: responsavelId || null,
         etapa_id: etapaId || null,
+        // O gatilho `trg_negocios_pipeline` deduz o funil pela etapa; mandamos
+        // explícito porque `etapa_id` é nulável e negócio sem funil não
+        // aparece em board nenhum.
+        pipeline_id: etapa?.pipeline_id ?? pipelineId,
         probabilidade: etapa?.probabilidade ?? 10,
       })
       .select()

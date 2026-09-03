@@ -1,0 +1,77 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database, Tables } from "@/lib/supabase/types";
+import type { EtapaPipeline } from "@/lib/types";
+
+export type Pipeline = Tables<"pipelines">;
+
+/**
+ * A chave é imutável no banco (CHECK em `pipelines.chave`) justamente para o
+ * código poder referenciá-la: o nome exibido pode ser trocado pelo admin sem
+ * quebrar nada.
+ */
+export const CHAVES_PIPELINE = ["vendas", "sdr"] as const;
+export type ChavePipeline = (typeof CHAVES_PIPELINE)[number];
+
+/** O funil do vendedor. É o único que existe até a Fase 4. */
+export const PIPELINE_VENDAS: ChavePipeline = "vendas";
+
+type Cliente = SupabaseClient<Database>;
+
+/**
+ * Este módulo é o caminho EXCLUSIVO para ler etapas.
+ *
+ * O motivo é a armadilha nº 2 do projeto: `etapas_pipeline` era consultada sem
+ * filtro em quatro lugares, então a primeira etapa de SDR criada apareceria
+ * como coluna extra no board do vendedor, na lista e no seletor de etapa do
+ * negócio — em produção, sem aviso. Com a leitura concentrada aqui, "consulta
+ * sem filtro" deixa de ser uma questão de disciplina: o ESLint recusa
+ * `from("etapas_pipeline")` em qualquer outro arquivo (regra
+ * `no-restricted-syntax` em `eslint.config.mjs`).
+ */
+export async function carregarPipeline(
+  supabase: Cliente,
+  chave: ChavePipeline = PIPELINE_VENDAS,
+): Promise<Pipeline | null> {
+  const { data } = await supabase.from("pipelines").select("*").eq("chave", chave).maybeSingle();
+  return data ?? null;
+}
+
+/**
+ * Valor para `.eq("pipeline_id", …)` quando o funil não existe. É um UUID
+ * válido que não casa com nada: passar string vazia faria o Postgres recusar o
+ * cast e a consulta voltaria com erro em vez de lista vazia, o que na prática
+ * vira tela quebrada em vez de board vazio.
+ */
+export const NENHUM_FUNIL = "00000000-0000-0000-0000-000000000000";
+
+/** Recorte de funil para consultas de `negocios`. */
+export function recorteDeFunil(pipelineId: string | null | undefined): string {
+  return pipelineId || NENHUM_FUNIL;
+}
+
+/** Etapas de um único funil, na ordem em que aparecem no board. */
+export async function carregarEtapas(
+  supabase: Cliente,
+  pipelineId: string | null | undefined,
+): Promise<EtapaPipeline[]> {
+  if (!pipelineId) return [];
+  const { data } = await supabase
+    .from("etapas_pipeline")
+    .select("*")
+    .eq("pipeline_id", pipelineId)
+    .order("ordem");
+  return data ?? [];
+}
+
+/**
+ * O par que quase toda tela precisa: o funil e as etapas dele, numa ida só ao
+ * banco por vez. Devolve `pipeline: null` quando o tenant ainda não tem aquele
+ * funil — é o que a Fase 4 usa para esconder o board do SDR de quem não o tem.
+ */
+export async function carregarFunil(
+  supabase: Cliente,
+  chave: ChavePipeline = PIPELINE_VENDAS,
+): Promise<{ pipeline: Pipeline | null; etapas: EtapaPipeline[] }> {
+  const pipeline = await carregarPipeline(supabase, chave);
+  return { pipeline, etapas: await carregarEtapas(supabase, pipeline?.id) };
+}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminClient } from "@/components/admin/AdminClient";
+import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipelines";
 
 /**
  * Teto explicito: a consulta era ilimitada e, no volume alvo de 500-2000
@@ -20,12 +21,20 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, { data: etapas }, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }] = await Promise.all([
+  // Os números do admin são os do funil de vendas. Quando o board do SDR
+  // existir (Fase 4) ele terá as métricas dele; misturar os dois aqui mudaria
+  // toda taxa de conversão do vendedor sem ninguém pedir.
+  const pipeline = await carregarPipeline(supabase);
+
+  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, etapas, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }] = await Promise.all([
     supabase.from("usuarios").select("*").order("criado_em"),
     supabase.from("convites").select("*").order("criado_em", { ascending: false }),
     supabase.from("planos").select("*").order("valor_plataforma_base"),
-    supabase.from("negocios").select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)"),
-    supabase.from("etapas_pipeline").select("*").order("ordem"),
+    supabase
+      .from("negocios")
+      .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+      .eq("pipeline_id", recorteDeFunil(pipeline?.id)),
+    carregarEtapas(supabase, pipeline?.id),
     supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }).limit(TETO_LEADS_SEM_DONO),
     supabase.from("contatos").select("*, responsavel:usuarios(id, nome)").not("responsavel_id", "is", null).order("criado_em", { ascending: false }).limit(1000),
     supabase.from("negocio_etapa_historico").select("negocio_id, etapa_id"),
@@ -41,7 +50,7 @@ export default async function AdminPage() {
       convites={convites || []}
       planos={planos || []}
       negocios={(negocios as any) || []}
-      etapas={etapas || []}
+      etapas={etapas}
       contatosSemDono={contatosSemDono || []}
       tetoLeadsSemDono={TETO_LEADS_SEM_DONO}
       contatosComDono={(contatosComDono as any) || []}

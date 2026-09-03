@@ -8,6 +8,7 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
+import { recorteDeFunil } from "@/lib/pipelines";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
@@ -22,11 +23,13 @@ const FOCOS: { chave: Foco; label: string }[] = [
 ];
 
 export function KanbanPageClient({
+  pipelineId,
   etapas,
   negocios: negociosIniciais,
   vendedores,
   usuarioAtual,
 }: {
+  pipelineId: string | null;
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
   vendedores: Usuario[];
@@ -46,13 +49,22 @@ export function KanbanPageClient({
     const { data } = await createClient()
       .from("negocios")
       .select(SELECT_NEGOCIO_COMPLETO)
+      .eq("pipeline_id", recorteDeFunil(pipelineId))
       .order("criado_em", { ascending: false });
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
-  }, []);
+  }, [pipelineId]);
 
+  // O filtro por funil chega até o Realtime: sem ele, mexer num negócio do SDR
+  // faria este board recarregar inteiro à toa. Funciona porque `negocios` está
+  // com `replica identity full` — sem isso o Postgres não manda a coluna nos
+  // eventos de UPDATE/DELETE e o board pararia de atualizar ao arrastar card.
   useSincronizacao(recarregar, {
     canal: "pipeline",
-    tabelas: [{ tabela: "negocios" }, { tabela: "contatos" }, { tabela: "atividades" }],
+    tabelas: [
+      { tabela: "negocios", filtro: `pipeline_id=eq.${recorteDeFunil(pipelineId)}` },
+      { tabela: "contatos" },
+      { tabela: "atividades" },
+    ],
   });
 
   const moverNegocio = useCallback(
@@ -261,6 +273,7 @@ export function KanbanPageClient({
 
       {modalAberto && (
         <NewLeadModal
+          pipelineId={pipelineId}
           etapas={etapas}
           etapaInicial={etapaNovoNegocio}
           vendedores={vendedores}

@@ -6,6 +6,7 @@ import { Search, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
+import { recorteDeFunil } from "@/lib/pipelines";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda } from "@/lib/types";
 import {
@@ -20,9 +21,11 @@ import {
 type Ordem = "recentes" | "sem_contato" | "valor" | "proxima_acao";
 
 export function ListaClient({
+  pipelineId,
   negocios: negociosIniciais,
   etapas,
 }: {
+  pipelineId: string | null;
   negocios: NegocioComRelacoes[];
   etapas: EtapaPipeline[];
 }) {
@@ -35,13 +38,18 @@ export function ListaClient({
     const { data } = await createClient()
       .from("negocios")
       .select(SELECT_NEGOCIO_COMPLETO)
+      .eq("pipeline_id", recorteDeFunil(pipelineId))
       .order("criado_em", { ascending: false });
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
-  }, []);
+  }, [pipelineId]);
 
   useSincronizacao(recarregar, {
     canal: "lista-negocios",
-    tabelas: [{ tabela: "negocios" }, { tabela: "contatos" }, { tabela: "atividades" }],
+    tabelas: [
+      { tabela: "negocios", filtro: `pipeline_id=eq.${recorteDeFunil(pipelineId)}` },
+      { tabela: "contatos" },
+      { tabela: "atividades" },
+    ],
   });
 
   const filtrados = useMemo(() => {
