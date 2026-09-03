@@ -14,6 +14,29 @@ import { DesempenhoTab } from "@/components/admin/DesempenhoTab";
 import { DescontosTab } from "@/components/admin/DescontosTab";
 import { CadenciasTab } from "@/components/admin/CadenciasTab";
 import { IntegracoesTab } from "@/components/admin/IntegracoesTab";
+import { Abas, useAbaNaUrl, useIdDeAbas } from "@/components/ui";
+
+/**
+ * A lista e a fonte do tipo. Antes a uniao estava escrita a mao no `useState`
+ * ao lado de um literal inline, e o `onClick` fazia `t.id as any` para os dois
+ * conversarem — ou seja, acrescentar uma aba e esquecer da uniao compilava.
+ */
+const ABAS_ADMIN = [
+  { chave: "desempenho", rotulo: "Desempenho", icone: LineChart },
+  { chave: "vendedores", rotulo: "Time", icone: Users },
+  { chave: "funil", rotulo: "Funil do Vendedor", icone: BarChart3 },
+  { chave: "planos", rotulo: "Planos", icone: Package },
+  { chave: "leads", rotulo: "Leads", icone: UserSquare2 },
+  { chave: "descontos", rotulo: "Descontos", icone: BadgePercent },
+  { chave: "cadencias", rotulo: "Cadências", icone: Send },
+  { chave: "integracoes", rotulo: "Integrações", icone: Plug },
+] as const;
+
+export type AbaAdmin = (typeof ABAS_ADMIN)[number]["chave"];
+
+export function ehAbaAdmin(v: string | undefined): v is AbaAdmin {
+  return ABAS_ADMIN.some((a) => a.chave === v);
+}
 
 export function AdminClient({
   usuarios,
@@ -27,6 +50,7 @@ export function AdminClient({
   historicoEtapas,
   solicitacoesDesconto,
   usuarioAtual,
+  abaInicial = "desempenho",
 }: {
   usuarios: Usuario[];
   convites: Convite[];
@@ -38,9 +62,14 @@ export function AdminClient({
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   historicoEtapas?: { negocio_id: string; etapa_id: string | null }[];
   solicitacoesDesconto?: any[];
+  /** Vem de `?tab=`, validado no servidor. */
+  abaInicial?: AbaAdmin;
   usuarioAtual: Usuario;
 }) {
-  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos" | "cadencias" | "integracoes">("desempenho");
+  // Estado da aba na URL: F5 e link compartilhado caem na mesma aba. Antes o
+  // admin inteiro nao tinha uma unica leitura de query string.
+  const [aba, setAba] = useAbaNaUrl<AbaAdmin>(abaInicial);
+  const idDasAbas = useIdDeAbas("admin");
   const router = useRouter();
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,32 +120,21 @@ export function AdminClient({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center bg-recuo/80 p-1.5 rounded-2xl border border-fio/60 shrink-0">
-          {[
-            { id: "desempenho", label: "Desempenho", icon: LineChart },
-            { id: "vendedores", label: `Time (${membrosAtivos.length})`, icon: Users },
-            { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
-            { id: "planos", label: `Planos (${planos.length})`, icon: Package },
-            { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
-            { id: "descontos", label: descontosPendentes > 0 ? `Descontos (${descontosPendentes})` : "Descontos", icon: BadgePercent },
-            { id: "cadencias", label: "Cadências", icon: Send },
-            { id: "integracoes", label: "Integrações", icon: Plug },
-          ].map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setAba(t.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 text-rotulo font-medium rounded-xl transition-colors duration-150 ease-out ${
-                  aba === t.id ? "bg-acento-solido text-acento-tinta shadow-md" : "text-tinta-fraca hover:text-tinta"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <Abas
+          abas={ABAS_ADMIN.map((a) => ({
+            ...a,
+            contagem:
+              a.chave === "vendedores" ? membrosAtivos.length
+              : a.chave === "planos" ? planos.length
+              : a.chave === "leads" ? contatosSemDono.length
+              : a.chave === "descontos" && descontosPendentes > 0 ? descontosPendentes
+              : undefined,
+            alerta: a.chave === "descontos" && descontosPendentes > 0,
+          }))}
+          valor={aba}
+          aoTrocar={setAba}
+          idBase={idDasAbas}
+        />
       </div>
 
       {aba === "desempenho" && <DesempenhoTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} historicoEtapas={historicoEtapas || []} />}

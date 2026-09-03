@@ -5,6 +5,7 @@ import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
+import { Botao, Campo, Entrada, Modal } from "@/components/ui";
 import { Confirmar } from "@/components/ui";
 
 const PLANO_VAZIO = {
@@ -120,21 +121,22 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
         ))}
       </div>
 
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 bg-superficie/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-superficie rounded-2xl max-w-lg w-full border border-fio shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-fio flex items-center justify-between">
-              <h3 className="font-medium text-tinta">{editando ? "Editar plano" : "Novo plano"}</h3>
-              <button onClick={() => setModalAberto(false)}><X className="h-5 w-5 text-tinta-fraca" /></button>
-            </div>
-            <form onSubmit={salvar} className="p-5 space-y-3">
+      <Modal
+        aberto={modalAberto}
+        aoFechar={() => setModalAberto(false)}
+        titulo={editando ? "Editar plano" : "Novo plano"}
+      >
+        {/* Era um `fixed inset-0` a mao: sem role="dialog", sem aria-modal, sem
+            Escape, sem foco preso e sem portal — para leitor de tela, um monte
+            de conteudo solto por cima da pagina. */}
+        <form onSubmit={salvar} className="flex flex-col gap-3">
               <input required placeholder="Nome do plano" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
               <textarea placeholder="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Franquia de pedidos/mês" value={form.franquia_pedidos} onChange={(v) => setForm({ ...form, franquia_pedidos: v })} />
-                <Campo label="Excedente por pedido (R$)" value={form.valor_excedente_pedido} onChange={(v) => setForm({ ...form, valor_excedente_pedido: v })} step="0.01" />
-                <Campo label="Mensalidade base (R$/mês)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
-                <Campo label="Setup (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
+                <CampoNumero label="Franquia de pedidos/mês" value={form.franquia_pedidos} onChange={(v) => setForm({ ...form, franquia_pedidos: v })} />
+                <CampoNumero label="Excedente por pedido (R$)" value={form.valor_excedente_pedido} onChange={(v) => setForm({ ...form, valor_excedente_pedido: v })} step="0.01" />
+                <CampoNumero label="Mensalidade base (R$/mês)" value={form.valor_plataforma_base} onChange={(v) => setForm({ ...form, valor_plataforma_base: v })} />
+                <CampoNumero label="Setup (R$)" value={form.valor_setup_plataforma} onChange={(v) => setForm({ ...form, valor_setup_plataforma: v })} />
               </div>
               {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
               <div className="pt-3 border-t border-fio flex justify-end gap-2">
@@ -142,9 +144,7 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
                 <button type="submit" disabled={salvando} className="px-5 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-60">{salvando ? "Salvando..." : "Salvar plano"}</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <Confirmar
         aberto={!!excluindo}
@@ -163,17 +163,24 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
   );
 }
 
-function Campo({ label, value, onChange, step }: { label: string; value: number; onChange: (v: number) => void; step?: string }) {
+/**
+ * O campo numerico do plano. Era um `Campo` LOCAL com `id="planostab-1"` fixo,
+ * renderizado quatro vezes no mesmo formulario — quatro `<label htmlFor>`
+ * apontando para o mesmo input, entao clicar em tres deles focava o campo
+ * errado. Agora envolve o `Campo` de ui/, que gera o id com `useId()`.
+ */
+function CampoNumero({ label, value, onChange, step }: { label: string; value: number; onChange: (v: number) => void; step?: string }) {
   return (
-    <div>
-      <label htmlFor="planostab-1" className="text-rotulo font-medium text-tinta-suave block mb-1">{label}</label>
-      <input id="planostab-1"
-        type="number"
-        step={step || "1"}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium text-acento"
-      />
-    </div>
+    <Campo rotulo={label}>
+      {(p) => (
+        <Entrada
+          {...p}
+          type="number"
+          step={step || "1"}
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        />
+      )}
+    </Campo>
   );
 }

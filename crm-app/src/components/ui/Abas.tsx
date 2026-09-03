@@ -17,6 +17,8 @@ import type { ReactNode } from "react";
 export interface Aba<C extends string> {
   chave: C;
   rotulo: string;
+  /** Opcional. Ajuda quando sao muitas abas — o admin tem oito. */
+  icone?: React.ComponentType<{ className?: string }>;
   /** Numero ao lado do rotulo. `0` aparece; `undefined` nao. */
   contagem?: number;
   /** Ponto de atencao, para "tem coisa aqui" sem numero. */
@@ -87,6 +89,7 @@ export function Abas<C extends string>({
                 : "text-tinta-suave font-medium hover:text-tinta",
             ].join(" ")}
           >
+            {a.icone ? <a.icone className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
             {a.rotulo}
             {a.contagem !== undefined ? (
               <span className={ativa ? "text-tinta-fraca tabular" : "text-tinta-fraca tabular"}>

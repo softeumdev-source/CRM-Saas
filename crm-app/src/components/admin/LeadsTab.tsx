@@ -366,7 +366,7 @@ export function LeadsTab({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <select aria-label="Vendedor que vai receber os leads selecionados" value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="">Escolher vendedor...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
@@ -445,14 +445,14 @@ export function LeadsTab({
                 className="pl-8 pr-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl w-56"
               />
             </div>
-            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <select aria-label="Filtrar leads por vendedor" value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="all">Todos os vendedores</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
             <div className="flex-1" />
-            <select value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
+            <select aria-label="Passar os leads selecionados para outro vendedor" value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="">Passar para...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>

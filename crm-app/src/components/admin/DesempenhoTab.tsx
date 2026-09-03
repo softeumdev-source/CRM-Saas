@@ -180,6 +180,7 @@ export function DesempenhoTab({
           <div className="ml-auto flex items-center gap-2">
             <Users className="h-3.5 w-3.5 text-tinta-fraca" />
             <select
+              aria-label="Ver o funil de conversão de um vendedor"
               value={vendedorFunil}
               onChange={(e) => setVendedorFunil(e.target.value)}
               className="px-3 py-1.5 text-rotulo font-medium bg-recuo border border-fio rounded-xl"

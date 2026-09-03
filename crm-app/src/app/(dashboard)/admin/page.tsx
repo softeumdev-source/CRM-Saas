@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminClient } from "@/components/admin/AdminClient";
+import { AdminClient, ehAbaAdmin } from "@/components/admin/AdminClient";
 import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipelines";
 
 /**
@@ -10,7 +10,13 @@ import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipeline
  */
 const TETO_LEADS_SEM_DONO = 500;
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  // Nesta versao do Next `searchParams` e uma Promise.
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -57,6 +63,7 @@ export default async function AdminPage() {
       historicoEtapas={historicoEtapas || []}
       solicitacoesDesconto={(solicitacoesDesconto as any) || []}
       usuarioAtual={usuarioAtual}
+      abaInicial={ehAbaAdmin(tab) ? tab : "desempenho"}
     />
   );
 }

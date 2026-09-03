@@ -54,7 +54,7 @@ export function FunilTab({
             <select id="funiltab-2"
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              className="px-4 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-2xl w-full"
+              className="px-4 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-xl w-full"
             >
               <option value="all">Visão geral (todos os vendedores)</option>
               <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
