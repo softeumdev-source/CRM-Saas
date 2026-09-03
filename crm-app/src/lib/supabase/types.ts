@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       atividades: {
         Row: {
+          compareceu: boolean | null
           concluida: boolean | null
           concluida_em: string | null
           confirmada: boolean | null
@@ -31,6 +32,7 @@ export type Database = {
           usuario_id: string | null
         }
         Insert: {
+          compareceu?: boolean | null
           concluida?: boolean | null
           concluida_em?: string | null
           confirmada?: boolean | null
@@ -46,6 +48,7 @@ export type Database = {
           usuario_id?: string | null
         }
         Update: {
+          compareceu?: boolean | null
           concluida?: boolean | null
           concluida_em?: string | null
           confirmada?: boolean | null
@@ -360,6 +363,7 @@ export type Database = {
           motivo_perda: string | null
           pipeline_id: string | null
           prioridade: string | null
+          retomar_em: string | null
           probabilidade: number | null
           responsavel_id: string | null
           tenant_id: string | null
@@ -379,6 +383,7 @@ export type Database = {
           motivo_perda?: string | null
           pipeline_id?: string | null
           prioridade?: string | null
+          retomar_em?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
           tenant_id?: string | null
@@ -398,6 +403,7 @@ export type Database = {
           motivo_perda?: string | null
           pipeline_id?: string | null
           prioridade?: string | null
+          retomar_em?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
           tenant_id?: string | null

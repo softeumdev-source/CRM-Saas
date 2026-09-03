@@ -19,6 +19,7 @@ import {
   Loader2,
   Trash2,
   CalendarClock,
+  Radar,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -81,10 +82,17 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
 
   const links = [
     { href: "/", label: "Pipeline Kanban", icon: Kanban },
+  ];
+  // O board do SDR so aparece para quem opera ele. Um vendedor que abrisse
+  // /sdr veria um board vazio, porque a RLS nao lhe mostra lead nenhum de la.
+  if (usuario.role === "sdr" || usuario.role === "admin") {
+    links.push({ href: "/sdr", label: "Prospecção", icon: Radar });
+  }
+  links.push(
     { href: "/agenda", label: "Agenda", icon: CalendarClock },
     { href: "/lista", label: "Lista de Leads", icon: ListFilter },
     { href: "/assinaturas", label: "Assinaturas", icon: FileSignature },
-  ];
+  );
   if (usuario.role === "admin") {
     links.push({ href: "/admin", label: "Painel Admin", icon: ShieldCheck });
   }

@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, Wallet } from "lucide-react";
+import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, Users, Wallet } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
-import { recorteDeFunil } from "@/lib/pipelines";
+import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
@@ -23,19 +23,25 @@ const FOCOS: { chave: Foco; label: string }[] = [
 ];
 
 export function KanbanPageClient({
-  pipelineId,
+  pipeline,
   etapas,
   negocios: negociosIniciais,
   responsaveis,
   usuarioAtual,
 }: {
-  pipelineId: string | null;
+  /** O funil desta tela. É ele que decide o recorte, o título e as métricas. */
+  pipeline: Pipeline | null;
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
   /** Quem pode ser dono de um card deste funil (`pipelines.role_operador`). */
   responsaveis: Usuario[];
   usuarioAtual: Usuario;
 }) {
+  const pipelineId = pipeline?.id ?? null;
+  // O SDR nao vende: o que ele entrega e reuniao, nao receita. Por isso o
+  // cartao de valor do funil da lugar a contagem de leads no board dele.
+  const ehSdr = pipeline?.chave === "sdr";
+
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
   const [modalAberto, setModalAberto] = useState(false);
   const [etapaNovoNegocio, setEtapaNovoNegocio] = useState<string | null>(null);
@@ -172,9 +178,13 @@ export function KanbanPageClient({
       <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 pt-5 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Pipeline de Vendas</h1>
+            <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+              {ehSdr ? "Prospecção (SDR)" : "Pipeline de Vendas"}
+            </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Arraste os cards entre as etapas. Quem recebe atividade hoje fica verde e desce para o fim da coluna.
+              {ehSdr
+                ? "Cadência, qualificação e agendamento. Quando o cliente aceita a reunião, entregue o lead ao vendedor pelo card."
+                : "Arraste os cards entre as etapas. Quem recebe atividade hoje fica verde e desce para o fim da coluna."}
             </p>
           </div>
           <button
@@ -182,17 +192,26 @@ export function KanbanPageClient({
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
           >
             <Plus className="h-4 w-4" />
-            <span>Novo Negócio</span>
+            <span>{ehSdr ? "Novo Lead" : "Novo Negócio"}</span>
           </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-          <ResumoCard
-            icone={<Wallet className="h-3.5 w-3.5" />}
-            rotulo={`Pipeline aberto (${resumo.abertos})`}
-            valor={formatarMoeda(resumo.valor)}
-            detalhe={`Ponderado: ${formatarMoeda(resumo.ponderado)}`}
-          />
+          {ehSdr ? (
+            <ResumoCard
+              icone={<Users className="h-3.5 w-3.5" />}
+              rotulo="Leads em prospecção"
+              valor={String(resumo.abertos)}
+              detalhe={`${filtrados.length} no board`}
+            />
+          ) : (
+            <ResumoCard
+              icone={<Wallet className="h-3.5 w-3.5" />}
+              rotulo={`Pipeline aberto (${resumo.abertos})`}
+              valor={formatarMoeda(resumo.valor)}
+              detalhe={`Ponderado: ${formatarMoeda(resumo.ponderado)}`}
+            />
+          )}
           <ResumoCard
             icone={<CheckCircle2 className="h-3.5 w-3.5" />}
             rotulo="Trabalhados hoje"
