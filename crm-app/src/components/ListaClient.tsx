@@ -23,25 +23,54 @@ type Ordem = "recentes" | "sem_contato" | "valor" | "proxima_acao";
 export function ListaClient({
   pipelineId,
   negocios: negociosIniciais,
+  total,
+  lote,
   etapas,
 }: {
   pipelineId: string | null;
   negocios: NegocioComRelacoes[];
+  /** Quantos existem no funil, não quantos vieram. */
+  total: number;
+  lote: number;
   etapas: EtapaPipeline[];
 }) {
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
   const [busca, setBusca] = useState("");
   const [etapaFiltro, setEtapaFiltro] = useState("all");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
+  const [carregados, setCarregados] = useEstadoDaProp(negociosIniciais.length);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const buscarAte = useCallback(
+    (limite: number) =>
+      createClient()
+        .from("negocios")
+        .select(SELECT_NEGOCIO_COMPLETO)
+        .eq("pipeline_id", recorteDeFunil(pipelineId))
+        .order("criado_em", { ascending: false })
+        .range(0, limite - 1),
+    [pipelineId],
+  );
 
   const recarregar = useCallback(async () => {
-    const { data } = await createClient()
-      .from("negocios")
-      .select(SELECT_NEGOCIO_COMPLETO)
-      .eq("pipeline_id", recorteDeFunil(pipelineId))
-      .order("criado_em", { ascending: false });
+    const { data } = await buscarAte(Math.max(carregados, lote));
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
-  }, [pipelineId]);
+  }, [buscarAte, carregados, lote]);
+
+  const carregarMais = useCallback(async () => {
+    const alvo = carregados + lote;
+    setCarregando(true);
+    const { data, error } = await buscarAte(alvo);
+    setCarregando(false);
+    if (error) {
+      setErro(`Não foi possível carregar mais: ${error.message}`);
+      return;
+    }
+    const lista = (data as unknown as NegocioComRelacoes[]) || [];
+    setNegocios(lista);
+    setCarregados(lista.length);
+  }, [buscarAte, carregados, lote, setNegocios, setCarregados]);
 
   // Sem `atividades`: o gatilho `atividades_tocar_negocio` já toca `negocios`
   // em tudo que esta tela mostra. Ver o comentário no KanbanPageClient.
@@ -83,9 +112,21 @@ export function ListaClient({
   return (
     <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-          Lista de Negócios ({filtrados.length})
-        </h1>
+        <div>
+          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+            Lista de Negócios ({filtrados.length})
+          </h1>
+          {/* A busca só alcança o que está carregado. Dizer isso é a diferença
+              entre "não existe" e "ainda não veio" — sem esta linha, procurar
+              um cliente que está na posição 300 devolveria "nenhum negócio
+              encontrado", que é uma resposta errada. */}
+          {carregados < total && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Mostrando {carregados} de {total}. A busca e os filtros trabalham
+              sobre estes {carregados}.
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -202,12 +243,34 @@ export function ListaClient({
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400">Nenhum negócio encontrado.</td>
+                  <td colSpan={8} className="p-6 text-center text-slate-400">
+                    {carregados < total
+                      ? `Nenhum negócio encontrado entre os ${carregados} carregados — carregue mais abaixo.`
+                      : "Nenhum negócio encontrado."}
+                  </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {erro && (
+          <p className="m-4 text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+            {erro}
+          </p>
+        )}
+
+        {carregados < total && (
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-center">
+            <button
+              onClick={() => void carregarMais()}
+              disabled={carregando}
+              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
+            >
+              {carregando ? "Carregando…" : `Carregar mais ${Math.min(lote, total - carregados)}`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

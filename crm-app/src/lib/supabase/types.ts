@@ -1092,6 +1092,14 @@ export type Database = {
       }
       usuario_role: { Args: never; Returns: string }
       usuario_tenant_id: { Args: never; Returns: string }
+      negocios_do_board: {
+        Args: { p_pipeline_id: string; p_por_etapa?: number }
+        Returns: Database["public"]["Tables"]["negocios"]["Row"][]
+      }
+      contagem_negocios_por_etapa: {
+        Args: { p_pipeline_id: string }
+        Returns: { etapa_id: string; total: number }[]
+      }
       transferir_negocio_de_funil: {
         Args: {
           p_descricao: string

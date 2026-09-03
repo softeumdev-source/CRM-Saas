@@ -10,11 +10,21 @@ import { LeadCard } from "@/components/LeadCard";
 export function KanbanBoard({
   etapas,
   negocios,
+  totaisPorEtapa,
+  carregadosPorEtapa,
+  carregandoMais,
+  onCarregarMais,
   onNovoNegocio,
   onMoverNegocio,
 }: {
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
+  /** Quantos existem no banco por etapa — pode ser mais do que está carregado. */
+  totaisPorEtapa: Record<string, number>;
+  /** Quantos estão carregados por etapa, ANTES dos filtros de busca/foco. */
+  carregadosPorEtapa: Record<string, number>;
+  carregandoMais: boolean;
+  onCarregarMais: () => void;
   onNovoNegocio: (etapaId: string) => void;
   onMoverNegocio: (negocioId: string, etapaId: string) => void;
 }) {
@@ -40,6 +50,16 @@ export function KanbanBoard({
           const atrasados = doEtapa.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
           const cor = etapa.cor || "#6366f1";
           const alvo = etapaAlvo === etapa.id;
+          // Três números diferentes, e confundi-los é o que faz um board
+          // mentir: `total` é quanto existe no banco, `carregados` é quanto
+          // veio nesta fatia, e `doEtapa.length` é quanto sobrou depois da
+          // busca e do foco. "Faltam" tem que sair dos dois primeiros — se
+          // saísse do filtrado, digitar qualquer busca faria toda coluna pedir
+          // "ver mais".
+          const total = totaisPorEtapa[etapa.id] ?? doEtapa.length;
+          const carregados = carregadosPorEtapa[etapa.id] ?? doEtapa.length;
+          const faltam = Math.max(0, total - carregados);
+          const filtrando = doEtapa.length !== carregados;
 
           return (
             <div
@@ -64,8 +84,15 @@ export function KanbanBoard({
                     <span
                       className="px-2 py-0.5 text-xs font-bold rounded-full shrink-0"
                       style={{ background: cor + "22", color: cor }}
+                      title={
+                        filtrando
+                          ? `${doEtapa.length} de ${carregados} carregados (${total} no total)`
+                          : faltam > 0
+                            ? `${carregados} carregados de ${total}`
+                            : undefined
+                      }
                     >
-                      {doEtapa.length}
+                      {filtrando ? doEtapa.length : faltam > 0 ? `${carregados}/${total}` : total}
                     </span>
                   </div>
                   <button
@@ -121,6 +148,16 @@ export function KanbanBoard({
                       <LeadCard negocio={negocio} />
                     </div>
                   ))
+                )}
+
+                {faltam > 0 && (
+                  <button
+                    onClick={onCarregarMais}
+                    disabled={carregandoMais}
+                    className="w-full py-2 text-[11px] font-bold text-slate-500 hover:text-indigo-600 bg-white/70 dark:bg-slate-900/60 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
+                  >
+                    {carregandoMais ? "Carregando…" : `Ver mais ${faltam > 50 ? 50 : faltam}`}
+                  </button>
                 )}
               </div>
             </div>

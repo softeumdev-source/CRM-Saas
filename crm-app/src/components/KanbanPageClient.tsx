@@ -9,8 +9,9 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
+import { CARDS_POR_ETAPA, buscarNegociosDoBoard, contarPorEtapa } from "@/lib/board";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
-import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa } from "@/lib/types";
+import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 
 type Foco = "todos" | "atencao" | "atrasados" | "sem_agenda";
@@ -26,6 +27,8 @@ export function KanbanPageClient({
   pipeline,
   etapas,
   negocios: negociosIniciais,
+  totaisPorEtapa,
+  porEtapa: porEtapaInicial,
   responsaveis,
   usuarioAtual,
 }: {
@@ -33,6 +36,8 @@ export function KanbanPageClient({
   pipeline: Pipeline | null;
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
+  totaisPorEtapa: Record<string, number>;
+  porEtapa: number;
   /** Quem pode ser dono de um card deste funil (`pipelines.role_operador`). */
   responsaveis: Usuario[];
   usuarioAtual: Usuario;
@@ -43,6 +48,11 @@ export function KanbanPageClient({
   const ehSdr = pipeline?.chave === "sdr";
 
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
+  const [totais, setTotais] = useEstadoDaProp(totaisPorEtapa);
+  // Quantos cards por coluna estão carregados. Sobe quando o usuário pede mais;
+  // o board inteiro recarrega com o teto novo, numa consulta só.
+  const [porEtapa, setPorEtapa] = useState(porEtapaInicial);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [etapaNovoNegocio, setEtapaNovoNegocio] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -53,13 +63,31 @@ export function KanbanPageClient({
   const [erro, setErro] = useState<string | null>(null);
 
   const recarregar = useCallback(async () => {
-    const { data } = await createClient()
-      .from("negocios")
-      .select(SELECT_NEGOCIO_COMPLETO)
-      .eq("pipeline_id", recorteDeFunil(pipelineId))
-      .order("criado_em", { ascending: false });
+    const supabase = createClient();
+    const [{ data }, { data: novosTotais }] = await Promise.all([
+      buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
+      contarPorEtapa(supabase, pipelineId),
+    ]);
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
-  }, [pipelineId]);
+    if (novosTotais) {
+      setTotais(Object.fromEntries(novosTotais.map((t) => [t.etapa_id, Number(t.total)])));
+    }
+  }, [pipelineId, porEtapa]);
+
+  // Busca com o teto novo ANTES de mexer no estado: assim o board nunca fica
+  // um render com o teto alto e os cards antigos.
+  const carregarMais = useCallback(async () => {
+    const novo = porEtapa + CARDS_POR_ETAPA;
+    setCarregandoMais(true);
+    const { data, error } = await buscarNegociosDoBoard(createClient(), pipelineId, novo);
+    setCarregandoMais(false);
+    if (error) {
+      setErro(`Não foi possível carregar mais cards: ${error.message}`);
+      return;
+    }
+    setNegocios((data as unknown as NegocioComRelacoes[]) || []);
+    setPorEtapa(novo);
+  }, [porEtapa, pipelineId, setNegocios]);
 
   // Duas coisas nesta assinatura:
   //
@@ -165,6 +193,16 @@ export function KanbanPageClient({
       semAgenda: abertos.filter((n) => !proximaAtividade(n.atividades_pendentes)).length,
     };
   }, [filtrados]);
+
+  // Contagem por etapa do que está carregado, sem os filtros de tela — é o
+  // outro lado da conta do "ver mais" no cabeçalho da coluna.
+  const carregadosPorEtapa = useMemo(() => {
+    const contagem: Record<string, number> = {};
+    for (const n of negocios) {
+      if (n.etapa_id) contagem[n.etapa_id] = (contagem[n.etapa_id] || 0) + 1;
+    }
+    return contagem;
+  }, [negocios]);
 
   const abrirNovoNegocio = (etapaId: string) => {
     setEtapaNovoNegocio(etapaId);
@@ -294,6 +332,10 @@ export function KanbanPageClient({
       <KanbanBoard
         etapas={etapas}
         negocios={filtrados}
+        totaisPorEtapa={totais}
+        carregadosPorEtapa={carregadosPorEtapa}
+        carregandoMais={carregandoMais}
+        onCarregarMais={carregarMais}
         onNovoNegocio={abrirNovoNegocio}
         onMoverNegocio={moverNegocio}
       />
