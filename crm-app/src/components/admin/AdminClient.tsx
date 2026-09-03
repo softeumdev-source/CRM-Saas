@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
+import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent, Send } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { ehDoTime, operaNegocios } from "@/lib/types";
@@ -12,6 +12,7 @@ import { PlanosTab } from "@/components/admin/PlanosTab";
 import { LeadsTab } from "@/components/admin/LeadsTab";
 import { DesempenhoTab } from "@/components/admin/DesempenhoTab";
 import { DescontosTab } from "@/components/admin/DescontosTab";
+import { CadenciasTab } from "@/components/admin/CadenciasTab";
 
 export function AdminClient({
   usuarios,
@@ -38,7 +39,7 @@ export function AdminClient({
   solicitacoesDesconto?: any[];
   usuarioAtual: Usuario;
 }) {
-  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos">("desempenho");
+  const [aba, setAba] = useState<"desempenho" | "vendedores" | "funil" | "planos" | "leads" | "descontos" | "cadencias">("desempenho");
   const router = useRouter();
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,6 +98,7 @@ export function AdminClient({
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
             { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
             { id: "descontos", label: descontosPendentes > 0 ? `Descontos (${descontosPendentes})` : "Descontos", icon: BadgePercent },
+            { id: "cadencias", label: "Cadências", icon: Send },
           ].map((t) => {
             const Icon = t.icon;
             return (
@@ -119,6 +121,7 @@ export function AdminClient({
       {aba === "vendedores" && <VendedoresTab membros={membros} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}
+      {aba === "cadencias" && <CadenciasTab />}
       {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
       {aba === "descontos" && <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />}
     </div>
