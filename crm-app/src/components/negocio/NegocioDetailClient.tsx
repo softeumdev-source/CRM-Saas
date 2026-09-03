@@ -20,7 +20,7 @@ import {
 import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
-import { CopilotoTab } from "@/components/negocio/CopilotoTab";
+import { MensagensTab } from "@/components/negocio/MensagensTab";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
 import type { Pipeline } from "@/lib/pipelines";
 import { AreaTexto, Botao, Campo, Modal, Selecao } from "@/components/ui";
@@ -478,7 +478,7 @@ export function NegocioDetailClient({
       {aba === "proposta" && (
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
-      {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
+      {aba === "ia" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
 
       {entrega && (
         <Modal
