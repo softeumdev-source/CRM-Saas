@@ -1,18 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Bot, Check, FileText, Loader2, Send, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
 import { AreaTexto, Botao, Entrada, Modal } from "@/components/ui";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
+import { formatarDataHora } from "@/lib/atividades";
 
 type Template = Tables<"templates_mensagem">;
+type ConfigWhats = Tables<"whatsapp_config">;
 
 export function CadenciasTab() {
   const [cadencias, setCadencias] = useState<CadenciaComPassos[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [whats, setWhats] = useState<ConfigWhats | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState<string | null>(null);
@@ -24,13 +27,14 @@ export function CadenciasTab() {
   const carregar = useCallback(async () => {
     const supabase = createClient();
     try {
-      const [cad, tpl] = await comPrazo(
+      const [cad, tpl, wa] = await comPrazo(
         Promise.all([
           supabase.from("cadencias").select("*, passos:cadencia_passos(*)").order("criado_em"),
           supabase.from("templates_mensagem").select("*").order("canal").order("nome"),
+          supabase.from("whatsapp_config").select("*").maybeSingle(),
         ]),
       );
-      const falha = cad.error || tpl.error;
+      const falha = cad.error || tpl.error || wa.error;
       if (falha) {
         setErro(`Não foi possível carregar: ${falha.message}`);
         return;
@@ -38,6 +42,7 @@ export function CadenciasTab() {
       setErro(null);
       setCadencias((cad.data || []) as unknown as CadenciaComPassos[]);
       setTemplates(tpl.data || []);
+      setWhats(wa.data ?? null);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar.");
     } finally {
@@ -56,6 +61,32 @@ export function CadenciasTab() {
     // afrouxar o tipo.
     const patch = campo === "autonoma" ? { autonoma: valor } : { ativa: valor };
     const { error } = await createClient().from("cadencias").update(patch).eq("id", id);
+    setSalvando(null);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setErro(null);
+    void carregar();
+  };
+
+  /**
+   * Ligar o canal LIMPA a marca de pausa automática. Sem isso, quem religasse
+   * depois de o monitor cortar continuaria vendo "pausado pelo monitor" com o
+   * canal no ar — a tela mentiria sobre o próprio estado.
+   */
+  const alternarWhats = async (pausar: boolean) => {
+    if (!whats) return;
+    setSalvando("whats");
+    const { error } = await createClient()
+      .from("whatsapp_config")
+      .update({
+        pausado: pausar,
+        pausado_automaticamente: false,
+        pausado_em: pausar ? new Date().toISOString() : null,
+        pausado_motivo: pausar ? "Desligado manualmente." : null,
+      })
+      .eq("id", whats.id);
     setSalvando(null);
     if (error) {
       setErro(error.message);
@@ -174,6 +205,77 @@ export function CadenciasTab() {
           </div>
         )}
       </div>
+
+      {whats && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-emerald-600" /> WhatsApp
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Mensagem iniciada pela empresa só sai por template aprovado pela Meta. Use um número
+              separado do comercial: se ele for bloqueado a ponto de ser banido, você perde o
+              descartável, não o número da empresa.
+            </p>
+          </div>
+
+          {whats.pausado ? (
+            <div
+              className={`rounded-2xl border p-4 ${
+                whats.pausado_automaticamente
+                  ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30"
+                  : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+              }`}
+            >
+              <p
+                className={`text-sm font-bold flex items-center gap-2 ${
+                  whats.pausado_automaticamente
+                    ? "text-rose-900 dark:text-rose-200"
+                    : "text-slate-800 dark:text-slate-200"
+                }`}
+              >
+                {whats.pausado_automaticamente ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                {whats.pausado_automaticamente ? "Pausado pelo monitor" : "Canal desligado"}
+              </p>
+              <p className="text-[11px] mt-1 text-slate-600 dark:text-slate-300">
+                {whats.pausado_motivo ||
+                  "O canal nasce desligado. Ligue só com o número separado no ar e os templates já aprovados."}
+                {whats.pausado_em && ` (${formatarDataHora(whats.pausado_em)})`}
+              </p>
+              <div className="mt-3">
+                <Botao
+                  tamanho="sm"
+                  variante="secundario"
+                  disabled={salvando === "whats"}
+                  onClick={() => void alternarWhats(false)}
+                >
+                  Ligar o canal
+                </Botao>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Canal ligado</p>
+                <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
+                  Até {whats.limite_por_hora}/hora e {whats.limite_por_dia}/dia, com no mínimo{" "}
+                  {whats.horas_entre_mensagens_por_lead}h entre mensagens para o mesmo lead. O monitor
+                  pausa sozinho se mais de {Math.round(Number(whats.limite_taxa_falha) * 100)}% das
+                  últimas {whats.janela_monitor} falharem.
+                </p>
+              </div>
+              <Botao
+                tamanho="sm"
+                variante="perigo"
+                disabled={salvando === "whats"}
+                onClick={() => void alternarWhats(true)}
+              >
+                Desligar
+              </Botao>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
         <div>

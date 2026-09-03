@@ -596,6 +596,7 @@ export type Database = {
           destino: string | null
           direcao: string
           enviada_em: string | null
+          erro_codigo: string | null
           gerado_por: string
           id: string
           idempotency_key: string | null
@@ -604,10 +605,13 @@ export type Database = {
           passo_id: string | null
           provedor_id: string | null
           proxima_tentativa_em: string | null
+          reservada_em: string | null
           status: string
+          template_externo: string | null
           tenant_id: string | null
           tentativas: number
           ultimo_erro: string | null
+          variaveis: string[] | null
         }
         Insert: {
           agendada_para?: string | null
@@ -621,6 +625,7 @@ export type Database = {
           destino?: string | null
           direcao?: string
           enviada_em?: string | null
+          erro_codigo?: string | null
           gerado_por?: string
           id?: string
           idempotency_key?: string | null
@@ -629,10 +634,13 @@ export type Database = {
           passo_id?: string | null
           provedor_id?: string | null
           proxima_tentativa_em?: string | null
+          reservada_em?: string | null
           status?: string
+          template_externo?: string | null
           tenant_id?: string | null
           tentativas?: number
           ultimo_erro?: string | null
+          variaveis?: string[] | null
         }
         Update: {
           agendada_para?: string | null
@@ -646,6 +654,7 @@ export type Database = {
           destino?: string | null
           direcao?: string
           enviada_em?: string | null
+          erro_codigo?: string | null
           gerado_por?: string
           id?: string
           idempotency_key?: string | null
@@ -654,10 +663,13 @@ export type Database = {
           passo_id?: string | null
           provedor_id?: string | null
           proxima_tentativa_em?: string | null
+          reservada_em?: string | null
           status?: string
+          template_externo?: string | null
           tenant_id?: string | null
           tentativas?: number
           ultimo_erro?: string | null
+          variaveis?: string[] | null
         }
         Relationships: [
           {
@@ -1430,6 +1442,65 @@ export type Database = {
           },
         ]
       }
+      whatsapp_config: {
+        Row: {
+          criado_em: string | null
+          horas_entre_mensagens_por_lead: number
+          id: string
+          janela_monitor: number
+          limite_por_dia: number
+          limite_por_hora: number
+          limite_taxa_falha: number
+          numero_exibicao: string | null
+          numero_id: string | null
+          pausado: boolean
+          pausado_automaticamente: boolean
+          pausado_em: string | null
+          pausado_motivo: string | null
+          tenant_id: string
+        }
+        Insert: {
+          criado_em?: string | null
+          horas_entre_mensagens_por_lead?: number
+          id?: string
+          janela_monitor?: number
+          limite_por_dia?: number
+          limite_por_hora?: number
+          limite_taxa_falha?: number
+          numero_exibicao?: string | null
+          numero_id?: string | null
+          pausado?: boolean
+          pausado_automaticamente?: boolean
+          pausado_em?: string | null
+          pausado_motivo?: string | null
+          tenant_id: string
+        }
+        Update: {
+          criado_em?: string | null
+          horas_entre_mensagens_por_lead?: number
+          id?: string
+          janela_monitor?: number
+          limite_por_dia?: number
+          limite_por_hora?: number
+          limite_taxa_falha?: number
+          numero_exibicao?: string | null
+          numero_id?: string | null
+          pausado?: boolean
+          pausado_automaticamente?: boolean
+          pausado_em?: string | null
+          pausado_motivo?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1444,6 +1515,7 @@ export type Database = {
       concluir_envio: {
         Args: {
           p_erro?: string
+          p_erro_codigo?: string
           p_id: string
           p_ok: boolean
           p_provedor_id?: string
@@ -1570,6 +1642,7 @@ export type Database = {
           destino: string | null
           direcao: string
           enviada_em: string | null
+          erro_codigo: string | null
           gerado_por: string
           id: string
           idempotency_key: string | null
@@ -1578,10 +1651,13 @@ export type Database = {
           passo_id: string | null
           provedor_id: string | null
           proxima_tentativa_em: string | null
+          reservada_em: string | null
           status: string
+          template_externo: string | null
           tenant_id: string | null
           tentativas: number
           ultimo_erro: string | null
+          variaveis: string[] | null
         }[]
         SetofOptions: {
           from: "*"
@@ -1642,6 +1718,15 @@ export type Database = {
       }
       usuario_role: { Args: never; Returns: string }
       usuario_tenant_id: { Args: never; Returns: string }
+      whatsapp_avaliar_bloqueio: {
+        Args: { p_tenant: string }
+        Returns: boolean
+      }
+      whatsapp_folga: { Args: { p_tenant: string }; Returns: number }
+      whatsapp_lead_em_espera: {
+        Args: { p_mensagem: string; p_negocio: string; p_tenant: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

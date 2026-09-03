@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
+import { enviarTemplate, temWhatsappConfigurado } from "@/lib/whatsapp/cliente";
 
 /**
  * O despachante da cadência.
@@ -18,7 +19,7 @@ import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
  */
 export const maxDuration = 60;
 
-/** Teto por execução. Com o cron de 5 minutos, dá 240 e-mails/hora. */
+/** Teto por execução. O WhatsApp tem freio próprio, no banco. */
 const LOTE = 20;
 
 export async function GET(request: Request) {
@@ -29,11 +30,14 @@ export async function GET(request: Request) {
   if (!temServiceRole()) {
     return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY não configurada." }, { status: 503 });
   }
-  // Sem Resend, reservar a fila marcaria tudo como "enviando" e queimaria as 5
-  // tentativas de cada mensagem contra um erro que não é dela. Melhor não
-  // tocar na fila.
-  if (!temResendConfigurado()) {
-    return NextResponse.json({ error: "RESEND_API_KEY não configurada." }, { status: 503 });
+  // Sem provedor nenhum, reservar a fila marcaria tudo como "enviando" e
+  // queimaria as 5 tentativas de cada mensagem contra um erro que não é dela.
+  // Melhor não tocar na fila.
+  if (!temResendConfigurado() && !temWhatsappConfigurado()) {
+    return NextResponse.json(
+      { error: "Nenhum provedor configurado (RESEND_API_KEY ou WHATSAPP_TOKEN)." },
+      { status: 503 },
+    );
   }
 
   const supabase = createAdminClient();
@@ -55,17 +59,36 @@ export async function GET(request: Request) {
       continue;
     }
 
-    const r = await enviarEmail({
-      to: m.destino,
-      subject: m.assunto || "Softeum",
-      html: emailBase(m.corpo),
-    });
+    // O WhatsApp não manda `corpo`: manda o nome do template aprovado e as
+    // variáveis. O `corpo` renderizado é a prévia que quem aprovou leu.
+    const r =
+      m.canal === "whatsapp"
+        ? await (async () => {
+            if (!m.template_externo) {
+              return { ok: false, erro: "mensagem sem template aprovado na Meta", codigo: "sem_template" };
+            }
+            const w = await enviarTemplate({
+              para: m.destino!,
+              template: m.template_externo,
+              variaveis: m.variaveis || [],
+            });
+            return { ok: w.enviado, id: w.id, erro: w.erro, codigo: w.codigo };
+          })()
+        : await (async () => {
+            const e = await enviarEmail({
+              to: m.destino!,
+              subject: m.assunto || "Softeum",
+              html: emailBase(m.corpo),
+            });
+            return { ok: e.sent, id: e.id, erro: e.error, codigo: undefined as string | undefined };
+          })();
 
     const { data: desfecho } = await supabase.rpc("concluir_envio", {
       p_id: m.id,
-      p_ok: r.sent,
+      p_ok: r.ok,
       p_provedor_id: r.id ?? undefined,
-      p_erro: r.sent ? undefined : r.error || "falha desconhecida no envio",
+      p_erro: r.ok ? undefined : r.erro || "falha desconhecida no envio",
+      p_erro_codigo: r.codigo ?? undefined,
     });
 
     if (desfecho === "enviada") resultado.enviadas += 1;
