@@ -31,17 +31,12 @@ import {
   type Mensagem,
 } from "@/lib/cadencia";
 import {
-  Apoio,
   AreaTexto,
   Botao,
-  Cartao,
   Entrada,
   Modal,
-  Rotulo,
   Selecao,
-  useIdDeAbas,
 } from "@/components/ui";
-import { Conversa } from "@/components/negocio/Conversa";
 
 export function MensagensTab({
   negocio,
@@ -65,14 +60,6 @@ export function MensagensTab({
   const [editando, setEditando] = useState<Mensagem | null>(null);
   const [assuntoEdit, setAssuntoEdit] = useState("");
   const [corpoEdit, setCorpoEdit] = useState("");
-
-  /** Estado real do canal. `null` enquanto carrega — o compositor não chuta. */
-  const [whatsapp, setWhatsapp] = useState<{
-    configurado: boolean;
-    pausado: boolean;
-    motivo: string | null;
-  } | null>(null);
-  const idDasAbas = useIdDeAbas("conversa");
 
   const carregar = useCallback(async () => {
     const supabase = createClient();
@@ -119,19 +106,6 @@ export function MensagensTab({
       setInscricoes((insc.data || []) as never);
       setMensagens(msg.data || []);
 
-      // Estado do canal, para o compositor dizer a verdade em vez de oferecer
-      // uma caixa de texto que nao manda nada. Fora do Promise.all porque a
-      // falha aqui nao pode derrubar a conversa: sem esta linha o compositor
-      // fica em `null` e mostra o estado neutro, que ja e o certo.
-      const { data: cfg } = await supabase
-        .from("whatsapp_config")
-        .select("pausado, pausado_motivo, numero_id")
-        .maybeSingle();
-      setWhatsapp({
-        configurado: !!cfg?.numero_id,
-        pausado: !!cfg?.pausado,
-        motivo: cfg?.pausado_motivo ?? null,
-      });
     } catch (e) {
       setErroCarga(e instanceof Error ? e.message : "Não foi possível carregar as mensagens.");
     } finally {
@@ -142,28 +116,6 @@ export function MensagensTab({
   useEffect(() => {
     void carregar();
   }, [carregar]);
-
-  /**
-   * Abrir a conversa marca as respostas como lidas — e apaga o sinal do card
-   * no board, em todas as abas abertas, porque o UPDATE em `negocios` viaja
-   * pelo realtime que o board ja assina.
-   *
-   * Vai direto do cliente, sem RPC: `negocios_update` tem o USING IDENTICO ao
-   * `negocios_select` e, sem WITH CHECK proprio, o Postgres reaproveita o
-   * USING. Ou seja, quem enxerga o card pode atualiza-lo — a mesma permissao
-   * que `moverEtapa` ja usa.
-   *
-   * Depende so do id: nao deve disparar de novo a cada resposta que chega
-   * enquanto a aba esta aberta, senao o contador zeraria antes de ser visto.
-   */
-  useEffect(() => {
-    if (!negocio.respostas_nao_lidas) return;
-    void createClient()
-      .from("negocios")
-      .update({ respostas_nao_lidas: 0, respostas_lidas_em: new Date().toISOString() })
-      .eq("id", negocio.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [negocio.id]);
 
   useSincronizacao(carregar, {
     canal: `mensagens-${negocio.id}`,
@@ -469,26 +421,6 @@ export function MensagensTab({
           </div>
         )}
       </div>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* A conversa com o cliente: WhatsApp e e-mail, no mesmo card        */}
-      {/* ---------------------------------------------------------------- */}
-      <Cartao>
-        <div className="mb-3">
-          <Rotulo>Conversa</Rotulo>
-          <Apoio>
-            O histórico segue o negócio: passar do SDR para o vendedor não perde nada, porque a
-            transferência não mexe no dono das mensagens.
-          </Apoio>
-        </div>
-        <Conversa
-          negocio={negocio}
-          mensagens={mensagens}
-          whatsapp={whatsapp}
-          idBase={idDasAbas}
-          aoEnviar={() => void carregar()}
-        />
-      </Cartao>
 
       <Modal
         aberto={editando !== null}

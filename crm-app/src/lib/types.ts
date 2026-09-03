@@ -42,17 +42,25 @@ export const SELECT_AGENDA =
  * componente se chamava `CopilotoTab`, e não havia IA nenhuma dentro. Agora a
  * aba é a conversa com o cliente, e o nome diz isso.
  */
-export type Aba = "geral" | "cadencia" | "proposta" | "conversa";
+export type Aba = "geral" | "cadencia" | "proposta" | "email" | "whatsapp";
 
-const ABAS_VALIDAS: readonly string[] = ["geral", "cadencia", "proposta", "conversa"];
+const ABAS_VALIDAS: readonly string[] = ["geral", "cadencia", "proposta", "email", "whatsapp"];
 
 /**
- * Aceita `?tab=ia` como apelido de `conversa`. Links antigos existem em
- * notificações já enviadas e em favoritos; quebrá-los levaria a pessoa para a
- * aba errada sem explicação.
+ * Apelidos de abas que já existiram.
+ *
+ * `ia` foi o nome original da aba de mensagens. `conversa` foi o seguinte, e
+ * empilhava os dois canais no mesmo lugar — agora e-mail e WhatsApp são abas
+ * separadas, porque um inbox e um chat não têm a mesma forma.
+ *
+ * Os dois continuam aceitos: existem em notificações já enviadas e em
+ * favoritos, e quebrá-los levaria a pessoa para a aba errada sem explicação.
+ * `email` é o destino porque era ele que a aba antiga abria por último.
  */
+const APELIDOS: Record<string, Aba> = { ia: "email", conversa: "email" };
+
 export function normalizarAba(valor: string | undefined): Aba | undefined {
-  if (valor === "ia") return "conversa";
+  if (valor && APELIDOS[valor]) return APELIDOS[valor];
   return ehAbaValida(valor) ? valor : undefined;
 }
 

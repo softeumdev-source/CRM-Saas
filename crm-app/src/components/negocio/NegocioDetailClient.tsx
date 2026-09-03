@@ -21,6 +21,8 @@ import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
+import { EmailTab } from "@/components/negocio/EmailTab";
+import { WhatsappTab } from "@/components/negocio/WhatsappTab";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
 import type { Pipeline } from "@/lib/pipelines";
 import {
@@ -41,7 +43,11 @@ const ABAS: readonly ItemDeAba<Aba>[] = [
   { chave: "geral", rotulo: "Visão Geral" },
   { chave: "cadencia", rotulo: "Cadência" },
   { chave: "proposta", rotulo: "Proposta & Assinatura" },
-  { chave: "conversa", rotulo: "Conversa" },
+  // Duas abas, não uma. Um inbox de e-mail e um chat de WhatsApp não têm a
+  // mesma forma, e empilhá-los no mesmo lugar era o que fazia os dois parecerem
+  // a mesma coisa.
+  { chave: "email", rotulo: "E-mail" },
+  { chave: "whatsapp", rotulo: "WhatsApp" },
 ];
 
 /** Para onde este negócio pode ser entregue (SDR → vendedor). */
@@ -522,7 +528,7 @@ export function NegocioDetailClient({
         abas={ABAS.map((t) =>
           t.chave === "cadencia"
             ? { ...t, alerta: proximaAtrasada }
-            : t.chave === "conversa" && (negocio.respostas_nao_lidas ?? 0) > 0
+            : t.chave === "email" && (negocio.respostas_nao_lidas ?? 0) > 0
               ? { ...t, contagem: negocio.respostas_nao_lidas ?? 0 }
               : t,
         )}
@@ -550,10 +556,16 @@ export function NegocioDetailClient({
           }}
         />
       )}
+      {/* A fila da cadência automática mora junto da cadência manual: as duas
+          respondem à mesma pergunta ("qual é o próximo toque neste lead?"), e
+          antes ela estava escondida atrás da aba de conversa, que é outra
+          coisa. */}
+      {aba === "cadencia" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
       {aba === "proposta" && (
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
-      {aba === "conversa" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
+      {aba === "email" && <EmailTab negocio={negocio} />}
+      {aba === "whatsapp" && <WhatsappTab negocio={negocio} />}
 
       {entrega && (
         <Modal
