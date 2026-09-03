@@ -263,6 +263,8 @@ async function processar(
       recebidaEm: lida.recebidaEm,
       automatica: lida.automatica,
       threadExterno: lida.threadId || null,
+      messageIdExterno: lida.messageId,
+      inReplyTo: lida.emRespostaA,
       direcao: lida.direcao,
     },
     { tenantId: i.tenant_id!, usuarioId: i.usuario_id },

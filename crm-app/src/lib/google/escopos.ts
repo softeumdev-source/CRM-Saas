@@ -40,14 +40,36 @@ export const ESCOPOS_AGENDA = [
 export const ESCOPO_GMAIL = "https://www.googleapis.com/auth/gmail.readonly";
 
 /**
+ * Mandar e-mail. Separado do de leitura de propósito: `gmail.send` NÃO dá
+ * leitura nenhuma, e `gmail.readonly` não deixa mandar nada. Os dois juntos são
+ * exatamente o necessário e nada além.
+ *
+ * A alternativa seria `gmail.modify`, um escopo só que faz os dois — e que de
+ * quebra permite apagar e reetiquetar a caixa inteira. Pedir permissão de
+ * apagar para quem só precisa responder é o tipo de folga que vira incidente.
+ */
+export const ESCOPO_GMAIL_ENVIO = "https://www.googleapis.com/auth/gmail.send";
+
+/**
  * Escopo INCREMENTAL: quem já conectou só a Agenda não precisa reconectar do
  * zero. `urlDeConsentimento` manda `include_granted_scopes=true`, então a
  * Google devolve um refresh token com a UNIÃO dos escopos, e
  * `google_guardar_refresh_token` faz `on conflict (usuario_id) do update` —
  * atualiza no lugar, sem órfão e sem segunda conexão.
  */
-export const ESCOPOS_COM_GMAIL = [...ESCOPOS_AGENDA, ESCOPO_GMAIL];
+export const ESCOPOS_COM_GMAIL = [...ESCOPOS_AGENDA, ESCOPO_GMAIL, ESCOPO_GMAIL_ENVIO];
 
 export function temGmail(escopos: string[] | null | undefined): boolean {
   return (escopos || []).includes(ESCOPO_GMAIL);
+}
+
+/**
+ * A conta pode MANDAR e-mail.
+ *
+ * Vale perguntar separado de `temGmail`: uma conexão feita antes de o envio
+ * existir tem leitura e não tem envio, e a tela precisa saber a diferença para
+ * pedir o reconsentimento em vez de falhar no primeiro envio.
+ */
+export function temEnvioGmail(escopos: string[] | null | undefined): boolean {
+  return (escopos || []).includes(ESCOPO_GMAIL_ENVIO);
 }

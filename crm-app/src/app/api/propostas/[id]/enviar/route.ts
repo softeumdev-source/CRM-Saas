@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
+import { emailBase } from "@/lib/resend";
+import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
+import { nomeDeExibicao } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
@@ -133,7 +135,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   let algumEmailEnviado = false;
   let emailErro: string | null = null;
-  let remetenteTest = false;
+  // Quem o cliente ve como remetente: o dono do negocio, pela caixa comercial.
+  const assinaturaDe = nomeDeExibicao(
+    (negocio?.responsavel as { nome?: string; email?: string } | null) ?? null,
+  );
   for (const sig of signatariosCriados) {
     const token = sig.token;
     const [upComercial, upTecnica] = await Promise.all([
@@ -152,9 +157,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     const linkAssinatura = `${origin}/assinar/${token}`;
-    const resultado = await enviarEmail({
-      to: sig.email,
-      subject: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
+    const resultado = await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
+      para: sig.email,
+      nomeDeExibicao: assinaturaDe,
+      assunto: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
       html: emailBase(`
         <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
         <p>Olá ${sig.nome},</p>
@@ -165,16 +171,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         <p style="font-size:12px; color:#64748b;">Se o botão não funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
       `),
     });
-    if (resultado.sent) algumEmailEnviado = true;
-    if (resultado.error && !emailErro) emailErro = resultado.error;
-    if (resultado.remetenteTest) remetenteTest = true;
+    if (resultado.enviado) algumEmailEnviado = true;
+    if (resultado.erro && !emailErro) emailErro = resultado.erro;
   }
 
   const linkPrimario = `${origin}/assinar/${signatariosCriados[0].token}`;
   for (const email of copias) {
-    await enviarEmail({
-      to: email,
-      subject: `Cópia: Proposta Softeum ${proposta.numero}`,
+    await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
+      para: email,
+      nomeDeExibicao: assinaturaDe,
+      assunto: `Cópia: Proposta Softeum ${proposta.numero}`,
       html: emailBase(`
         <h2 style="margin-top:0;">Cópia da proposta enviada para assinatura</h2>
         <p>Você está recebendo uma cópia da proposta ${proposta.numero} enviada para assinatura.</p>
@@ -201,8 +207,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     envelope,
     linkAssinatura: linkPrimario,
     emailEnviado: algumEmailEnviado,
-    resendConfigurado: temResendConfigurado(),
     emailErro: emailErro || null,
-    remetenteTest,
   });
 }

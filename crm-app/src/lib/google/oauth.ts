@@ -1,4 +1,5 @@
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, redirectUri } from "@/lib/google/config";
+import { textoDeBase64Url } from "@/lib/base64url";
 
 const AUTORIZACAO = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN = "https://oauth2.googleapis.com/token";
@@ -77,7 +78,7 @@ export function emailDoIdToken(idToken: string | undefined): string | null {
   const partes = idToken.split(".");
   if (partes.length < 2) return null;
   try {
-    const json = Buffer.from(partes[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const json = textoDeBase64Url(partes[1]);
     const payload = JSON.parse(json) as { email?: string };
     return payload.email || null;
   } catch {

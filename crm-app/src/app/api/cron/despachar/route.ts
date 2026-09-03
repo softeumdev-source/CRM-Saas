@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
-import { enviarEmail, emailBase, temResendConfigurado, podeReceberResposta } from "@/lib/resend";
+import { emailBase } from "@/lib/resend";
 import { enviarTemplate, temWhatsappConfigurado } from "@/lib/whatsapp/cliente";
+import { enviarPeloGmail } from "@/lib/gmail/enviar";
+import {
+  assuntoDeResposta,
+  caixasDeSaida,
+  nomeDeExibicao,
+  threadsDosNegocios,
+  type ContextoDeThread,
+} from "@/lib/gmail/caixa";
+import { temGoogleConfigurado } from "@/lib/google/config";
 
 /**
  * O despachante da cadência.
@@ -16,6 +25,12 @@ import { enviarTemplate, temWhatsappConfigurado } from "@/lib/whatsapp/cliente";
  * como autônoma. Esta rota não sabe aprovar, e é de propósito: foi exatamente
  * uma rota que enviava por conta própria que precisou ser removida deste
  * projeto.
+ *
+ * O e-mail saía pelo Resend, de um endereço de sistema. Agora sai pela caixa
+ * comercial do próprio tenant, pelo Gmail — e a diferença não é de fornecedor:
+ * a resposta do cliente cai numa caixa que a sincronização LÊ, dentro da mesma
+ * thread. Antes ela caía num endereço que ninguém abria, e o CRM ficava
+ * indistinguível de "ninguém respondeu".
  */
 export const maxDuration = 60;
 
@@ -30,17 +45,33 @@ export async function GET(request: Request) {
   if (!temServiceRole()) {
     return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY não configurada." }, { status: 503 });
   }
-  // Sem provedor nenhum, reservar a fila marcaria tudo como "enviando" e
-  // queimaria as 5 tentativas de cada mensagem contra um erro que não é dela.
-  // Melhor não tocar na fila.
-  if (!temResendConfigurado() && !temWhatsappConfigurado()) {
+
+  const supabase = createAdminClient();
+
+  // A guarda ANTES de reservar, e não depois: reservar marca tudo como
+  // "enviando" e queima as 5 tentativas de cada mensagem contra um erro que não
+  // é dela. Por isso a pergunta "existe alguma caixa de saída?" vem primeiro.
+  //
+  // Uma consulta a mais por rodada (a cada 5 minutos) para não estragar a fila
+  // inteira quando alguém esquece de conectar a conta.
+  const caixas = temGoogleConfigurado()
+    ? await caixasDeSaida(
+        supabase,
+        ((await supabase.from("tenants").select("id")).data || []).map((t) => t.id),
+      )
+    : new Map();
+
+  if (caixas.size === 0 && !temWhatsappConfigurado()) {
     return NextResponse.json(
-      { error: "Nenhum provedor configurado (RESEND_API_KEY ou WHATSAPP_TOKEN)." },
+      {
+        error:
+          "Nenhum canal pronto: nenhum tenant tem caixa de e-mail conectada com permissão de envio, " +
+          "e o WhatsApp não está configurado.",
+      },
       { status: 503 },
     );
   }
 
-  const supabase = createAdminClient();
   const { data: mensagens, error } = await supabase.rpc("reservar_mensagens", { p_limite: LOTE });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -48,13 +79,14 @@ export async function GET(request: Request) {
 
   const resultado = { reservadas: mensagens?.length ?? 0, enviadas: 0, reagendadas: 0, falhou: 0 };
 
-  // De quem e a caixa que deve receber a RESPOSTA de cada e-mail.
+  // Quem assina o e-mail, e em que conversa ele entra.
   //
-  // Sem Reply-To o cliente responde para `RESEND_FROM_EMAIL`, um endereco de
-  // sistema, e a resposta nao chega na caixa de ninguem — a sincronizacao do
-  // Gmail "funciona" e nao traz nada, indistinguivel de "ninguem respondeu".
+  // Reply-To deixou de ser necessario: o endereco de saida JA e a caixa que a
+  // sincronizacao le, entao a resposta volta sozinha para dentro do CRM. O que
+  // sobra do dono do negocio e o NOME exibido — o cliente ve com quem esta
+  // falando, sem que o endereco mude e a thread quebre.
   //
-  // Uma consulta para o LOTE inteiro, nao uma por mensagem: sao ate 20 por
+  // Duas consultas para o LOTE inteiro, nao duas por mensagem: sao ate 20 por
   // rodada, a cada 5 minutos.
   const idsDeNegocio = [
     ...new Set(
@@ -63,17 +95,17 @@ export async function GET(request: Request) {
         .map((m) => m.negocio_id as string),
     ),
   ];
-  const respostaVaiPara = new Map<string, string>();
+  const quemAssina = new Map<string, string>();
+  let threads = new Map<string, ContextoDeThread>();
   if (idsDeNegocio.length > 0) {
-    const { data: donos } = await supabase
-      .from("negocios")
-      .select("id, responsavel:usuarios(email)")
-      .in("id", idsDeNegocio);
+    const [{ data: donos }, mapaDeThreads] = await Promise.all([
+      supabase.from("negocios").select("id, responsavel:usuarios(nome, email)").in("id", idsDeNegocio),
+      threadsDosNegocios(supabase, idsDeNegocio),
+    ]);
     for (const d of donos || []) {
-      const email = (d.responsavel as { email?: string } | null)?.email;
-      // O dono pode ser o robo SDR IA, cujo e-mail e `.invalid` de proposito.
-      if (podeReceberResposta(email)) respostaVaiPara.set(d.id, email!);
+      quemAssina.set(d.id, nomeDeExibicao(d.responsavel as { nome?: string; email?: string } | null));
     }
+    threads = mapaDeThreads;
   }
 
   for (const m of mensagens || []) {
@@ -103,21 +135,54 @@ export async function GET(request: Request) {
             return { ok: w.enviado, id: w.id, erro: w.erro, codigo: w.codigo };
           })()
         : await (async () => {
-            const e = await enviarEmail({
-              to: m.destino!,
-              subject: m.assunto || "Softeum",
-              html: emailBase(m.corpo),
-              replyTo: m.negocio_id ? respostaVaiPara.get(m.negocio_id) : undefined,
-            });
-            return { ok: e.sent, id: e.id, erro: e.error, codigo: undefined as string | undefined };
+            const caixa = m.tenant_id ? caixas.get(m.tenant_id) : undefined;
+            if (!caixa) {
+              return {
+                ok: false,
+                erro: "o tenant nao tem caixa de e-mail conectada com permissao de envio",
+                codigo: "sem_caixa",
+              };
+            }
+            // A thread manda no assunto: o Gmail recusa um `threadId` cujo
+            // assunto nao bate com o da conversa. Sem thread, o assunto e o do
+            // proprio passo da cadencia.
+            const t = m.negocio_id ? threads.get(m.negocio_id) : undefined;
+            const assunto = t?.threadId
+              ? assuntoDeResposta(t.assunto, m.assunto || "Softeum")
+              : m.assunto || "Softeum";
+            try {
+              const e = await enviarPeloGmail(
+                caixa.usuarioId,
+                {
+                  de: caixa.email,
+                  nomeDeExibicao: m.negocio_id ? quemAssina.get(m.negocio_id) : "Softeum",
+                  para: m.destino!,
+                  assunto,
+                  html: emailBase(m.corpo),
+                  emRespostaA: t?.emRespostaA ?? null,
+                  referencias: t?.referencias ?? null,
+                },
+                t?.threadId ?? null,
+              );
+              return { ok: true, id: e.id, threadId: e.threadId, messageId: e.messageId };
+            } catch (erro) {
+              return { ok: false, erro: erro instanceof Error ? erro.message : "falha no envio pelo Gmail" };
+            }
           })();
 
+    // Cada ramo devolve um formato um pouco diferente (o WhatsApp tem `codigo`,
+    // o e-mail tem `threadId`), entao a leitura e frouxa de proposito.
+    const d = r as { id?: string; codigo?: string; threadId?: string; messageId?: string };
     const { data: desfecho } = await supabase.rpc("concluir_envio", {
       p_id: m.id,
       p_ok: r.ok,
-      p_provedor_id: r.id ?? undefined,
+      p_provedor_id: d.id ?? undefined,
       p_erro: r.ok ? undefined : r.erro || "falha desconhecida no envio",
-      p_erro_codigo: r.codigo ?? undefined,
+      p_erro_codigo: d.codigo ?? undefined,
+      // So o e-mail devolve thread. O WhatsApp manda `undefined`, e o
+      // `coalesce` da funcao preserva o que ja estava la.
+      p_thread_externo: d.threadId ?? undefined,
+      p_message_id_externo: d.messageId ?? undefined,
     });
 
     if (desfecho === "enviada") resultado.enviadas += 1;

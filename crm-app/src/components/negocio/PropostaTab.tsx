@@ -106,7 +106,6 @@ export function PropostaTab({
     linkAssinatura: string;
     emailEnviado: boolean;
     emailErro: string | null;
-    remetenteTest: boolean;
   } | null>(null);
 
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
@@ -318,7 +317,6 @@ export function PropostaTab({
       linkAssinatura: data.linkAssinatura,
       emailEnviado: data.emailEnviado,
       emailErro: data.emailErro || null,
-      remetenteTest: data.remetenteTest || false,
     });
     const supabase = createClient();
     const { data: propostaAtualizada } = await supabase
@@ -763,16 +761,17 @@ export function PropostaTab({
                     <div className={`rounded-xl p-3 text-rotulo ${ultimoResultado.emailEnviado ? "bg-acento-fraco border border-fio" : "bg-alerta-fraco border border-alerta/40"}`}>
                       <p className={`font-medium ${ultimoResultado.emailEnviado ? "text-acento" : "text-alerta"}`}>
                         {ultimoResultado.emailEnviado
-                          ? ultimoResultado.remetenteTest
-                            ? "E-mail enviado (remetente de teste — só chega no e-mail da conta Resend)."
-                            : "E-mail de assinatura enviado aos envolvidos."
+                          ? "E-mail de assinatura enviado aos envolvidos, pela caixa comercial."
                           : ultimoResultado.emailErro
                             ? `Falha ao enviar e-mail: ${ultimoResultado.emailErro}`
-                            : "RESEND_API_KEY não configurada — copie e envie o link manualmente:"}
+                            : "E-mail não enviado — copie e envie o link manualmente:"}
                       </p>
+                      {/* O envio agora sai da caixa comercial pelo Gmail, não do
+                          Resend. Mandar a pessoa configurar RESEND_FROM_EMAIL
+                          aqui seria mandá-la mexer no lugar errado. */}
                       {!ultimoResultado.emailEnviado && (
                         <p className="text-alerta mt-1">
-                          Configure RESEND_API_KEY e RESEND_FROM_EMAIL (domínio verificado) no Vercel.
+                          Conecte a conta comercial em Admin → Integrações e escolha-a como caixa de envio.
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1.5">

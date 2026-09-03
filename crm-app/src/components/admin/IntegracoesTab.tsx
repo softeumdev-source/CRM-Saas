@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Unlink } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Send, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selo } from "@/components/ui";
+import { Alerta, Botao, Campo, Cartao, Confirmar, Rotulo, Selecao, Selo } from "@/components/ui";
 import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
 import { formatarDataHora } from "@/lib/atividades";
-import { temGmail } from "@/lib/google/escopos";
+import { temEnvioGmail, temGmail } from "@/lib/google/escopos";
 import type { Tables } from "@/lib/supabase/types";
 
 type Integracao = Tables<"integracoes_google"> & { usuario: { nome: string } | null };
@@ -21,6 +21,12 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
   // efeito e engolia a mensagem. Medido no navegador: a faixa não aparecia.
   const [erroDaVolta, setErroDaVolta] = useState<string | null>(null);
   const [desconectando, setDesconectando] = useState<Integracao | null>(null);
+  // A caixa por onde o CRM MANDA e-mail para o cliente. É do tenant, não da
+  // pessoa: a cadência e a proposta saem sempre do mesmo endereço, senão a
+  // resposta do cliente cai numa caixa diferente a cada toque e a conversa se
+  // parte em várias.
+  const [caixaDoTenant, setCaixaDoTenant] = useState<string>("");
+  const [salvandoCaixa, setSalvandoCaixa] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -36,12 +42,18 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
       }
       setErro(null);
       setConexoes((data || []) as unknown as Integracao[]);
+      const { data: tenant } = await createClient()
+        .from("tenants")
+        .select("caixa_email_usuario_id")
+        .eq("id", usuarioAtual.tenant_id || "")
+        .maybeSingle();
+      setCaixaDoTenant(tenant?.caixa_email_usuario_id || "");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar.");
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [usuarioAtual.tenant_id]);
 
   useEffect(() => {
     void carregar();
@@ -52,6 +64,21 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
   }, [carregar]);
 
   const minha = conexoes.find((c) => c.usuario_id === usuarioAtual.id);
+  // Só entra na lista quem PODE mandar. Oferecer uma conexão sem `gmail.send`
+  // trocaria um erro de configuração legível por um 403 da Google no primeiro
+  // envio da cadência.
+  const podemEnviar = conexoes.filter((c) => temEnvioGmail(c.escopos) && !c.ultimo_erro);
+
+  const salvarCaixa = async (usuarioId: string) => {
+    setCaixaDoTenant(usuarioId);
+    setSalvandoCaixa(true);
+    const { error } = await createClient()
+      .from("tenants")
+      .update({ caixa_email_usuario_id: usuarioId || null })
+      .eq("id", usuarioAtual.tenant_id || "");
+    setSalvandoCaixa(false);
+    if (error) setErro(`Não foi possível salvar a caixa de envio: ${error.message}`);
+  };
 
   const desconectar = async (): Promise<string | void> => {
     if (!desconectando) return;
@@ -142,6 +169,11 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
                         inbox
                       </Selo>
                     )}
+                    {temEnvioGmail(c.escopos) && (
+                      <Selo tom="ok" icone={Send}>
+                        envio
+                      </Selo>
+                    )}
                     {c.ultimo_erro ? (
                       <span className="text-rotulo font-medium text-risco">precisa reconectar</span>
                     ) : (
@@ -156,6 +188,54 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
       </Cartao>
 
       <CaixaDeEntradaGoogle integracao={minha ?? null} />
+
+      <Cartao className="space-y-4">
+        <div>
+          <Rotulo className="flex items-center gap-2">
+            <Send className="h-4 w-4 text-acento" /> Caixa de envio do time
+          </Rotulo>
+          <p className="text-rotulo text-tinta-suave mt-1">
+            Por qual conta o CRM manda e-mail para o cliente — a cadência, a proposta e as
+            respostas. É uma só para o time inteiro, e de propósito: a resposta do cliente volta
+            para a mesma caixa que a sincronização lê, dentro da mesma conversa. O nome exibido
+            muda conforme quem está falando; o endereço, não.
+          </p>
+        </div>
+
+        {podemEnviar.length === 0 ? (
+          <Alerta tom="alerta">
+            Nenhuma conta conectada tem permissão de envio ainda. Conecte a conta comercial pelo
+            botão do inbox acima — o consentimento agora pede leitura <strong>e</strong> envio.
+            Enquanto isso, nada de e-mail sai para o cliente.
+          </Alerta>
+        ) : (
+          <Campo rotulo="Conta que envia">
+            {(props) => (
+              <Selecao
+                {...props}
+                value={caixaDoTenant}
+                disabled={salvandoCaixa}
+                onChange={(e) => void salvarCaixa(e.target.value)}
+              >
+                <option value="">Nenhuma — o CRM não manda e-mail para o cliente</option>
+                {podemEnviar.map((c) => (
+                  <option key={c.id} value={c.usuario_id}>
+                    {c.email_google} ({c.usuario?.nome || "—"})
+                  </option>
+                ))}
+              </Selecao>
+            )}
+          </Campo>
+        )}
+
+        {/* Convite de usuário do CRM não passa por aqui: é e-mail de sistema e
+            continua saindo pelo Resend, para dar para convidar alguém mesmo com
+            a conta Google fora do ar. */}
+        <p className="text-rotulo text-tinta-fraca">
+          O convite para entrar no CRM não usa esta caixa — ele continua saindo pelo remetente de
+          sistema, para você conseguir convidar alguém mesmo se a conta Google cair.
+        </p>
+      </Cartao>
 
       <Confirmar
         aberto={desconectando !== null}

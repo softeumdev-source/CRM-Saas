@@ -611,7 +611,9 @@ export type Database = {
           gerado_por: string
           id: string
           idempotency_key: string | null
+          in_reply_to: string | null
           inscricao_id: string | null
+          message_id_externo: string | null
           negocio_id: string | null
           passo_id: string | null
           provedor_id: string | null
@@ -644,7 +646,9 @@ export type Database = {
           gerado_por?: string
           id?: string
           idempotency_key?: string | null
+          in_reply_to?: string | null
           inscricao_id?: string | null
+          message_id_externo?: string | null
           negocio_id?: string | null
           passo_id?: string | null
           provedor_id?: string | null
@@ -677,7 +681,9 @@ export type Database = {
           gerado_por?: string
           id?: string
           idempotency_key?: string | null
+          in_reply_to?: string | null
           inscricao_id?: string | null
+          message_id_externo?: string | null
           negocio_id?: string | null
           passo_id?: string | null
           provedor_id?: string | null
@@ -1482,6 +1488,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          caixa_email_usuario_id: string | null
           cor_primaria: string | null
           criado_em: string | null
           id: string
@@ -1490,6 +1497,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          caixa_email_usuario_id?: string | null
           cor_primaria?: string | null
           criado_em?: string | null
           id?: string
@@ -1498,6 +1506,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          caixa_email_usuario_id?: string | null
           cor_primaria?: string | null
           criado_em?: string | null
           id?: string
@@ -1505,7 +1514,15 @@ export type Database = {
           nome?: string
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_caixa_email_usuario_id_fkey"
+            columns: ["caixa_email_usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuarios: {
         Row: {
@@ -1626,8 +1643,10 @@ export type Database = {
           p_erro?: string
           p_erro_codigo?: string
           p_id: string
+          p_message_id_externo?: string
           p_ok: boolean
           p_provedor_id?: string
+          p_thread_externo?: string
         }
         Returns: string
       }
@@ -1683,6 +1702,7 @@ export type Database = {
         }
       }
       disparar_despacho: { Args: never; Returns: string }
+      disparar_sync_gmail: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
       google_guardar_refresh_token: {
         Args: {
@@ -1770,7 +1790,9 @@ export type Database = {
           gerado_por: string
           id: string
           idempotency_key: string | null
+          in_reply_to: string | null
           inscricao_id: string | null
+          message_id_externo: string | null
           negocio_id: string | null
           passo_id: string | null
           provedor_id: string | null

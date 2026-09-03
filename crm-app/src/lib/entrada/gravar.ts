@@ -14,6 +14,9 @@ export type MensagemRecebida = {
   recebidaEm: string;
   automatica: boolean;
   threadExterno: string | null;
+  /** Só o e-mail tem: `Message-ID` desta mensagem e o que ela responde. */
+  messageIdExterno?: string | null;
+  inReplyTo?: string | null;
   direcao: "entrada" | "saida";
 };
 
@@ -64,6 +67,8 @@ export async function gravarEntrada(
       recebida_em: m.recebidaEm,
       enviada_em: m.direcao === "saida" ? m.recebidaEm : null,
       thread_externo: m.threadExterno,
+      message_id_externo: m.messageIdExterno ?? null,
+      in_reply_to: m.inReplyTo ?? null,
       idempotency_key: m.externoId,
       // Nada agendado: isto não é fila de envio, é registro do que aconteceu.
       agendada_para: null,

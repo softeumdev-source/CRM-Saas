@@ -6,6 +6,8 @@
  * sem navegador.
  */
 
+import { textoDeBase64Url } from "@/lib/base64url";
+
 export type ParteGmail = {
   mimeType?: string;
   filename?: string;
@@ -66,9 +68,55 @@ export function ehAutomatica(m: MensagemGmail): boolean {
   return /^(mailer-daemon|postmaster|no-?reply|nao-?responda|donotreply)@/.test(de);
 }
 
-function deBase64Url(s: string): string {
-  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
-  return Buffer.from(b64, "base64").toString("utf-8");
+/**
+ * RFC 2047 na volta: `=?utf-8?B?…?=` vira texto legível.
+ *
+ * Isto NÃO é refinamento — é um defeito que já existia. Cabeçalho de e-mail só
+ * pode carregar ASCII, então todo cliente sério codifica um assunto com acento.
+ * Como `lerMensagem` guardava o `Subject` cru, qualquer e-mail em português com
+ * acento no assunto — ou seja, quase todos — já entrava no card como
+ * `=?utf-8?B?UmU6IFByb3Bvc3Rh…?=`. O teste de ida e volta do envio foi o que
+ * escancarou isso.
+ *
+ * Dois detalhes do RFC que decidem o código:
+ * - o espaço ENTRE duas palavras codificadas é separador, não conteúdo (§6.2),
+ *   então some; o espaço dentro de uma palavra é dado e fica.
+ * - `B` é base64 PADRÃO, não base64url — nada de trocar `-` e `_` aqui, e o
+ *   `_` do `Q` significa espaço.
+ */
+const PALAVRA_CODIFICADA = /=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g;
+
+function bytesParaTexto(bytes: Buffer, charset: string): string {
+  const c = charset.toLowerCase();
+  // `latin1` cobre iso-8859-1 e, na prática, o windows-1252 que aparece em
+  // cliente antigo. Charset exótico cai em utf-8 e, na pior das hipóteses,
+  // rende alguns caracteres errados — melhor do que devolver a palavra crua.
+  if (c === "iso-8859-1" || c === "latin1" || c === "windows-1252") return bytes.toString("latin1");
+  return bytes.toString("utf-8");
+}
+
+export function decodificarCabecalho(valor: string): string {
+  if (!valor.includes("=?")) return valor;
+  return valor
+    .replace(/(\?=)\s+(=\?)/g, "$1$2")
+    .replace(PALAVRA_CODIFICADA, (inteiro, charset: string, tipo: string, dados: string) => {
+      try {
+        if (tipo.toUpperCase() === "B") {
+          return bytesParaTexto(Buffer.from(dados, "base64"), charset);
+        }
+        const bytes = Buffer.from(
+          dados.replace(/_/g, " ").replace(/=([0-9A-Fa-f]{2})/g, (_m, h: string) =>
+            String.fromCharCode(parseInt(h, 16)),
+          ),
+          "latin1",
+        );
+        return bytesParaTexto(bytes, charset);
+      } catch {
+        // Palavra malformada volta como veio: texto estranho é melhor do que
+        // uma mensagem perdida.
+        return inteiro;
+      }
+    });
 }
 
 /** Percorre a árvore de partes e devolve a primeira do tipo pedido. */
@@ -124,14 +172,14 @@ export function htmlParaTexto(html: string): string {
  */
 export function corpoEmTexto(m: MensagemGmail): string {
   const plano = acharParte(m.payload, "text/plain");
-  if (plano?.body?.data) return deBase64Url(plano.body.data).trim();
+  if (plano?.body?.data) return textoDeBase64Url(plano.body.data).trim();
 
   const html = acharParte(m.payload, "text/html");
-  if (html?.body?.data) return htmlParaTexto(deBase64Url(html.body.data));
+  if (html?.body?.data) return htmlParaTexto(textoDeBase64Url(html.body.data));
 
   // Mensagem de uma parte só: o corpo está na raiz.
   if (m.payload?.body?.data) {
-    const cru = deBase64Url(m.payload.body.data);
+    const cru = textoDeBase64Url(m.payload.body.data);
     return m.payload.mimeType === "text/html" ? htmlParaTexto(cru) : cru.trim();
   }
   return "";
@@ -158,6 +206,10 @@ export type EntradaDeEmail = {
   corpo: string;
   recebidaEm: string;
   automatica: boolean;
+  /** `Message-ID` desta mensagem — a próxima resposta vai citá-lo. */
+  messageId: string | null;
+  /** `Message-ID` que esta mensagem responde. */
+  emRespostaA: string | null;
   /** `saida` quando a própria caixa mandou — a pasta Enviados. */
   direcao: "entrada" | "saida";
 };
@@ -179,12 +231,17 @@ export function lerMensagem(
       ...enderecos(cabecalho(m, "Cc")),
       ...enderecos(cabecalho(m, "Delivered-To")),
     ],
-    assunto: cabecalho(m, "Subject"),
+    assunto: decodificarCabecalho(cabecalho(m, "Subject")),
     corpo: corpoEmTexto(m),
     // `internalDate` é o carimbo do PROVEDOR, em ms. Nunca `now()`: uma
     // reentrega atrasada não pode reabrir a janela de 24h sobre e-mail velho.
     recebidaEm: new Date(Number(m.internalDate || Date.now())).toISOString(),
     automatica: ehAutomatica(m),
+    // Já vinham na resposta (estão em `CABECALHOS` desde sempre) e eram
+    // jogados fora. São eles que costuram a conversa no cliente do outro lado,
+    // onde o `threadId` do Gmail não significa nada.
+    messageId: cabecalho(m, "Message-ID") || null,
+    emRespostaA: cabecalho(m, "In-Reply-To") || null,
     direcao: daPropriaCaixa ? "saida" : "entrada",
   };
 }

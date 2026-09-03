@@ -3,7 +3,8 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
-import { enviarEmail, emailBase } from "@/lib/resend";
+import { emailBase } from "@/lib/resend";
+import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
@@ -282,11 +283,17 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           documentosAssinados = { comercial: urlComercial, tecnica: urlTecnica };
           await supabase.rpc("salvar_pdf_assinado", { p_token: token, p_comercial_url: urlComercial, p_tecnica_url: urlTecnica });
 
+          // Amplia a consulta que ja existia em vez de somar outra ida: o
+          // tenant vem pelo mesmo caminho (envelope -> proposta -> negocio).
+          // Esta rota e publica e nao tem sessao, entao `usuario_tenant_id()`
+          // nao existe aqui.
           const { data: envelopeRow } = await admin
             .from("envelopes")
-            .select("copias_emails")
+            .select("copias_emails, proposta:propostas(negocio:negocios(tenant_id))")
             .eq("id", signatariosData?.envelope_id || "")
             .single();
+          const tenantId =
+            (envelopeRow?.proposta as { negocio?: { tenant_id?: string } } | null)?.negocio?.tenant_id ?? null;
 
           const destinatarios = new Set<string>();
           for (const sig of todosSig || []) {
@@ -296,11 +303,29 @@ export async function POST(request: Request, context: { params: Promise<{ token:
             if (cc?.trim()) destinatarios.add(cc.trim());
           }
 
+          // Os PDFs assinados JA estao em memoria aqui. Antes o e-mail mandava
+          // um link para o bucket publico; agora vao anexados, o que resolve
+          // duas coisas de uma vez: chega quem so le e-mail sem clicar em link,
+          // e o documento deixa de depender de uma URL publica eterna.
+          const anexosAssinados = [
+            {
+              nome: `proposta-${numero}-comercial-assinada.pdf`,
+              mime: "application/pdf",
+              conteudo: Buffer.from(comercialAssinado),
+            },
+            {
+              nome: `proposta-${numero}-tecnica-assinada.pdf`,
+              mime: "application/pdf",
+              conteudo: Buffer.from(tecnicaAssinado),
+            },
+          ];
+
           for (const emailDest of destinatarios) {
             const sigNome = (todosSig || []).find((s: any) => s.email === emailDest)?.nome || "";
-            await enviarEmail({
-              to: emailDest,
-              subject: `Proposta ${numero} assinada por todos — documentos para download`,
+            await enviarDoTenant(admin, tenantId, {
+              para: emailDest,
+              anexos: anexosAssinados,
+              assunto: `Proposta ${numero} assinada por todos — documentos para download`,
               html: emailBase(`
                 <h2 style="margin-top:0;">Documentação assinada disponível para download</h2>
                 ${sigNome ? `<p>Olá ${sigNome},</p>` : ""}
