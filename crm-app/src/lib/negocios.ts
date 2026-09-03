@@ -105,3 +105,45 @@ export async function fecharNegocio({
 
   return { ok: true, ganho };
 }
+
+/**
+ * Passagem de um negócio de um funil para outro: a entrega do SDR ao vendedor
+ * e, no sentido inverso, a devolução de um no-show para a fila de
+ * reagendamento.
+ *
+ * Vai por RPC, e não por `update`, por uma razão do banco e não de estilo: num
+ * UPDATE o Postgres exige que a linha NOVA também passe na policy de SELECT.
+ * Como a entrega troca o dono, a linha deixa de ser visível para quem entregou
+ * e o próprio banco recusa — "new row violates row-level security policy".
+ * Afrouxar o SELECT daria ao SDR o funil inteiro do vendedor, então quem
+ * confere a autorização é a função: ela valida tenant, permissão sobre o
+ * negócio e se o funil de destino é vizinho do seu.
+ *
+ * De quebra a mudança de etapa e o registro na cadência viram uma transação
+ * só: aqui eram dois writes, e o segundo podia falhar sozinho.
+ */
+export async function transferirDeFunil({
+  negocioId,
+  etapaDestino,
+  responsavelId,
+  titulo,
+  descricao,
+}: {
+  negocioId: string;
+  etapaDestino: EtapaPipeline;
+  /** `null` deixa no pool do funil de destino. */
+  responsavelId: string | null;
+  titulo: string;
+  descricao: string;
+}): Promise<ResultadoMover> {
+  const { error } = await createClient().rpc("transferir_negocio_de_funil", {
+    p_negocio_id: negocioId,
+    p_etapa_destino_id: etapaDestino.id,
+    p_responsavel_id: responsavelId,
+    p_titulo: titulo,
+    p_descricao: descricao,
+  });
+
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true, ganho: resultadoDaEtapa(etapaDestino) };
+}

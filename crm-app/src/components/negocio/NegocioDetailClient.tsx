@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Building2, Mail, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, Mail, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -21,8 +21,9 @@ import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { CopilotoTab } from "@/components/negocio/CopilotoTab";
-import { fecharNegocio, moverEtapa } from "@/lib/negocios";
-import { AreaTexto, Botao, Campo, Modal } from "@/components/ui";
+import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
+import type { Pipeline } from "@/lib/pipelines";
+import { AreaTexto, Botao, Campo, Modal, Selecao } from "@/components/ui";
 
 type PropostaComRelacoes = Record<string, unknown>;
 const ABAS: { id: Aba; label: string }[] = [
@@ -32,9 +33,17 @@ const ABAS: { id: Aba; label: string }[] = [
   { id: "ia", label: "Mensagens" },
 ];
 
+/** Para onde este negócio pode ser entregue (SDR → vendedor). */
+type Entrega = { funil: Pipeline; etapa: EtapaPipeline; responsaveis: Usuario[] };
+/** De onde ele veio — para onde um no-show volta (vendedor → SDR). */
+type Devolucao = { funil: Pipeline; etapa: EtapaPipeline };
+
 export function NegocioDetailClient({
   negocioInicial,
+  pipeline,
   etapas,
+  entrega,
+  devolucao,
   responsaveis,
   planos,
   atividadesIniciais,
@@ -43,7 +52,10 @@ export function NegocioDetailClient({
   abaInicial = "geral",
 }: {
   negocioInicial: NegocioComRelacoes;
+  pipeline: Pipeline | null;
   etapas: EtapaPipeline[];
+  entrega: Entrega | null;
+  devolucao: Devolucao | null;
   responsaveis: Usuario[];
   planos: Plano[];
   atividadesIniciais: AtividadeComUsuario[];
@@ -153,7 +165,85 @@ export function NegocioDetailClient({
       setErro(`Não foi possível fechar o negócio: ${r.erro}`);
       return;
     }
-    router.push("/");
+    router.push(voltarPara);
+    router.refresh();
+  };
+
+  // O board de onde este negócio veio — para onde voltar depois de fechar ou
+  // de entregar. Um SDR que entrega um lead não pode cair no board do vendedor.
+  const voltarPara = pipeline?.chave === "sdr" ? "/sdr" : "/";
+
+  // Ganhei/Perdi só existem em funil que tenha etapa de fechamento. O funil do
+  // SDR não tem etapa de ganho de propósito: entregar o lead não é vender.
+  const podeFechar = {
+    ganho: etapas.some((e) => resultadoDaEtapa(e) === true),
+    perda: etapas.some((e) => resultadoDaEtapa(e) === false),
+  };
+
+  // Entrega do lead ao vendedor. Sai do funil do SDR e entra na etapa de
+  // entrada do funil de vendas, com dono definido ali mesmo.
+  const [entregando, setEntregando] = useState(false);
+  const [destinatario, setDestinatario] = useState("");
+  const [entregandoAgora, setEntregandoAgora] = useState(false);
+
+  const entregarAoVendedor = async () => {
+    if (!entrega) return;
+    setEntregandoAgora(true);
+    const dono = entrega.responsaveis.find((v) => v.id === destinatario);
+    const r = await transferirDeFunil({
+      negocioId: negocio.id,
+      etapaDestino: entrega.etapa,
+      responsavelId: destinatario || null,
+      titulo: `Lead entregue ao funil ${entrega.funil.nome}`,
+      descricao: dono
+        ? `Reunião aceita. Passado de "${negocio.etapa?.nome ?? "—"}" para ${dono.nome}, em "${entrega.etapa.nome}".`
+        : `Reunião aceita. Passado de "${negocio.etapa?.nome ?? "—"}" para o pool de "${entrega.etapa.nome}".`,
+    });
+    setEntregandoAgora(false);
+    if (!r.ok) {
+      setEntregando(false);
+      setErro(`Não foi possível entregar o lead: ${r.erro}`);
+      return;
+    }
+    router.push(voltarPara);
+    router.refresh();
+  };
+
+  /**
+   * Resposta do vendedor a "o cliente compareceu?".
+   *
+   * `compareceu = false` não é só um registro: o lead volta para a fila de
+   * reagendamento do SDR, sem dono, porque quem reagenda é quem estiver livre.
+   * O pool é do funil (RLS), então ele aparece para os SDRs e para mais
+   * ninguém.
+   */
+  const responderComparecimento = async (
+    atividadeId: string,
+    compareceu: boolean,
+  ): Promise<string | void> => {
+    const { error } = await createClient()
+      .from("atividades")
+      .update({ compareceu, concluida: true })
+      .eq("id", atividadeId);
+    if (error) return error.message;
+
+    if (compareceu || !devolucao) {
+      void recarregar();
+      return;
+    }
+
+    const r = await transferirDeFunil({
+      negocioId: negocio.id,
+      etapaDestino: devolucao.etapa,
+      responsavelId: null,
+      titulo: "No-show: devolvido para reagendamento",
+      descricao: `O cliente não compareceu à reunião. Voltou para "${devolucao.etapa.nome}" em ${devolucao.funil.nome}, sem dono, para o próximo SDR livre reagendar.`,
+    });
+    if (!r.ok) return r.erro;
+
+    // O negócio saiu do funil deste usuário: continuar nesta página daria 404
+    // na próxima leitura, porque a RLS já não o alcança.
+    router.push(voltarPara);
     router.refresh();
   };
 
@@ -201,18 +291,33 @@ export function NegocioDetailClient({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setMotivoPerda(''); setEncerrando(true); }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors"
-            >
-              <Trophy className="h-3.5 w-3.5" /> Ganhei
-            </button>
-            <button
-              onClick={() => { setMotivoPerda(''); setEncerrando(false); }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors"
-            >
-              <XCircle className="h-3.5 w-3.5" /> Perdi
-            </button>
+            {/* O SDR não fecha venda: o que ele faz com um lead pronto é
+                entregar. Por isso a ação principal do funil de prospecção é
+                esta, e "Ganhei" nem chega a existir lá. */}
+            {entrega && (
+              <button
+                onClick={() => { setDestinatario(''); setEntregando(true); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-xl transition-colors duration-150 ease-out"
+              >
+                <ArrowRightLeft className="h-3.5 w-3.5" /> Entregar ao vendedor
+              </button>
+            )}
+            {podeFechar.ganho && (
+              <button
+                onClick={() => { setMotivoPerda(''); setEncerrando(true); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors duration-150 ease-out"
+              >
+                <Trophy className="h-3.5 w-3.5" /> Ganhei
+              </button>
+            )}
+            {podeFechar.perda && (
+              <button
+                onClick={() => { setMotivoPerda(''); setEncerrando(false); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors duration-150 ease-out"
+              >
+                <XCircle className="h-3.5 w-3.5" /> {entrega ? "Descartar" : "Perdi"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -278,7 +383,7 @@ export function NegocioDetailClient({
             </select>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <p className="text-[10px] font-bold uppercase text-slate-400">Vendedor responsável</p>
+            <p className="text-[10px] font-bold uppercase text-slate-400">Responsável</p>
             <select
               value={negocio.responsavel_id || ""}
               onChange={(e) => {
@@ -329,6 +434,7 @@ export function NegocioDetailClient({
       )}
       {aba === "cadencia" && (
         <CadenciaTab
+          aoResponderComparecimento={devolucao ? responderComparecimento : undefined}
           negocio={negocio}
           atividadesIniciais={atividades}
           usuarioAtual={usuarioAtual}
@@ -342,6 +448,46 @@ export function NegocioDetailClient({
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
       {aba === "ia" && <CopilotoTab negocio={negocio} usuarioAtual={usuarioAtual} />}
+
+      {entrega && (
+        <Modal
+          aberto={entregando}
+          aoFechar={() => setEntregando(false)}
+          titulo="Entregar ao vendedor"
+          rodape={
+            <>
+              <Botao variante="secundario" onClick={() => setEntregando(false)} disabled={entregandoAgora}>
+                Cancelar
+              </Botao>
+              <Botao variante="primario" onClick={() => void entregarAoVendedor()} disabled={entregandoAgora}>
+                {entregandoAgora ? "Entregando…" : "Entregar"}
+              </Botao>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              <strong className="font-bold text-slate-900 dark:text-slate-100">
+                {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
+              </strong>{" "}
+              sai da prospecção e entra em <strong>{entrega.funil.nome}</strong>, na etapa{" "}
+              <strong>{entrega.etapa.nome}</strong>. O histórico e a cadência vão junto.
+            </p>
+            <Campo rotulo="Quem assume">
+              {(props) => (
+                <Selecao {...props} value={destinatario} onChange={(e) => setDestinatario(e.target.value)}>
+                  <option value="">Deixar no pool (qualquer vendedor pega)</option>
+                  {entrega.responsaveis.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              )}
+            </Campo>
+          </div>
+        </Modal>
+      )}
 
       <Modal
         aberto={encerrando !== null}

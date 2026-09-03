@@ -57,7 +57,14 @@ export function CadenciaTab({
   atividadesIniciais,
   usuarioAtual,
   onRegistrouAtividade,
+  aoResponderComparecimento,
 }: {
+  /**
+   * Só existe quando há um funil para onde devolver o no-show. Sem ele a
+   * pergunta "compareceu?" não aparece: não adianta perguntar se não há fila
+   * de reagendamento do outro lado.
+   */
+  aoResponderComparecimento?: (atividadeId: string, compareceu: boolean) => Promise<string | void>;
   negocio: NegocioComRelacoes;
   atividadesIniciais: AtividadeComUsuario[];
   usuarioAtual: Usuario;
@@ -219,6 +226,22 @@ export function CadenciaTab({
       setAtividades(antes);
       setErro(`Não foi possível reagendar: ${error.message}`);
     }
+  };
+
+  const [respondendo, setRespondendo] = useState<string | null>(null);
+
+  const responder = async (id: string, compareceu: boolean) => {
+    if (!aoResponderComparecimento) return;
+    setRespondendo(id);
+    const erroResposta = await aoResponderComparecimento(id, compareceu);
+    setRespondendo(null);
+    if (erroResposta) {
+      setErro(`Não foi possível registrar a resposta: ${erroResposta}`);
+      return;
+    }
+    setAtividades((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, compareceu, concluida: true } : a)),
+    );
   };
 
   const [excluindo, setExcluindo] = useState<AtividadeComUsuario | null>(null);
@@ -486,6 +509,39 @@ export function CadenciaTab({
                         </span>
                       )}
                     </p>
+
+                    {/* Reunião cuja hora já passou e ninguém disse se houve.
+                        Sem esta pergunta o no-show fica invisível: o card
+                        continua "atrasado" para sempre e o SDR nunca sabe que
+                        tem alguém para reagendar. */}
+                    {aoResponderComparecimento &&
+                      atrasada &&
+                      a.compareceu == null &&
+                      (a.tipo === "reuniao" || a.tipo === "demo") && (
+                        <div className="mt-2 flex items-center gap-2 flex-wrap rounded-xl bg-white/70 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900 px-3 py-2">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            O cliente compareceu?
+                          </span>
+                          <button
+                            onClick={() => void responder(a.id, true)}
+                            disabled={respondendo === a.id}
+                            className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                          >
+                            Compareceu
+                          </button>
+                          <button
+                            onClick={() => void responder(a.id, false)}
+                            disabled={respondendo === a.id}
+                            className="px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                          >
+                            Não veio
+                          </button>
+                          {respondendo === a.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+                          <span className="text-[11px] text-slate-400">
+                            &ldquo;Não veio&rdquo; devolve o lead para o SDR reagendar.
+                          </span>
+                        </div>
+                      )}
 
                     {reagendando === a.id && (
                       <div className="flex items-center gap-2 mt-2 flex-wrap">

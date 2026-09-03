@@ -74,6 +74,37 @@ export async function carregarEtapas(
 }
 
 /**
+ * Papel de uma etapa dentro do fluxo do funil. Espelha o CHECK de
+ * `etapas_pipeline.funcao`.
+ *
+ * `resultado` diz o que a etapa significa para o NEGÓCIO (ganho/perda);
+ * `funcao` diz o que ela significa para o FLUXO — para onde o handoff entrega,
+ * para onde o no-show volta, onde o lead fica parado esperando data.
+ */
+export type FuncaoEtapa = "entrada" | "retorno" | "nutricao";
+
+export function etapaComFuncao(
+  etapas: EtapaPipeline[],
+  funcao: FuncaoEtapa,
+): EtapaPipeline | undefined {
+  return etapas.find((e) => e.funcao === funcao);
+}
+
+/** O funil de onde vêm os leads deste aqui — o outro lado do handoff. */
+export async function carregarFunilDeOrigem(
+  supabase: Cliente,
+  pipelineId: string | null | undefined,
+): Promise<Pipeline | null> {
+  if (!pipelineId) return null;
+  const { data } = await supabase
+    .from("pipelines")
+    .select("*")
+    .eq("pipeline_destino_id", pipelineId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+/**
  * O par que quase toda tela precisa: o funil e as etapas dele, numa ida só ao
  * banco por vez. Devolve `pipeline: null` quando o tenant ainda não tem aquele
  * funil — é o que a Fase 4 usa para esconder o board do SDR de quem não o tem.

@@ -263,6 +263,7 @@ export type Database = {
       etapas_pipeline: {
         Row: {
           resultado: string | null
+          funcao: string | null
           pipeline_id: string | null
           cor: string | null
           id: string
@@ -273,6 +274,7 @@ export type Database = {
         }
         Insert: {
           resultado?: string | null
+          funcao?: string | null
           pipeline_id?: string | null
           cor?: string | null
           id?: string
@@ -283,6 +285,7 @@ export type Database = {
         }
         Update: {
           resultado?: string | null
+          funcao?: string | null
           pipeline_id?: string | null
           cor?: string | null
           id?: string
@@ -1089,6 +1092,16 @@ export type Database = {
       }
       usuario_role: { Args: never; Returns: string }
       usuario_tenant_id: { Args: never; Returns: string }
+      transferir_negocio_de_funil: {
+        Args: {
+          p_descricao: string
+          p_etapa_destino_id: string
+          p_negocio_id: string
+          p_responsavel_id: string | null
+          p_titulo: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
