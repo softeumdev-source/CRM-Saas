@@ -16,7 +16,31 @@ export interface EmailResult {
   remetenteTest?: boolean;
 }
 
-export async function enviarEmail(params: { to: string; subject: string; html: string }): Promise<EmailResult> {
+/**
+ * Endereco para onde a RESPOSTA do cliente deve ir.
+ *
+ * Sem isto, o cliente responde para `RESEND_FROM_EMAIL` — um endereco de
+ * sistema — e a resposta nunca chega na caixa de ninguem. A sincronizacao do
+ * Gmail entao "funciona" e nao traz nada, o que e indistinguivel de "ninguem
+ * respondeu". Era o buraco silencioso mais caro da entrada de mensagens.
+ *
+ * Endereco nao entregavel e recusado aqui em vez de virar um Reply-To que
+ * devolve bounce: o dono do lead pode ser o robo SDR IA, cujo e-mail usa o TLD
+ * `.invalid` justamente para nao receber nada.
+ */
+export function podeReceberResposta(email: string | null | undefined): boolean {
+  const e = (email || "").trim().toLowerCase();
+  if (!e || !e.includes("@")) return false;
+  return !e.endsWith(".invalid") && !e.endsWith(".local") && !e.endsWith(".example");
+}
+
+export async function enviarEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+  /** Ignorado quando nao e entregavel — ver `podeReceberResposta`. */
+  replyTo?: string | null;
+}): Promise<EmailResult> {
   if (!process.env.RESEND_API_KEY) {
     console.warn("[resend] RESEND_API_KEY não configurada - e-mail não enviado:", params.subject, "->", params.to);
     return { sent: false, skipped: true, error: "RESEND_API_KEY não configurada no servidor." };
@@ -36,6 +60,7 @@ export async function enviarEmail(params: { to: string; subject: string; html: s
       to: params.to,
       subject: params.subject,
       html: params.html,
+      ...(podeReceberResposta(params.replyTo) ? { replyTo: params.replyTo! } : {}),
     });
 
     if (error) {

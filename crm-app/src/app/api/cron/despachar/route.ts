@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
-import { enviarEmail, emailBase, temResendConfigurado } from "@/lib/resend";
+import { enviarEmail, emailBase, temResendConfigurado, podeReceberResposta } from "@/lib/resend";
 import { enviarTemplate, temWhatsappConfigurado } from "@/lib/whatsapp/cliente";
 
 /**
@@ -48,6 +48,34 @@ export async function GET(request: Request) {
 
   const resultado = { reservadas: mensagens?.length ?? 0, enviadas: 0, reagendadas: 0, falhou: 0 };
 
+  // De quem e a caixa que deve receber a RESPOSTA de cada e-mail.
+  //
+  // Sem Reply-To o cliente responde para `RESEND_FROM_EMAIL`, um endereco de
+  // sistema, e a resposta nao chega na caixa de ninguem — a sincronizacao do
+  // Gmail "funciona" e nao traz nada, indistinguivel de "ninguem respondeu".
+  //
+  // Uma consulta para o LOTE inteiro, nao uma por mensagem: sao ate 20 por
+  // rodada, a cada 5 minutos.
+  const idsDeNegocio = [
+    ...new Set(
+      (mensagens || [])
+        .filter((m) => m.canal === "email" && m.negocio_id)
+        .map((m) => m.negocio_id as string),
+    ),
+  ];
+  const respostaVaiPara = new Map<string, string>();
+  if (idsDeNegocio.length > 0) {
+    const { data: donos } = await supabase
+      .from("negocios")
+      .select("id, responsavel:usuarios(email)")
+      .in("id", idsDeNegocio);
+    for (const d of donos || []) {
+      const email = (d.responsavel as { email?: string } | null)?.email;
+      // O dono pode ser o robo SDR IA, cujo e-mail e `.invalid` de proposito.
+      if (podeReceberResposta(email)) respostaVaiPara.set(d.id, email!);
+    }
+  }
+
   for (const m of mensagens || []) {
     if (!m.destino) {
       await supabase.rpc("concluir_envio", {
@@ -79,6 +107,7 @@ export async function GET(request: Request) {
               to: m.destino!,
               subject: m.assunto || "Softeum",
               html: emailBase(m.corpo),
+              replyTo: m.negocio_id ? respostaVaiPara.get(m.negocio_id) : undefined,
             });
             return { ok: e.sent, id: e.id, erro: e.error, codigo: undefined as string | undefined };
           })();
