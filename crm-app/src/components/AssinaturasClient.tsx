@@ -56,61 +56,61 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
   return (
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
       <div className="flex items-center gap-2">
-        <FileSignature className="h-5 w-5 text-indigo-600" />
-        <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Assinaturas</h1>
+        <FileSignature className="h-5 w-5 text-acento" />
+        <h1 className="text-titulo font-semibold text-tinta">Assinaturas</h1>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-amber-600">{contadores.acaoNecessaria}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Aguardando assinatura</p>
+        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
+          <p className="text-display font-semibold text-alerta">{contadores.acaoNecessaria}</p>
+          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Aguardando assinatura</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-emerald-600">{contadores.concluido}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Concluídas</p>
+        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
+          <p className="text-display font-semibold text-ok">{contadores.concluido}</p>
+          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Concluídas</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-          <p className="text-2xl font-extrabold text-slate-400">{contadores.cancelado}</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase">Canceladas</p>
+        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
+          <p className="text-display font-semibold text-tinta-fraca">{contadores.cancelado}</p>
+          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Canceladas</p>
         </div>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tinta-fraca" />
         <input
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por empresa, nome, CNPJ, e-mail, nº da proposta ou signatário..."
-          className="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+          className="w-full pl-10 pr-4 py-2.5 text-corpo bg-superficie border border-fio rounded-2xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800">
-        {envelopes.length === 0 && <p className="p-6 text-xs text-slate-400 text-center">Nenhum envelope de assinatura ainda.</p>}
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs divide-y divide-fio">
+        {envelopes.length === 0 && <p className="p-6 text-rotulo text-tinta-fraca text-center">Nenhum envelope de assinatura ainda.</p>}
         {envelopes.length > 0 && envelopesFiltrados.length === 0 && (
-          <p className="p-6 text-xs text-slate-400 text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
+          <p className="p-6 text-rotulo text-tinta-fraca text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
         )}
         {envelopesFiltrados.map((env) => {
           const negocio = env.proposta?.negocio;
           const assinadoComercial = env.proposta?.pdf_assinado_comercial_path;
           const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
           return (
-            <div key={env.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <div key={env.id} className="p-4 hover:bg-recuo">
               <Link href={negocio ? `/negocios/${negocio.id}` : "#"} className="block">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                    <p className="font-semibold text-corpo text-tinta">
                       {negocio?.contato?.empresa || negocio?.contato?.nome} — Proposta {env.proposta?.numero}
                     </p>
-                    <p className="text-xs text-slate-500">Vendedor: {negocio?.responsavel?.nome || "—"}</p>
+                    <p className="text-rotulo text-tinta-suave">Vendedor: {negocio?.responsavel?.nome || "—"}</p>
                   </div>
                   <span
-                    className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                    className={`flex items-center gap-1.5 px-3 py-1 text-rotulo font-semibold rounded-full ${
                       env.status === "concluido"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        ? "bg-ok-fraco text-ok"
                         : env.status === "cancelado"
-                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                          ? "bg-recuo text-tinta-suave"
+                          : "bg-alerta-fraco text-alerta"
                     }`}
                   >
                     {env.status === "concluido" ? <CheckCircle2 className="h-3.5 w-3.5" /> : env.status === "cancelado" ? <XCircle className="h-3.5 w-3.5" /> : env.status === "aguardando" ? <Eye className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
@@ -136,12 +136,12 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                               ? `Visualizou em ${new Date(s.visualizado_em).toLocaleString("pt-BR")}`
                               : "Ainda não visualizou o documento"
                         }
-                        className={`text-[11px] px-2 py-1 rounded-lg font-semibold flex items-center gap-1 ${
+                        className={`text-rotulo px-2 py-1 rounded-lg font-medium flex items-center gap-1 ${
                           s.status === "assinado"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40"
+                            ? "bg-ok-fraco text-ok"
                             : s.status === "visualizado"
-                              ? "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
-                              : "bg-slate-100 text-slate-500 dark:bg-slate-800"
+                              ? "bg-info-fraco text-info"
+                              : "bg-recuo text-tinta-suave"
                         }`}
                       >
                         {s.status === "visualizado" && <Eye className="h-3 w-3" />}
@@ -151,7 +151,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                 </div>
               </Link>
               {(assinadoComercial || assinadoTecnica) && (
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-fio">
                   {/* Botao, e nao <a href>: o banco guarda o caminho no bucket
                       privado, entao a URL tem de ser assinada na hora. Com o
                       caminho cru no href, estes links davam 404. */}
@@ -159,7 +159,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                     <button
                       type="button"
                       onClick={() => void abrirPdf(assinadoComercial)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800"
+                      className="flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar comercial assinada
                     </button>
@@ -168,7 +168,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                     <button
                       type="button"
                       onClick={() => void abrirPdf(assinadoTecnica)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800"
+                      className="flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar técnica assinada
                     </button>

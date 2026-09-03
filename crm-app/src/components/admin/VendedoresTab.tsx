@@ -108,9 +108,9 @@ export function VendedoresTab({
   return (
     <div className="space-y-6">
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4 h-fit">
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-indigo-600" /> Convidar para o time
+        <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4 h-fit">
+          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <UserPlus className="h-4 w-4 text-acento" /> Convidar para o time
           </h3>
           <form onSubmit={handleConvidar} className="space-y-3">
             <input
@@ -118,7 +118,7 @@ export function VendedoresTab({
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Nome completo"
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
             />
             <input
               required
@@ -126,7 +126,7 @@ export function VendedoresTab({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@softeum.com.br"
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
             />
             <div>
               <Selecao
@@ -140,13 +140,13 @@ export function VendedoresTab({
                   </option>
                 ))}
               </Selecao>
-              <p className="mt-1 px-1 text-[11px] text-slate-400">{DESCRICAO_PAPEL[papel]}</p>
+              <p className="mt-1 px-1 text-rotulo text-tinta-fraca">{DESCRICAO_PAPEL[papel]}</p>
             </div>
-            {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+            {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
             <button
               type="submit"
               disabled={enviando}
-              className="w-full py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
             >
               {enviando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Enviar convite
@@ -154,8 +154,8 @@ export function VendedoresTab({
           </form>
 
           {linkGerado && (
-            <div className={`rounded-xl p-3 text-xs ${emailEnviado ? "bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800" : "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"}`}>
-              <p className={`font-bold mb-1.5 ${emailEnviado ? "text-indigo-800 dark:text-indigo-300" : "text-amber-800 dark:text-amber-300"}`}>
+            <div className={`rounded-xl p-3 text-rotulo ${emailEnviado ? "bg-acento-fraco border border-fio" : "bg-alerta-fraco border border-alerta/40"}`}>
+              <p className={`font-medium mb-1.5 ${emailEnviado ? "text-acento" : "text-alerta"}`}>
                 {emailEnviado
                   ? remetenteTest
                     ? "E-mail enviado (remetente de teste — só chega no e-mail da conta Resend). Link de apoio:"
@@ -165,36 +165,36 @@ export function VendedoresTab({
                     : "RESEND_API_KEY não configurada — envie este link manualmente:"}
               </p>
               {!emailEnviado && (
-                <p className="text-amber-700 dark:text-amber-400 mb-2">
+                <p className="text-alerta mb-2">
                   Configure as variáveis RESEND_API_KEY e RESEND_FROM_EMAIL (com domínio verificado no Resend) nas variáveis de ambiente do Vercel.
                 </p>
               )}
               <div className="flex items-center gap-2">
-                <code className="flex-1 truncate bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{linkGerado}</code>
-                <button onClick={copiarLink} className="text-indigo-600">{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>
+                <code className="flex-1 truncate bg-superficie px-2 py-1 rounded-lg border border-fio">{linkGerado}</code>
+                <button onClick={copiarLink} className="text-acento">{copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</button>
               </div>
             </div>
           )}
 
           {pendentes.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">Convites pendentes</p>
+              <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">Convites pendentes</p>
               <div className="space-y-1.5">
                 {pendentes.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg">
-                    <span className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300 truncate">
+                  <div key={c.id} className="flex items-center justify-between gap-2 text-rotulo bg-alerta-fraco px-3 py-2 rounded-lg">
+                    <span className="flex items-center gap-1.5 font-medium text-alerta truncate">
                       <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{c.email}</span>
-                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-rotulo font-medium bg-alerta-fraco text-alerta">
                         {ROTULO_PAPEL[c.role || ""] || c.role}
                       </span>
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="flex items-center gap-1 text-amber-600"><Clock className="h-3 w-3" /> pendente</span>
+                      <span className="flex items-center gap-1 text-alerta"><Clock className="h-3 w-3" /> pendente</span>
                       <button
                         type="button"
                         onClick={() => handleReenviar(c.id)}
                         disabled={reenviandoId === c.id}
-                        className="flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                        className="flex items-center gap-1 font-medium text-acento hover:text-acento disabled:opacity-50"
                       >
                         {reenviandoId === c.id ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -214,40 +214,40 @@ export function VendedoresTab({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <p className="text-xs font-bold uppercase text-slate-400">Time ativo</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{ativos.length}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Time ativo</p>
+            <p className="text-display font-medium text-tinta mt-1">{ativos.length}</p>
+            <p className="text-rotulo text-tinta-fraca mt-0.5">
               {vendedoresAtivos.length} {vendedoresAtivos.length === 1 ? "vendedor" : "vendedores"}
               {ativos.length - vendedoresAtivos.length > 0 && ` · ${ativos.length - vendedoresAtivos.length} SDR`}
             </p>
           </div>
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <p className="text-xs font-bold uppercase text-slate-400">Meta mensal somada</p>
-            <p className="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">{formatarMoeda(totalMeta)}</p>
+          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Meta mensal somada</p>
+            <p className="text-display font-medium text-acento mt-1">{formatarMoeda(totalMeta)}</p>
           </div>
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <p className="text-xs font-bold uppercase text-slate-400">Negócios ativos</p>
-            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => !n.ganho).length}</p>
+          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Negócios ativos</p>
+            <p className="text-display font-medium text-ok mt-1">{negocios.filter((n) => !n.ganho).length}</p>
           </div>
 
           {ativos.map((v) => {
             const deles = negocios.filter((n) => n.responsavel_id === v.id);
             const valorAtivo = deles.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
-              <div key={v.id} className="col-span-full sm:col-span-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3">
+              <div key={v.id} className="col-span-full sm:col-span-3 bg-superficie p-4 rounded-2xl border border-fio shadow-xs flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold shrink-0">
+                  <div className="h-10 w-10 rounded-xl bg-acento-fraco text-acento flex items-center justify-center text-rotulo font-medium shrink-0">
                     {iniciais(v.nome)}
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{v.nome}</p>
-                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <p className="font-medium text-corpo text-tinta truncate">{v.nome}</p>
+                      <span className="shrink-0 px-2 py-0.5 rounded-full text-rotulo font-medium bg-recuo text-tinta-suave">
                         {ROTULO_PAPEL[v.role || ""] || v.role}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{v.email}</p>
+                    <p className="text-rotulo text-tinta-suave truncate">{v.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -259,20 +259,20 @@ export function VendedoresTab({
                     <>
                       <MetaMensal usuario={v} />
                       <div className="text-right">
-                        <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
-                        <p className="text-[11px] text-slate-400">{deles.length} negócios</p>
+                        <p className="text-corpo font-medium text-acento">{formatarMoeda(valorAtivo)}</p>
+                        <p className="text-rotulo text-tinta-fraca">{deles.length} negócios</p>
                       </div>
                     </>
                   ) : (
                     <div className="text-right">
-                      <p className="text-sm font-extrabold text-slate-700 dark:text-slate-200">{deles.length}</p>
-                      <p className="text-[11px] text-slate-400">leads em mãos</p>
+                      <p className="text-corpo font-medium text-tinta-suave">{deles.length}</p>
+                      <p className="text-rotulo text-tinta-fraca">leads em mãos</p>
                     </div>
                   )}
                   <button
                     onClick={() => setDesativando(v)}
                     title={`Remover ${ROTULO_PAPEL[v.role || ""] || "membro"} do time`}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
+                    className="p-2 text-tinta-fraca hover:text-risco hover:bg-risco-fraco rounded-xl transition-colors"
                   >
                     <UserX className="h-4 w-4" />
                   </button>
@@ -283,23 +283,23 @@ export function VendedoresTab({
 
           {inativos.length > 0 && (
             <div className="col-span-full">
-              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Removidos do time ({inativos.length})</p>
+              <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2 mt-2">Removidos do time ({inativos.length})</p>
               <div className="space-y-2">
                 {inativos.map((v) => (
-                  <div key={v.id} className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 opacity-70">
+                  <div key={v.id} className="bg-recuo p-3 rounded-2xl border border-fio flex items-center justify-between gap-3 opacity-70">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 w-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px] font-extrabold shrink-0">
+                      <div className="h-8 w-8 rounded-xl bg-fio text-tinta-suave flex items-center justify-center text-rotulo font-medium shrink-0">
                         {iniciais(v.nome)}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-slate-700 dark:text-slate-300 truncate">{v.nome}</p>
-                        <p className="text-[11px] text-slate-400 truncate">{v.email}</p>
+                        <p className="font-medium text-rotulo text-tinta-suave truncate">{v.nome}</p>
+                        <p className="text-rotulo text-tinta-fraca truncate">{v.email}</p>
                       </div>
                     </div>
                     <button
                       onClick={() => void definirAtivo(v, true)}
                       title="Reativar acesso"
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-rotulo font-medium text-ok hover:bg-ok-fraco rounded-lg"
                     >
                       <UserCheck className="h-3.5 w-3.5" /> Reativar
                     </button>
@@ -319,7 +319,7 @@ export function VendedoresTab({
         aoConfirmar={() => definirAtivo(desativando!, false)}
         descricao={
           <>
-            <strong className="font-bold text-slate-900 dark:text-slate-100">{desativando?.nome}</strong>{" "}
+            <strong className="font-medium text-tinta">{desativando?.nome}</strong>{" "}
             deixa de acessar o sistema e some das listas de quem pode receber lead. Os negócios já
             atribuídos continuam com essa pessoa — reatribua antes se for o caso.
           </>
@@ -359,7 +359,7 @@ function MetaMensal({ usuario }: { usuario: Usuario }) {
     <div className="flex items-center gap-1.5">
       <label
         htmlFor={`meta-${usuario.id}`}
-        className="text-[11px] font-bold uppercase text-slate-400"
+        className="text-rotulo font-medium uppercase text-tinta-fraca"
       >
         Meta
       </label>
@@ -370,14 +370,14 @@ function MetaMensal({ usuario }: { usuario: Usuario }) {
         step={1000}
         value={meta}
         onChange={(e) => setMeta(e.target.value)}
-        className="w-28 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-900 transition-[border-color] duration-150 ease-out hover:border-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-28 rounded-lg border border-fio bg-recuo px-2 py-1.5 text-rotulo font-medium text-tinta transition-[border-color] duration-150 ease-out hover:border-fio-forte focus-visible:outline-2 focus-visible:outline-offset-2 "
       />
       {alterada && (
         <Botao tamanho="sm" variante="primario" carregando={salvando} onClick={salvar}>
           Salvar
         </Botao>
       )}
-      {erro && <span className="text-[11px] font-semibold text-rose-600">{erro}</span>}
+      {erro && <span className="text-rotulo font-medium text-risco">{erro}</span>}
     </div>
   );
 }

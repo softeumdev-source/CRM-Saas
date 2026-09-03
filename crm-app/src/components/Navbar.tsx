@@ -98,23 +98,23 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   }
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+    <header className="bg-superficie border-b border-fio sticky top-0 z-30 shadow-xs">
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 p-0.5 flex items-center justify-center shadow-md">
-            <div className="h-full w-full bg-white dark:bg-slate-900 rounded-[10px] flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="h-10 w-10 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center shadow-md">
+            <div className="h-full w-full bg-superficie rounded-[10px] flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-acento" />
             </div>
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+            <h1 className="text-corpo-lg font-semibold text-tinta tracking-tight leading-tight">
               CRM {usuario.tenant?.nome ?? ""}
             </h1>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">Funil comercial</p>
+            <p className="text-rotulo text-tinta-suave">Funil comercial</p>
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1">
+        <nav className="hidden md:flex items-center bg-recuo p-1 rounded-xl gap-1">
           {links.map((l) => {
             const Icon = l.icon;
             const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
@@ -122,10 +122,10 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-150 ease-out ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-rotulo font-medium rounded-lg transition-colors duration-150 ease-out ${
                   active
-                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-superficie text-acento shadow-xs"
+                    : "text-tinta-suave hover:text-tinta"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -139,24 +139,24 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
           <div className="relative">
             <button
               onClick={marcarLidas}
-              className="relative p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="relative p-2 text-tinta-fraca hover:text-acento hover:bg-recuo rounded-xl transition-colors"
             >
               <Bell className="h-4.5 w-4.5" />
               {naoLidas > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-risco-solido text-risco-tinta text-[9px] font-semibold flex items-center justify-center">
                   {naoLidas}
                 </span>
               )}
             </button>
             {showNotifs && (
-              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-40">
-                <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Notificações</span>
+              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-xl z-40">
+                <div className="p-3 border-b border-fio flex items-center justify-between gap-2">
+                  <span className="text-rotulo font-semibold text-tinta-suave">Notificações</span>
                   {notificacoes.length > 0 && (
                     <button
                       onClick={limparNotificacoes}
                       disabled={limpando}
-                      className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-rose-600 disabled:opacity-50"
+                      className="flex items-center gap-1 text-rotulo font-medium text-tinta-fraca hover:text-risco disabled:opacity-50"
                     >
                       {limpando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                       Limpar
@@ -164,23 +164,23 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
                   )}
                 </div>
                 {notificacoes.length === 0 ? (
-                  <p className="p-4 text-xs text-slate-400 text-center">Nenhuma notificação ainda.</p>
+                  <p className="p-4 text-rotulo text-tinta-fraca text-center">Nenhuma notificação ainda.</p>
                 ) : (
                   notificacoes.map((n) => (
                     <Link
                       key={n.id}
                       href={n.link || "#"}
                       onClick={() => setShowNotifs(false)}
-                      className="block p-3 border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs"
+                      className="block p-3 border-b border-fio hover:bg-recuo text-rotulo"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className={`font-bold ${n.lida ? "text-slate-500 dark:text-slate-400" : "text-slate-800 dark:text-slate-200"}`}>
+                        <p className={`font-semibold ${n.lida ? "text-tinta-suave" : "text-tinta"}`}>
                           {n.titulo}
                         </p>
-                        {!n.lida && <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                        {!n.lida && <span className="mt-1 h-1.5 w-1.5 rounded-full bg-acento shrink-0" />}
                       </div>
-                      {n.corpo && <p className="text-slate-500 dark:text-slate-400 mt-0.5">{n.corpo}</p>}
-                      <p className="text-[10px] text-slate-400 mt-1">{formatarDataHora(n.criado_em)}</p>
+                      {n.corpo && <p className="text-tinta-suave mt-0.5">{n.corpo}</p>}
+                      <p className="text-rotulo text-tinta-fraca mt-1">{formatarDataHora(n.criado_em)}</p>
                     </Link>
                   ))
                 )}
@@ -188,19 +188,19 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-700">
-            <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-extrabold">
+          <div className="flex items-center gap-2 pl-3 border-l border-fio">
+            <div className="h-8 w-8 rounded-full bg-acento-fraco text-acento flex items-center justify-center text-rotulo font-semibold">
               {iniciais(usuario.nome)}
             </div>
             <div className="hidden sm:block">
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">{usuario.nome}</p>
-              <p className="text-[10px] text-slate-400 capitalize">{usuario.role}</p>
+              <p className="text-rotulo font-semibold text-tinta leading-tight">{usuario.nome}</p>
+              <p className="text-rotulo text-tinta-fraca capitalize">{usuario.role}</p>
             </div>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
               title="Sair"
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="p-2 text-tinta-fraca hover:text-risco hover:bg-recuo rounded-xl transition-colors"
             >
               {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
             </button>
@@ -216,8 +216,8 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             <Link
               key={l.href}
               href={l.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap ${
-                active ? "bg-indigo-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium rounded-lg whitespace-nowrap ${
+                active ? "bg-acento-solido text-acento-tinta" : "bg-recuo text-tinta-suave"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />

@@ -126,7 +126,7 @@ function Balao({ mensagem }: { mensagem: Mensagem }) {
         ].join(" ")}
       >
         {mensagem.assunto ? (
-          <p className="mb-1 text-rotulo font-semibold text-tinta">{mensagem.assunto}</p>
+          <p className="mb-1 text-rotulo font-medium text-tinta">{mensagem.assunto}</p>
         ) : null}
 
         {/* `corpo_formato` decide o render, e isso e uma fronteira de seguranca,

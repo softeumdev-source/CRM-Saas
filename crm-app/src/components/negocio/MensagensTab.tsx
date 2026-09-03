@@ -222,7 +222,7 @@ export function MensagensTab({
 
   if (carregando) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-8 flex items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando cadência…
       </div>
     );
@@ -230,9 +230,9 @@ export function MensagensTab({
 
   if (erroCarga) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-rose-200 dark:border-rose-900 shadow-xs p-8 text-center space-y-3">
-        <AlertTriangle className="h-6 w-6 text-rose-500 mx-auto" />
-        <p className="text-sm text-slate-700 dark:text-slate-200">{erroCarga}</p>
+      <div className="bg-superficie rounded-2xl border border-risco/40 shadow-xs p-8 text-center space-y-3">
+        <AlertTriangle className="h-6 w-6 text-risco mx-auto" />
+        <p className="text-corpo text-tinta-suave">{erroCarga}</p>
         <Botao
           variante="secundario"
           onClick={() => {
@@ -249,7 +249,7 @@ export function MensagensTab({
   return (
     <div className="space-y-5">
       {erro && (
-        <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+        <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
           {erro}
         </p>
       )}
@@ -258,29 +258,29 @@ export function MensagensTab({
       {/* Fila de aprovação — o que está esperando alguém dizer "pode ir"   */}
       {/* ---------------------------------------------------------------- */}
       {aguardando.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 rounded-3xl border border-amber-200 dark:border-amber-900 p-5 space-y-3">
-          <h3 className="font-bold text-sm text-amber-900 dark:text-amber-200 flex items-center gap-2">
+        <div className="bg-alerta-fraco rounded-2xl border border-alerta/40 p-5 space-y-3">
+          <h3 className="font-medium text-corpo text-alerta flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             {aguardando.length === 1
               ? "1 mensagem esperando sua aprovação"
               : `${aguardando.length} mensagens esperando sua aprovação`}
           </h3>
-          <p className="text-xs text-amber-800 dark:text-amber-300">
+          <p className="text-rotulo text-alerta">
             Nada sai daqui sozinho. Leia, ajuste se precisar, e só então aprove.
           </p>
 
           {aguardando.map((m) => (
             <div
               key={m.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl border border-amber-200 dark:border-amber-900 p-4 space-y-3"
+              className="bg-superficie rounded-2xl border border-alerta/40 p-4 space-y-3"
             >
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{m.assunto}</p>
-                  <p className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                  <p className="text-corpo font-medium text-tinta">{m.assunto}</p>
+                  <p className="text-rotulo text-tinta-suave flex items-center gap-1.5 mt-0.5">
                     <Mail className="h-3 w-3" /> {m.destino}
                     {m.gerado_por === "ia" && (
-                      <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                      <span className="inline-flex items-center gap-1 text-acento font-medium">
                         <Bot className="h-3 w-3" /> escrita por IA
                       </span>
                     )}
@@ -331,7 +331,7 @@ export function MensagensTab({
                 </div>
               </div>
               <div
-                className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3 max-h-52 overflow-y-auto [&_p]:mb-2"
+                className="text-rotulo text-tinta-suave bg-recuo rounded-xl p-3 max-h-52 overflow-y-auto [&_p]:mb-2"
                 dangerouslySetInnerHTML={{ __html: m.corpo }}
               />
             </div>
@@ -342,19 +342,19 @@ export function MensagensTab({
       {/* ---------------------------------------------------------------- */}
       {/* Cadência: estado atual ou inscrição, com o plano à vista          */}
       {/* ---------------------------------------------------------------- */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Send className="h-4 w-4 text-indigo-600" /> Cadência
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+        <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Send className="h-4 w-4 text-acento" /> Cadência
         </h3>
 
         {ativa ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                <p className="text-corpo font-medium text-tinta">
                   {ativa.cadencia?.nome || "Cadência"}
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-rotulo text-tinta-suave mt-0.5">
                   {ROTULO_STATUS_INSCRICAO[ativa.status]} · passo {ativa.passo_atual}
                   {ativa.proximo_envio_em
                     ? ` · próximo toque em ${formatarDataHora(ativa.proximo_envio_em)}`
@@ -393,14 +393,14 @@ export function MensagensTab({
             </div>
           </div>
         ) : cadencias.length === 0 ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-rotulo text-tinta-suave">
             Nenhuma cadência configurada para este funil. O administrador cria as cadências no painel.
           </p>
         ) : (
           <div className="space-y-3">
             <div className="flex items-end gap-2 flex-wrap">
               <div className="min-w-[240px]">
-                <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
                   Inscrever este lead em
                 </label>
                 <Selecao value={cadenciaEscolhida?.id || ""} onChange={(e) => setEscolhida(e.target.value)}>
@@ -441,25 +441,25 @@ export function MensagensTab({
                 inscrever. Um botão "inscrever" sem esta lista pede um
                 compromisso que ninguém consegue avaliar na hora de clicar. */}
             {plano.length > 0 && (
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4">
-                <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">
+              <div className="bg-recuo rounded-2xl p-4">
+                <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">
                   O que vai acontecer
                 </p>
                 <ol className="space-y-1.5">
                   {plano.map(({ passo, quando }) => (
-                    <li key={passo.id} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                      <span className="h-5 w-5 shrink-0 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold">
+                    <li key={passo.id} className="text-rotulo text-tinta-suave flex items-center gap-2">
+                      <span className="h-5 w-5 shrink-0 rounded-full bg-superficie border border-fio flex items-center justify-center text-rotulo font-medium">
                         {passo.ordem}
                       </span>
-                      <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                      <Clock className="h-3 w-3 text-tinta-fraca shrink-0" />
                       {formatarDataHora(quando.toISOString())} · {passo.canal}
                       {passo.parar_se_respondeu && (
-                        <span className="text-slate-400">— não sai se o lead já tiver respondido</span>
+                        <span className="text-tinta-fraca">— não sai se o lead já tiver respondido</span>
                       )}
                     </li>
                   ))}
                 </ol>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="text-rotulo text-tinta-suave mt-2">
                   {cadenciaEscolhida?.autonoma
                     ? "Esta cadência está autônoma: as mensagens saem sem passar por aprovação."
                     : "Cada mensagem vai esperar sua aprovação antes de sair."}
@@ -514,11 +514,11 @@ export function MensagensTab({
       >
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Assunto</label>
+            <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Assunto</label>
             <Entrada value={assuntoEdit} onChange={(e) => setAssuntoEdit(e.target.value)} />
           </div>
           <div>
-            <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+            <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
               Corpo (HTML)
             </label>
             <AreaTexto rows={12} value={corpoEdit} onChange={(e) => setCorpoEdit(e.target.value)} />

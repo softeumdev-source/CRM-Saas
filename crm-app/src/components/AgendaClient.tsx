@@ -162,14 +162,14 @@ export function AgendaClient({
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-indigo-600" /> Agenda de cadência
+          <h1 className="text-titulo font-semibold text-tinta flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-acento" /> Agenda de cadência
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-rotulo text-tinta-suave">
             Todos os próximos passos agendados. Conclua, reagende ou confirme sem sair da tela.
           </p>
         </div>
-        <label htmlFor="agendaclie-1" className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl cursor-pointer">
+        <label htmlFor="agendaclie-1" className="flex items-center gap-2 text-rotulo font-medium text-tinta-suave bg-superficie border border-fio px-3 py-2 rounded-xl cursor-pointer">
           <input id="agendaclie-1"
             type="checkbox"
             checked={apenasMinhas}
@@ -181,45 +181,45 @@ export function AgendaClient({
       </div>
 
       <div className="grid grid-cols-3 gap-2.5">
-        <Indicador rotulo="Atrasadas" valor={totalAtrasadas} cor={totalAtrasadas > 0 ? "text-rose-600 dark:text-rose-400" : undefined} />
-        <Indicador rotulo="Para hoje" valor={totalHoje} cor="text-indigo-600 dark:text-indigo-400" />
+        <Indicador rotulo="Atrasadas" valor={totalAtrasadas} cor={totalAtrasadas > 0 ? "text-risco" : undefined} />
+        <Indicador rotulo="Para hoje" valor={totalHoje} cor="text-acento" />
         <Indicador rotulo="Total agendado" valor={visiveis.length} />
       </div>
 
-      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+      {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
       {grupos.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center">
-          <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Nenhum passo agendado</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <div className="bg-superficie rounded-2xl border border-fio p-8 text-center">
+          <CheckCircle2 className="h-8 w-8 text-ok mx-auto mb-2" />
+          <p className="text-corpo font-semibold text-tinta">Nenhum passo agendado</p>
+          <p className="text-rotulo text-tinta-suave mt-1">
             Abra um negócio, registre a atividade e já agende a próxima ação para ele não sumir do radar.
           </p>
         </div>
       )}
 
       {grupos.map((grupo) => (
-        <div key={grupo.chave} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div key={grupo.chave} className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
           <div
             className={`px-5 py-3 border-b flex items-center gap-2 ${
               grupo.tom === "atrasado"
-                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900"
+                ? "bg-risco-fraco border-risco/40"
                 : grupo.tom === "hoje"
-                  ? "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800"
+                  ? "bg-acento-fraco border-fio"
+                  : "bg-recuo border-fio"
             }`}
           >
             {grupo.tom === "atrasado" ? (
-              <AlertTriangle className="h-4 w-4 text-rose-600" />
+              <AlertTriangle className="h-4 w-4 text-risco" />
             ) : (
-              <Clock className="h-4 w-4 text-indigo-600" />
+              <Clock className="h-4 w-4 text-acento" />
             )}
-            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            <h2 className="text-corpo font-semibold text-tinta">
               {grupo.titulo} ({grupo.itens.length})
             </h2>
           </div>
 
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-fio">
             {grupo.itens.map((a) => {
               const Icon = ICONES[a.tipo] || MessageSquare;
               const atrasada = estaAtrasada(a.data_agendada);
@@ -228,30 +228,30 @@ export function AgendaClient({
                 <div key={a.id} className="p-4 flex items-start gap-3 flex-wrap sm:flex-nowrap">
                   <div
                     className={`h-9 w-9 rounded-full text-white flex items-center justify-center shrink-0 ${
-                      atrasada ? "bg-rose-600" : "bg-indigo-600"
+                      atrasada ? "bg-risco-solido" : "bg-acento-solido"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{a.titulo}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap mt-0.5">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">{empresa}</span>
+                    <p className="text-corpo font-semibold text-tinta">{a.titulo}</p>
+                    <p className="text-rotulo text-tinta-suave flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span className="font-medium text-tinta-suave">{empresa}</span>
                       <span>·</span>
                       <span>{ROTULOS_ATIVIDADE[a.tipo] || a.tipo}</span>
                       <span>·</span>
-                      <span className={atrasada ? "font-bold text-rose-600 dark:text-rose-400" : ""}>
+                      <span className={atrasada ? "font-semibold text-risco" : ""}>
                         {formatarDataHora(a.data_agendada)} ({descreverPrazo(a.data_agendada)})
                       </span>
                       {a.confirmada && (
-                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span className="flex items-center gap-1 text-ok font-medium">
                           <BadgeCheck className="h-3 w-3" /> confirmada
                         </span>
                       )}
                     </p>
                     {a.negocio?.contato?.telefone && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">{a.negocio.contato.telefone}</p>
+                      <p className="text-rotulo text-tinta-fraca mt-0.5">{a.negocio.contato.telefone}</p>
                     )}
 
                     {reagendando === a.id && (
@@ -260,13 +260,13 @@ export function AgendaClient({
                           type="datetime-local"
                           value={novaData}
                           onChange={(e) => setNovaData(e.target.value)}
-                          className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                          className="px-2.5 py-1.5 text-rotulo rounded-lg border border-fio bg-superficie"
                         />
                         {PRESETS_AGENDAMENTO.slice(0, 4).map((p) => (
                           <button
                             key={p.rotulo}
                             onClick={() => setNovaData(paraInputDataHora(dataDoPreset(p)))}
-                            className="px-2 py-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg"
+                            className="px-2 py-1 text-rotulo font-semibold text-acento bg-superficie border border-fio rounded-lg"
                           >
                             {p.rotulo}
                           </button>
@@ -274,11 +274,11 @@ export function AgendaClient({
                         <button
                           onClick={() => reagendar(a.id)}
                           disabled={!novaData}
-                          className="px-2.5 py-1.5 text-[11px] font-bold text-white bg-indigo-600 rounded-lg disabled:opacity-50"
+                          className="px-2.5 py-1.5 text-rotulo font-semibold text-acento-tinta bg-acento-solido rounded-lg disabled:opacity-50"
                         >
                           Salvar
                         </button>
-                        <button onClick={() => setReagendando(null)} className="px-2 py-1.5 text-[11px] font-semibold text-slate-500">
+                        <button onClick={() => setReagendando(null)} className="px-2 py-1.5 text-rotulo font-medium text-tinta-suave">
                           Cancelar
                         </button>
                       </div>
@@ -289,7 +289,7 @@ export function AgendaClient({
                     {!a.confirmada && (
                       <button
                         onClick={() => confirmar(a.id)}
-                        className="text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 px-2 py-1.5 rounded-lg"
+                        className="text-rotulo font-semibold text-acento hover:bg-acento-fraco px-2 py-1.5 rounded-lg"
                       >
                         Confirmar
                       </button>
@@ -300,20 +300,20 @@ export function AgendaClient({
                         setNovaData(a.data_agendada ? paraInputDataHora(new Date(a.data_agendada)) : "");
                       }}
                       title="Reagendar"
-                      className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg"
+                      className="text-tinta-fraca hover:text-acento p-1.5 rounded-lg"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => concluir(a.id)}
-                      className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-2 py-1.5 rounded-lg"
+                      className="text-rotulo font-semibold text-ok hover:bg-ok-fraco px-2 py-1.5 rounded-lg"
                     >
                       Concluir
                     </button>
                     {a.negocio && (
                       <Link
                         href={`/negocios/${a.negocio.id}?tab=cadencia`}
-                        className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg"
+                        className="text-tinta-fraca hover:text-acento p-1.5 rounded-lg"
                         title="Abrir negócio"
                       >
                         <ChevronRight className="h-4 w-4" />
@@ -332,9 +332,9 @@ export function AgendaClient({
 
 function Indicador({ rotulo, valor, cor }: { rotulo: string; valor: number; cor?: string }) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{rotulo}</p>
-      <p className={`text-xl font-extrabold ${cor || "text-slate-900 dark:text-slate-100"}`}>{valor}</p>
+    <div className="bg-superficie border border-fio rounded-2xl px-3.5 py-2.5">
+      <p className="text-rotulo font-semibold uppercase tracking-wider text-tinta-fraca">{rotulo}</p>
+      <p className={`text-titulo font-semibold ${cor || "text-tinta"}`}>{valor}</p>
     </div>
   );
 }

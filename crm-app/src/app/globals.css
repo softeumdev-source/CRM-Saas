@@ -50,6 +50,9 @@
   --cor-risco-solido: #b22440;
   --cor-risco-solido-hover: #971d36;
   --cor-risco-tinta: #ffffff;
+  --cor-ok-solido: #0e7a51;
+  --cor-ok-solido-hover: #0b6644;
+  --cor-ok-tinta: #ffffff;
   --cor-ok-fraco: #e6f5ee;
   --cor-alerta: #96600a;
   --cor-alerta-fraco: #fdf3e1;
@@ -94,6 +97,9 @@
     --cor-risco-solido: #e35f7d;
     --cor-risco-solido-hover: #ef7690;
     --cor-risco-tinta: #2c0d16;
+    --cor-ok-solido: #3fae7d;
+    --cor-ok-solido-hover: #4cc08c;
+    --cor-ok-tinta: #08251a;
     --cor-ok-fraco: #102f22;
     --cor-alerta: #e0a63c;
     --cor-alerta-fraco: #33260c;
@@ -126,6 +132,9 @@
   --color-risco-solido: var(--cor-risco-solido);
   --color-risco-solido-hover: var(--cor-risco-solido-hover);
   --color-risco-tinta: var(--cor-risco-tinta);
+  --color-ok-solido: var(--cor-ok-solido);
+  --color-ok-solido-hover: var(--cor-ok-solido-hover);
+  --color-ok-tinta: var(--cor-ok-tinta);
   --color-ok: var(--cor-ok);
   --color-ok-fraco: var(--cor-ok-fraco);
   --color-alerta: var(--cor-alerta);

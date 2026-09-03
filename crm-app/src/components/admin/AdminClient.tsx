@@ -80,18 +80,18 @@ export function AdminClient({
 
   return (
     <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-superficie rounded-2xl p-5 border border-fio shadow-cartao flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <span className="px-3 py-1 text-xs font-bold bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/30">
+          <span className="px-3 py-1 text-rotulo font-medium bg-acento/20 text-acento rounded-full border border-acento/30">
             Painel de Administracao
           </span>
-          <h2 className="text-2xl font-extrabold tracking-tight mt-2">Gestao de Vendedores, Funil, Planos e Leads</h2>
-          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+          <h2 className="text-display font-medium tracking-tight mt-2">Gestao de Vendedores, Funil, Planos e Leads</h2>
+          <p className="text-rotulo text-tinta-fraca mt-1 max-w-2xl">
             Convide vendedores, acompanhe o funil individual, configure os planos usados nas propostas e distribua os leads importados.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shrink-0">
+        <div className="flex flex-wrap items-center bg-recuo/80 p-1.5 rounded-2xl border border-fio/60 shrink-0">
           {[
             { id: "desempenho", label: "Desempenho", icon: LineChart },
             { id: "vendedores", label: `Time (${membrosAtivos.length})`, icon: Users },
@@ -107,8 +107,8 @@ export function AdminClient({
               <button
                 key={t.id}
                 onClick={() => setAba(t.id as any)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-colors duration-150 ease-out ${
-                  aba === t.id ? "bg-indigo-600 text-white shadow-md" : "text-slate-300 hover:text-white"
+                className={`flex items-center gap-2 px-4 py-2 text-rotulo font-medium rounded-xl transition-colors duration-150 ease-out ${
+                  aba === t.id ? "bg-acento-solido text-acento-tinta shadow-md" : "text-tinta-fraca hover:text-tinta"
                 }`}
               >
                 <Icon className="h-4 w-4" />

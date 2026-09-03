@@ -216,10 +216,10 @@ export function KanbanPageClient({
       <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 pt-5 space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+            <h1 className="text-titulo font-semibold text-tinta">
               {ehSdr ? "Prospecção (SDR)" : "Pipeline de Vendas"}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-rotulo text-tinta-suave">
               {ehSdr
                 ? "Cadência, qualificação e agendamento. Quando o cliente aceita a reunião, entregue o lead ao vendedor pelo card."
                 : "Arraste os cards entre as etapas. Quem recebe atividade hoje fica verde e desce para o fim da coluna."}
@@ -227,7 +227,7 @@ export function KanbanPageClient({
           </div>
           <button
             onClick={() => abrirNovoNegocio(etapas[0]?.id || "")}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
+            className="flex items-center gap-2 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
           >
             <Plus className="h-4 w-4" />
             <span>{ehSdr ? "Novo Lead" : "Novo Negócio"}</span>
@@ -254,42 +254,42 @@ export function KanbanPageClient({
             icone={<CheckCircle2 className="h-3.5 w-3.5" />}
             rotulo="Trabalhados hoje"
             valor={String(resumo.hoje)}
-            cor="text-emerald-600 dark:text-emerald-400"
+            cor="text-ok"
           />
           <ResumoCard
             icone={<AlertTriangle className="h-3.5 w-3.5" />}
             rotulo="Passos atrasados"
             valor={String(resumo.atrasados)}
-            cor={resumo.atrasados > 0 ? "text-rose-600 dark:text-rose-400" : undefined}
+            cor={resumo.atrasados > 0 ? "text-risco" : undefined}
           />
           <ResumoCard
             icone={<CalendarClock className="h-3.5 w-3.5" />}
             rotulo="Sem próximo passo"
             valor={String(resumo.semAgenda)}
-            cor={resumo.semAgenda > 0 ? "text-amber-600 dark:text-amber-400" : undefined}
+            cor={resumo.semAgenda > 0 ? "text-alerta" : undefined}
           />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[240px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tinta-fraca" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por empresa, nome, e-mail, telefone ou CNPJ..."
-              className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+              className="w-full pl-10 pr-4 py-2 text-corpo bg-superficie border border-fio rounded-xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
             />
           </div>
 
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl gap-1">
+          <div className="flex items-center bg-recuo p-1 rounded-xl gap-1">
             {FOCOS.map((f) => (
               <button
                 key={f.chave}
                 onClick={() => setFoco(f.chave)}
-                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap ${
+                className={`px-3 py-1.5 text-rotulo font-semibold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap ${
                   foco === f.chave
-                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800"
+                    ? "bg-superficie text-acento shadow-xs"
+                    : "text-tinta-suave hover:text-tinta"
                 }`}
               >
                 {f.label}
@@ -301,7 +301,7 @@ export function KanbanPageClient({
             <select
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              className="px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
+              className="px-3 py-2 text-rotulo font-medium bg-superficie border border-fio rounded-xl"
             >
               <option value="todos">Todos os responsáveis</option>
               {responsaveis.map((v) => (
@@ -317,7 +317,7 @@ export function KanbanPageClient({
                 setFoco("todos");
                 if (usuarioAtual.role === "admin") setResponsavel("todos");
               }}
-              className="flex items-center gap-1 px-3 py-2 text-[11px] font-bold text-slate-500 hover:text-rose-600 rounded-xl"
+              className="flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
             >
               <X className="h-3.5 w-3.5" /> Limpar filtros
             </button>
@@ -325,7 +325,7 @@ export function KanbanPageClient({
         </div>
 
         {erro && (
-          <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>
+          <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>
         )}
       </div>
 
@@ -369,12 +369,12 @@ function ResumoCard({
   cor?: string;
 }) {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+    <div className="bg-superficie border border-fio rounded-2xl px-3.5 py-2.5">
+      <p className="text-rotulo font-semibold uppercase tracking-wider text-tinta-fraca flex items-center gap-1.5">
         {icone} {rotulo}
       </p>
-      <p className={`text-base font-extrabold mt-0.5 ${cor || "text-slate-900 dark:text-slate-100"}`}>{valor}</p>
-      {detalhe && <p className="text-[10px] text-slate-400 font-medium">{detalhe}</p>}
+      <p className={`text-corpo-lg font-semibold mt-0.5 ${cor || "text-tinta"}`}>{valor}</p>
+      {detalhe && <p className="text-rotulo text-tinta-fraca font-medium">{detalhe}</p>}
     </div>
   );
 }

@@ -310,24 +310,24 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       <form
         onSubmit={handleRegistrar}
-        className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4"
+        className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4"
       >
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Registrar atividade</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <h3 className="font-medium text-corpo text-tinta">Registrar atividade</h3>
+            <p className="text-rotulo text-tinta-suave">
               Ao salvar, o card fica verde e desce para o fim da coluna do pipeline.
             </p>
           </div>
           {ok && (
-            <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-lg">
+            <span className="flex items-center gap-1.5 text-rotulo font-medium text-ok bg-ok-fraco px-3 py-1.5 rounded-lg">
               <CheckCircle2 className="h-4 w-4" /> Atividade registrada
             </span>
           )}
         </div>
 
         <div>
-          <span className="text-[11px] font-bold uppercase text-slate-400 block mb-1.5">Tipo de contato</span>
+          <span className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1.5">Tipo de contato</span>
           <div className="flex flex-wrap gap-1.5">
             {TIPOS_REGISTRAVEIS.map((t) => {
               const Icon = ICONES[t] || MessageSquare;
@@ -337,10 +337,10 @@ export function CadenciaTab({
                   key={t}
                   type="button"
                   onClick={() => setTipo(t)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-colors duration-150 ease-out ${
+                  className={`flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium rounded-xl border transition-colors duration-150 ease-out ${
                     ativo
-                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
-                      : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
+                      ? "bg-acento-solido text-acento-tinta border-acento shadow-md"
+                      : "bg-recuo text-tinta-suave border-fio hover:border-fio-forte"
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" /> {ROTULOS_ATIVIDADE[t]}
@@ -353,8 +353,8 @@ export function CadenciaTab({
         <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
           <div className="space-y-3">
             <div>
-              <label htmlFor="cadenciata-1" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">
-                O que aconteceu <span className="text-rose-500">*</span>
+              <label htmlFor="cadenciata-1" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
+                O que aconteceu <span className="text-risco">*</span>
               </label>
               <textarea id="cadenciata-1"
                 rows={12}
@@ -364,28 +364,28 @@ export function CadenciaTab({
                 placeholder={
                   "Anote aqui tudo que importa:\n• Com quem falou e qual o cargo\n• Dores e prioridades levantadas\n• Objeções, concorrentes e preço discutido\n• O que ficou combinado e o prazo"
                 }
-                className={`w-full px-3.5 py-2.5 text-sm leading-relaxed rounded-xl border bg-slate-50 dark:bg-slate-800 resize-y min-h-[240px] outline-hidden focus:ring-1 ${
+                className={`w-full px-3.5 py-2.5 text-corpo leading-relaxed rounded-xl border bg-recuo resize-y min-h-[240px] outline-hidden focus:ring-1 ${
                   tocouTexto && textoInvalido
-                    ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500"
-                    : "border-slate-200 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500"
+                    ? "border-risco focus:border-risco focus:ring-risco"
+                    : "border-fio focus:border-acento focus:ring-acento"
                 }`}
               />
               {tocouTexto && textoInvalido ? (
-                <p className="text-[11px] font-semibold text-rose-600 mt-1">Escreva o que aconteceu no contato.</p>
+                <p className="text-rotulo font-medium text-risco mt-1">Escreva o que aconteceu no contato.</p>
               ) : (
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-rotulo text-tinta-fraca mt-1">
                   {descricao.length} caracteres · a primeira linha vira o resumo no histórico
                 </p>
               )}
             </div>
 
             <div>
-              <label htmlFor="cadenciata-2" className="text-[11px] font-bold uppercase text-slate-400 block mb-1">Realizada em</label>
+              <label htmlFor="cadenciata-2" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Realizada em</label>
               <input id="cadenciata-2"
                 type="datetime-local"
                 value={realizadaEm}
                 onChange={(e) => setRealizadaEm(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                className="w-full px-3.5 py-2.5 text-corpo rounded-xl border border-fio bg-recuo"
               />
             </div>
           </div>
@@ -394,8 +394,8 @@ export function CadenciaTab({
           <div
             className={`rounded-2xl border p-4 space-y-3 h-fit ${
               agendarProximo
-                ? "border-indigo-200 dark:border-indigo-900 bg-indigo-50/60 dark:bg-indigo-950/20"
-                : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+                ? "border-fio bg-acento-fraco/60"
+                : "border-fio bg-recuo"
             }`}
           >
             <label htmlFor="cadenciata-3" className="flex items-start gap-2 cursor-pointer">
@@ -406,10 +406,10 @@ export function CadenciaTab({
                 className="mt-0.5 h-4 w-4 accent-indigo-600"
               />
               <span>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                  <Bell className="h-3.5 w-3.5 text-indigo-600" /> Agendar próximo passo
+                <span className="text-rotulo font-medium text-tinta flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5 text-acento" /> Agendar próximo passo
                 </span>
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <span className="block text-rotulo text-tinta-suave mt-0.5">
                   Nunca deixe o negócio sem próxima ação. Você recebe o alerta pelo sino na data.
                 </span>
               </span>
@@ -418,14 +418,14 @@ export function CadenciaTab({
             {agendarProximo && (
               <>
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Quando</span>
+                  <span className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Quando</span>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {PRESETS_AGENDAMENTO.map((p, i) => (
                       <button
                         key={p.rotulo}
                         type="button"
                         onClick={() => aplicarPreset(i)}
-                        className="px-2.5 py-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-950/60"
+                        className="px-2.5 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg hover:bg-acento-fraco"
                       >
                         {p.rotulo}
                       </button>
@@ -435,21 +435,21 @@ export function CadenciaTab({
                     type="datetime-local"
                     value={dataAgendada}
                     onChange={(e) => setDataAgendada(e.target.value)}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
                   />
                   {dataAgendada && (
-                    <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 mt-1">
+                    <p className="text-rotulo font-medium text-acento mt-1">
                       {descreverPrazo(new Date(dataAgendada).toISOString())} · {formatarDataHora(new Date(dataAgendada).toISOString())}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="cadenciata-4" className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Tipo do próximo passo</label>
+                  <label htmlFor="cadenciata-4" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Tipo do próximo passo</label>
                   <select id="cadenciata-4"
                     value={tipoProximo}
                     onChange={(e) => setTipoProximo(e.target.value as TipoAtividade)}
-                    className="w-full px-3 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="w-full px-3 py-2 text-corpo font-medium rounded-xl border border-fio bg-superficie"
                   >
                     {TIPOS_REGISTRAVEIS.map((t) => (
                       <option key={t} value={t}>{ROTULOS_ATIVIDADE[t]}</option>
@@ -458,15 +458,15 @@ export function CadenciaTab({
                 </div>
 
                 <div>
-                  <label htmlFor="cadenciata-5" className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                    Descrição do próximo passo <span className="font-semibold normal-case text-slate-400">(opcional)</span>
+                  <label htmlFor="cadenciata-5" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
+                    Descrição do próximo passo <span className="font-medium normal-case text-tinta-fraca">(opcional)</span>
                   </label>
                   <input id="cadenciata-5"
                     value={tituloProximo}
                     onChange={(e) => setTituloProximo(e.target.value)}
                     maxLength={120}
                     placeholder={`${ROTULOS_ATIVIDADE[tipoProximo]} — ${empresa}`}
-                    className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
                   />
                 </div>
               </>
@@ -474,13 +474,13 @@ export function CadenciaTab({
           </div>
         </div>
 
-        {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+        {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="submit"
             disabled={salvando}
-            className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+            className="px-5 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Registrar atividade
@@ -488,7 +488,7 @@ export function CadenciaTab({
           <button
             type="button"
             onClick={limparFormulario}
-            className="px-3 py-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+            className="px-3 py-2.5 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl"
           >
             Limpar
           </button>
@@ -498,15 +498,15 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       {/* Próximos passos                                                     */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-indigo-600" /> Próximos passos ({proximosPassos.length})
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
+        <h3 className="font-medium text-corpo text-tinta mb-3 flex items-center gap-2">
+          <CalendarClock className="h-4 w-4 text-acento" /> Próximos passos ({proximosPassos.length})
         </h3>
 
         {proximosPassos.length === 0 ? (
-          <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl">
-            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+          <div className="flex items-start gap-2 p-3 bg-alerta-fraco border border-alerta/40 rounded-xl">
+            <AlertTriangle className="h-4 w-4 text-alerta shrink-0 mt-0.5" />
+            <p className="text-rotulo text-alerta">
               Nenhum próximo passo agendado — este negócio some do radar. Registre uma atividade acima já agendando a próxima ação.
             </p>
           </div>
@@ -520,32 +520,32 @@ export function CadenciaTab({
                   key={a.id}
                   className={`flex items-start gap-3 p-3 rounded-xl border ${
                     atrasada
-                      ? "bg-rose-50/70 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900"
-                      : "bg-indigo-50/60 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900"
+                      ? "bg-risco-fraco/70 border-risco/40"
+                      : "bg-acento-fraco/60 border-fio"
                   }`}
                 >
                   <div
                     className={`h-8 w-8 rounded-full text-white flex items-center justify-center shrink-0 ${
-                      atrasada ? "bg-rose-600" : "bg-indigo-600"
+                      atrasada ? "bg-risco-solido" : "bg-acento-solido"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{a.titulo}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 flex-wrap">
+                    <p className="text-corpo font-medium text-tinta">{a.titulo}</p>
+                    <p className="text-rotulo text-tinta-suave flex items-center gap-1 mt-0.5 flex-wrap">
                       <Clock className="h-3 w-3" />
                       {formatarDataHora(a.data_agendada)}
-                      <span className={`font-bold ${atrasada ? "text-rose-600 dark:text-rose-400" : "text-slate-500"}`}>
+                      <span className={`font-medium ${atrasada ? "text-risco" : "text-tinta-suave"}`}>
                         ({descreverPrazo(a.data_agendada)})
                       </span>
                       {atrasada && (
-                        <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold ml-1">
+                        <span className="flex items-center gap-1 text-risco font-medium ml-1">
                           <AlertTriangle className="h-3 w-3" /> atrasado
                         </span>
                       )}
                       {a.confirmada && (
-                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold ml-1">
+                        <span className="flex items-center gap-1 text-ok font-medium ml-1">
                           <BadgeCheck className="h-3 w-3" /> agenda confirmada
                         </span>
                       )}
@@ -559,26 +559,26 @@ export function CadenciaTab({
                       atrasada &&
                       a.compareceu == null &&
                       (a.tipo === "reuniao" || a.tipo === "demo") && (
-                        <div className="mt-2 flex items-center gap-2 flex-wrap rounded-xl bg-white/70 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900 px-3 py-2">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <div className="mt-2 flex items-center gap-2 flex-wrap rounded-xl bg-superficie/70 border border-risco/40 px-3 py-2">
+                          <span className="text-rotulo font-medium text-tinta-suave">
                             O cliente compareceu?
                           </span>
                           <button
                             onClick={() => void responder(a.id, true)}
                             disabled={respondendo === a.id}
-                            className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                            className="px-2.5 py-1 text-rotulo font-medium text-ok bg-ok-fraco hover:bg-ok-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
                           >
                             Compareceu
                           </button>
                           <button
                             onClick={() => void responder(a.id, false)}
                             disabled={respondendo === a.id}
-                            className="px-2.5 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                            className="px-2.5 py-1 text-rotulo font-medium text-risco bg-risco-fraco hover:bg-risco-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
                           >
                             Não veio
                           </button>
-                          {respondendo === a.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
-                          <span className="text-[11px] text-slate-400">
+                          {respondendo === a.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-tinta-fraca" />}
+                          <span className="text-rotulo text-tinta-fraca">
                             &ldquo;Não veio&rdquo; devolve o lead para o SDR reagendar.
                           </span>
                         </div>
@@ -591,7 +591,7 @@ export function CadenciaTab({
                       <div className="mt-2 flex items-center gap-2 flex-wrap">
                         {a.google_evento_id ? (
                           <>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 text-rotulo font-medium text-ok">
                               <CalendarCheck className="h-3 w-3" /> convite enviado
                             </span>
                             {a.google_meet_link && (
@@ -599,7 +599,7 @@ export function CadenciaTab({
                                 href={a.google_meet_link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[11px] font-bold text-indigo-600 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 rounded"
+                                className="text-rotulo font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2  rounded"
                               >
                                 abrir o Meet
                               </a>
@@ -609,7 +609,7 @@ export function CadenciaTab({
                           <button
                             onClick={() => void criarConviteGoogle(a.id)}
                             disabled={agendandoGoogle === a.id}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
                           >
                             {agendandoGoogle === a.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -628,13 +628,13 @@ export function CadenciaTab({
                           type="datetime-local"
                           value={novaData}
                           onChange={(e) => setNovaData(e.target.value)}
-                          className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                          className="px-2.5 py-1.5 text-rotulo rounded-lg border border-fio bg-superficie"
                         />
                         {PRESETS_AGENDAMENTO.slice(0, 4).map((p) => (
                           <button
                             key={p.rotulo}
                             onClick={() => setNovaData(paraInputDataHora(dataDoPreset(p)))}
-                            className="px-2 py-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-lg"
+                            className="px-2 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg"
                           >
                             {p.rotulo}
                           </button>
@@ -642,13 +642,13 @@ export function CadenciaTab({
                         <button
                           onClick={() => reagendar(a.id)}
                           disabled={!novaData}
-                          className="px-2.5 py-1.5 text-[11px] font-bold text-white bg-indigo-600 rounded-lg disabled:opacity-50"
+                          className="px-2.5 py-1.5 text-rotulo font-medium text-acento-tinta bg-acento-solido rounded-lg disabled:opacity-50"
                         >
                           Salvar
                         </button>
                         <button
                           onClick={() => setReagendando(null)}
-                          className="px-2 py-1.5 text-[11px] font-semibold text-slate-500"
+                          className="px-2 py-1.5 text-rotulo font-medium text-tinta-suave"
                         >
                           Cancelar
                         </button>
@@ -661,7 +661,7 @@ export function CadenciaTab({
                       <button
                         onClick={() => confirmarAgenda(a.id)}
                         title="Cliente confirmou a agenda"
-                        className="text-[11px] font-bold text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-950/40 px-2 py-1.5 rounded-lg"
+                        className="text-rotulo font-medium text-acento hover:bg-acento-fraco px-2 py-1.5 rounded-lg"
                       >
                         Confirmar
                       </button>
@@ -672,20 +672,20 @@ export function CadenciaTab({
                         setNovaData(a.data_agendada ? paraInputDataHora(new Date(a.data_agendada)) : "");
                       }}
                       title="Reagendar"
-                      className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg"
+                      className="text-tinta-fraca hover:text-acento p-1.5 rounded-lg"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => marcarConcluida(a.id)}
-                      className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 px-2 py-1.5 rounded-lg"
+                      className="text-rotulo font-medium text-ok hover:bg-ok-fraco px-2 py-1.5 rounded-lg"
                     >
                       Concluir
                     </button>
                     <button
                       onClick={() => setExcluindo(a)}
                       title="Excluir"
-                      className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg"
+                      className="text-tinta-fraca hover:text-risco p-1.5 rounded-lg"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -700,23 +700,23 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       {/* Histórico                                                           */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Histórico ({historico.length})</h3>
+          <h3 className="font-medium text-corpo text-tinta">Histórico ({historico.length})</h3>
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-tinta-fraca" />
               <input
                 value={buscaHistorico}
                 onChange={(e) => setBuscaHistorico(e.target.value)}
                 placeholder="Buscar no histórico..."
-                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg w-48"
+                className="pl-8 pr-3 py-1.5 text-rotulo bg-recuo border border-fio rounded-lg w-48"
               />
             </div>
             <select
               value={filtroTipo}
               onChange={(e) => setFiltroTipo(e.target.value)}
-              className="px-2.5 py-1.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg"
+              className="px-2.5 py-1.5 text-rotulo font-medium bg-recuo border border-fio rounded-lg"
             >
               <option value="todos">Todos os tipos</option>
               {TIPOS_ATIVIDADE.map((t) => (
@@ -726,7 +726,7 @@ export function CadenciaTab({
           </div>
         </div>
 
-        <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+        <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-fio">
           {historico.map((a) => {
             const Icon = ICONES[a.tipo] || MessageSquare;
             // Nos registros feitos aqui o título é o resumo do próprio texto —
@@ -735,33 +735,33 @@ export function CadenciaTab({
             return (
               <div key={a.id} className="relative pl-9">
                 <div
-                  className={`absolute left-1 top-1 h-5 w-5 rounded-full text-white flex items-center justify-center ring-4 ring-white dark:ring-slate-900 ${
-                    a.concluida ? "bg-emerald-500" : "bg-slate-400"
+                  className={`absolute left-1 top-1 h-5 w-5 rounded-full text-white flex items-center justify-center ring-4 ring-superficie ${
+                    a.concluida ? "bg-ok" : "bg-tinta-fraca"
                   }`}
                 >
                   {a.concluida ? <CheckCircle2 className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
                 </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700">
-                  <div className="flex items-center justify-between gap-2 text-xs mb-1 flex-wrap">
-                    <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <Icon className="h-3.5 w-3.5 text-slate-400" />
+                <div className="p-3 bg-recuo rounded-xl border border-fio/80">
+                  <div className="flex items-center justify-between gap-2 text-rotulo mb-1 flex-wrap">
+                    <span className="font-medium text-tinta flex items-center gap-1.5">
+                      <Icon className="h-3.5 w-3.5 text-tinta-fraca" />
                       {tituloRedundante ? ROTULOS_ATIVIDADE[a.tipo] || a.tipo : a.titulo}
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-rotulo text-tinta-fraca">
                       {formatarDataHora(a.concluida_em || a.criado_em)}
                     </span>
                   </div>
                   {a.descricao && (
-                    <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{a.descricao}</p>
+                    <p className="text-rotulo text-tinta-suave whitespace-pre-wrap">{a.descricao}</p>
                   )}
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                  <p className="text-rotulo text-tinta-fraca mt-1 font-medium">
                     Por {a.usuario?.nome || "Sistema"}
                   </p>
                 </div>
               </div>
             );
           })}
-          {historico.length === 0 && <p className="text-xs text-slate-400 pl-9">Nenhum registro encontrado.</p>}
+          {historico.length === 0 && <p className="text-rotulo text-tinta-fraca pl-9">Nenhum registro encontrado.</p>}
         </div>
       </div>
 
@@ -773,7 +773,7 @@ export function CadenciaTab({
         aoConfirmar={excluirAtividade}
         descricao={
           <>
-            <strong className="font-bold text-slate-900 dark:text-slate-100">{excluindo?.titulo}</strong>{" "}
+            <strong className="font-medium text-tinta">{excluindo?.titulo}</strong>{" "}
             sai do histórico deste negócio. Não dá para desfazer.
           </>
         }

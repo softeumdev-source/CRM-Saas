@@ -63,7 +63,7 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
 
   if (carregando) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-8 flex items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando integrações…
       </div>
     );
@@ -72,17 +72,17 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
   return (
     <div className="space-y-5">
       {(erroDaVolta || erro) && (
-        <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+        <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
           {erroDaVolta || erro}
         </p>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
         <div>
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-indigo-600" /> Google Agenda
+          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-acento" /> Google Agenda
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-rotulo text-tinta-suave mt-1">
             Conectando sua conta, o CRM cria o evento na <strong>sua</strong> agenda, com link do
             Meet, e manda o convite para o cliente. Cada pessoa conecta a própria conta — o convite
             sai no nome de quem vai à reunião.
@@ -90,16 +90,16 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
         </div>
 
         {minha ? (
-          <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="rounded-2xl border border-ok/40 bg-ok-fraco p-4 flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+              <p className="text-corpo font-medium text-ok flex items-center gap-2">
                 <Check className="h-4 w-4" /> {minha.email_google}
               </p>
-              <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
+              <p className="text-rotulo text-ok mt-0.5">
                 Conectada em {formatarDataHora(minha.conectado_em)}
               </p>
               {minha.ultimo_erro && (
-                <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300 mt-1 flex items-center gap-1">
+                <p className="text-rotulo font-medium text-risco mt-1 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {minha.ultimo_erro} — reconecte.
                 </p>
               )}
@@ -121,25 +121,25 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
 
         {conexoes.length > 0 && (
           <div>
-            <p className="text-[11px] font-bold uppercase text-slate-400 mb-2">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">
               Contas conectadas no time ({conexoes.length})
             </p>
             <div className="space-y-2">
               {conexoes.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 p-3"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-fio p-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                    <p className="text-corpo font-medium text-tinta truncate">
                       {c.usuario?.nome || "—"}
                     </p>
-                    <p className="text-[11px] text-slate-500 truncate">{c.email_google}</p>
+                    <p className="text-rotulo text-tinta-suave truncate">{c.email_google}</p>
                   </div>
                   {c.ultimo_erro ? (
-                    <span className="text-[11px] font-bold text-rose-600 shrink-0">precisa reconectar</span>
+                    <span className="text-rotulo font-medium text-risco shrink-0">precisa reconectar</span>
                   ) : (
-                    <span className="text-[11px] font-bold text-emerald-600 shrink-0">ativa</span>
+                    <span className="text-rotulo font-medium text-ok shrink-0">ativa</span>
                   )}
                 </div>
               ))}

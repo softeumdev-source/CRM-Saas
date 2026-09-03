@@ -35,26 +35,26 @@ export function FunilTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div>
-            <label htmlFor="funiltab-1" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Buscar vendedor</label>
+            <label htmlFor="funiltab-1" className="text-rotulo font-medium text-tinta-suave uppercase tracking-wider block mb-1">Buscar vendedor</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-tinta-fraca" />
               <input id="funiltab-1"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome do vendedor..."
-                className="pl-8 pr-3 py-2.5 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full sm:w-56"
+                className="pl-8 pr-3 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-2xl w-full sm:w-56"
               />
             </div>
           </div>
           <div>
-            <label htmlFor="funiltab-2" className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Filtrar funil</label>
+            <label htmlFor="funiltab-2" className="text-rotulo font-medium text-tinta-suave uppercase tracking-wider block mb-1">Filtrar funil</label>
             <select id="funiltab-2"
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
-              className="px-4 py-2.5 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full"
+              className="px-4 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-2xl w-full"
             >
               <option value="all">Visão geral (todos os vendedores)</option>
               <option value="sem_dono">Leads sem dono (pool) — {semDonoCount}</option>
@@ -65,45 +65,45 @@ export function FunilTab({
           </div>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-500">Valor total no filtro</p>
-          <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(totalValor)}</p>
-          <p className="text-[11px] text-slate-400">{negociosFiltrados.length} negócios</p>
+          <p className="text-rotulo text-tinta-suave">Valor total no filtro</p>
+          <p className="text-titulo font-medium text-acento">{formatarMoeda(totalValor)}</p>
+          <p className="text-rotulo text-tinta-fraca">{negociosFiltrados.length} negócios</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-base">Distribuição por etapa</h3>
+      <div className="bg-superficie p-6 rounded-2xl border border-fio shadow-xs space-y-4">
+        <h3 className="font-medium text-tinta text-corpo-lg">Distribuição por etapa</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {etapas.map((etapa) => {
             const doEtapa = negociosFiltrados.filter((n) => n.etapa_id === etapa.id);
             const valor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
-              <div key={etapa.id} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+              <div key={etapa.id} className="p-4 rounded-2xl border border-fio bg-recuo space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-800 dark:text-slate-200">{etapa.nome}</span>
+                  <span className="font-medium text-rotulo text-tinta">{etapa.nome}</span>
                   <span
-                    className="text-[10px] font-extrabold px-2 py-0.5 rounded-full"
+                    className="text-rotulo font-medium px-2 py-0.5 rounded-full"
                     style={{ background: (etapa.cor || "#6366f1") + "22", color: etapa.cor || "#6366f1" }}
                   >
                     {doEtapa.length}
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between pt-1">
-                  <span className="text-xs text-slate-500">Valor:</span>
-                  <span className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valor)}</span>
+                  <span className="text-rotulo text-tinta-suave">Valor:</span>
+                  <span className="text-corpo font-medium text-acento">{formatarMoeda(valor)}</span>
                 </div>
                 {doEtapa.length > 0 && (
-                  <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/80 space-y-1">
+                  <div className="pt-2 border-t border-fio/80 space-y-1">
                     {doEtapa.map((n) => (
                       <Link
                         key={n.id}
                         href={`/negocios/${n.id}`}
-                        className="text-[11px] p-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/60 dark:border-slate-800 flex items-center justify-between hover:border-indigo-400 transition-colors"
+                        className="text-rotulo p-1.5 bg-superficie rounded-lg border border-fio/60 flex items-center justify-between hover:border-acento transition-colors"
                       >
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
+                        <span className="font-medium text-tinta truncate max-w-[130px]">
                           {n.contato?.empresa || n.contato?.nome}
                         </span>
-                        <span className="font-bold text-slate-600 dark:text-slate-400">{formatarMoeda(n.valor)}</span>
+                        <span className="font-medium text-tinta-suave">{formatarMoeda(n.valor)}</span>
                       </Link>
                     ))}
                   </div>

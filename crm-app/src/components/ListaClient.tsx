@@ -113,7 +113,7 @@ export function ListaClient({
     <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+          <h1 className="text-titulo font-semibold text-tinta">
             Lista de Negócios ({filtrados.length})
           </h1>
           {/* A busca só alcança o que está carregado. Dizer isso é a diferença
@@ -121,7 +121,7 @@ export function ListaClient({
               um cliente que está na posição 300 devolveria "nenhum negócio
               encontrado", que é uma resposta errada. */}
           {carregados < total && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-rotulo text-tinta-suave mt-0.5">
               Mostrando {carregados} de {total}. A busca e os filtros trabalham
               sobre estes {carregados}.
             </p>
@@ -129,18 +129,18 @@ export function ListaClient({
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
-            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-tinta-fraca" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar empresa, contato, e-mail ou CNPJ..."
-              className="pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl w-64"
+              className="pl-9 pr-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl w-64"
             />
           </div>
           <select
             value={etapaFiltro}
             onChange={(e) => setEtapaFiltro(e.target.value)}
-            className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+            className="px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="all">Todas as etapas</option>
             {etapas.map((et) => (
@@ -150,7 +150,7 @@ export function ListaClient({
           <select
             value={ordem}
             onChange={(e) => setOrdem(e.target.value as Ordem)}
-            className="px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+            className="px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="recentes">Mais recentes</option>
             <option value="sem_contato">Mais tempo sem contato</option>
@@ -160,11 +160,11 @@ export function ListaClient({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-rotulo">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-bold text-[10px]">
+              <tr className="border-b border-fio text-tinta-fraca uppercase tracking-wider font-semibold text-rotulo">
                 <th className="p-4">Empresa / Contato</th>
                 <th className="p-4">Etapa</th>
                 <th className="p-4">Valor</th>
@@ -175,65 +175,65 @@ export function ListaClient({
                 <th className="p-4 text-right">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-fio">
               {filtrados.map((n) => {
                 const hoje = temAtividadeHoje(n);
                 const dias = diasSemContato(n);
                 const proxima = proximaAtividade(n.atividades_pendentes);
                 const atrasada = estaAtrasada(proxima?.data_agendada);
                 return (
-                  <tr key={n.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr key={n.id} className="hover:bg-recuo transition-colors">
                     <td className="p-4">
-                      <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full shrink-0 ${hoje ? "bg-emerald-500" : "bg-amber-500"}`} />
+                      <p className="font-semibold text-tinta flex items-center gap-1.5">
+                        <span className={`h-2 w-2 rounded-full shrink-0 ${hoje ? "bg-ok" : "bg-alerta"}`} />
                         {n.contato?.empresa || n.contato?.nome}
                       </p>
-                      <p className="text-[11px] text-slate-500 pl-3.5">{n.contato?.nome}</p>
+                      <p className="text-rotulo text-tinta-suave pl-3.5">{n.contato?.nome}</p>
                     </td>
                     <td className="p-4">
                       <span
-                        className="px-2.5 py-1 text-[11px] font-bold rounded-full"
+                        className="px-2.5 py-1 text-rotulo font-semibold rounded-full"
                         style={{ background: (n.etapa?.cor || "#6366f1") + "22", color: n.etapa?.cor || "#6366f1" }}
                       >
                         {n.etapa?.nome}
                       </span>
                     </td>
-                    <td className="p-4 font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(n.valor)}</td>
+                    <td className="p-4 font-semibold text-acento">{formatarMoeda(n.valor)}</td>
                     <td className="p-4">
                       {hoje ? (
-                        <span className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="flex items-center gap-1 font-semibold text-ok">
                           <CheckCircle2 className="h-3 w-3" /> Hoje
                         </span>
                       ) : dias === null ? (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold">Nunca</span>
+                        <span className="text-alerta font-medium">Nunca</span>
                       ) : (
-                        <span className={dias >= 7 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-500"}>
+                        <span className={dias >= 7 ? "text-alerta font-medium" : "text-tinta-suave"}>
                           há {dias} {dias === 1 ? "dia" : "dias"}
                         </span>
                       )}
                     </td>
                     <td className="p-4">
                       {proxima ? (
-                        <span className={`font-semibold ${atrasada ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-300"}`}>
+                        <span className={`font-medium ${atrasada ? "text-risco" : "text-tinta-suave"}`}>
                           {atrasada && <AlertTriangle className="h-3 w-3 inline mr-1" />}
                           {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
                         </span>
                       ) : (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold">Sem agendamento</span>
+                        <span className="text-alerta font-medium">Sem agendamento</span>
                       )}
                     </td>
-                    <td className="p-4 font-medium text-slate-600 dark:text-slate-400">{n.responsavel?.nome || "Sem dono"}</td>
+                    <td className="p-4 font-medium text-tinta-suave">{n.responsavel?.nome || "Sem dono"}</td>
                     <td className="p-4">
                       {n.contato?.cnpj ? (
-                        <span className="text-emerald-600 font-semibold">OK</span>
+                        <span className="text-ok font-medium">OK</span>
                       ) : (
-                        <span className="text-amber-600 font-semibold">Faltando</span>
+                        <span className="text-alerta font-medium">Faltando</span>
                       )}
                     </td>
                     <td className="p-4 text-right">
                       <Link
                         href={`/negocios/${n.id}`}
-                        className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl transition-colors duration-150 ease-out whitespace-nowrap"
+                        className="px-3 py-1.5 text-rotulo font-semibold text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out whitespace-nowrap"
                       >
                         Ver detalhes
                       </Link>
@@ -243,7 +243,7 @@ export function ListaClient({
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-slate-400">
+                  <td colSpan={8} className="p-6 text-center text-tinta-fraca">
                     {carregados < total
                       ? `Nenhum negócio encontrado entre os ${carregados} carregados — carregue mais abaixo.`
                       : "Nenhum negócio encontrado."}
@@ -255,17 +255,17 @@ export function ListaClient({
         </div>
 
         {erro && (
-          <p className="m-4 text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+          <p className="m-4 text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
             {erro}
           </p>
         )}
 
         {carregados < total && (
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-center">
+          <div className="p-4 border-t border-fio flex items-center justify-center">
             <button
               onClick={() => void carregarMais()}
               disabled={carregando}
-              className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
+              className="px-4 py-2 text-rotulo font-semibold text-tinta-suave hover:text-acento bg-recuo border border-fio rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
             >
               {carregando ? "Carregando…" : `Carregar mais ${Math.min(lote, total - carregados)}`}
             </button>

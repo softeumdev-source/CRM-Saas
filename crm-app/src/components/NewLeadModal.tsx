@@ -145,7 +145,7 @@ export function NewLeadModal({
           </Campo>
         </div>
 
-        <div className="space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+        <div className="space-y-3 border-t border-fio pt-3">
           <Campo rotulo="Título do negócio" obrigatorio>
             {(p) => (
               <Entrada
@@ -189,7 +189,7 @@ export function NewLeadModal({
         </div>
 
         {erro && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 dark:bg-rose-950/40">
+          <p className="rounded-lg bg-risco-fraco px-3 py-2 text-rotulo font-medium text-risco">
             {erro}
           </p>
         )}

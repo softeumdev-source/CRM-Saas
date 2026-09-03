@@ -27,11 +27,11 @@ interface Preview {
 }
 
 const COR_STATUS: Record<StatusLinha, string> = {
-  novo: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40",
-  sem_nome: "text-slate-500 bg-slate-100 dark:bg-slate-800",
-  email_invalido: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
-  dup_arquivo: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
-  existe: "text-slate-500 bg-slate-100 dark:bg-slate-800",
+  novo: "text-ok bg-ok-fraco",
+  sem_nome: "text-tinta-suave bg-recuo",
+  email_invalido: "text-alerta bg-alerta-fraco",
+  dup_arquivo: "text-alerta bg-alerta-fraco",
+  existe: "text-tinta-suave bg-recuo",
 };
 
 export function LeadsTab({
@@ -256,57 +256,57 @@ export function LeadsTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-3">
-        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Upload className="h-4 w-4 text-indigo-600" /> Importar base de contatos (CSV ou XLSX)
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-3">
+        <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <Upload className="h-4 w-4 text-acento" /> Importar base de contatos (CSV ou XLSX)
         </h3>
-        <p className="text-xs text-slate-500">
+        <p className="text-rotulo text-tinta-suave">
           Colunas reconhecidas: nome, empresa, email, telefone, cargo, cidade, estado, cnpj. Repetidos (por e-mail ou
           CNPJ) — tanto no arquivo quanto já cadastrados — são detectados e mostrados numa prévia antes de gravar.
           Os leads importados entram no pool &quot;sem dono&quot; até serem distribuídos.
         </p>
         {!preview && (
-          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md cursor-pointer w-fit">
+          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md cursor-pointer w-fit">
             {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {processando ? progresso || "Processando..." : "Escolher arquivo"}
             <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
           </label>
         )}
         {resultado && (
-          <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
+          <p className="text-rotulo font-medium text-ok flex items-center gap-1.5">
             <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados).
           </p>
         )}
-        {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+        {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
         {preview && (
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="border border-fio rounded-2xl overflow-hidden">
+            <div className="p-4 bg-recuo border-b border-fio flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">Prévia — {preview.arquivo}</p>
-                <p className="text-[11px] text-slate-500">{preview.resumo.total} linhas analisadas</p>
+                <p className="text-rotulo font-medium text-tinta-suave truncate">Prévia — {preview.arquivo}</p>
+                <p className="text-rotulo text-tinta-suave">{preview.resumo.total} linhas analisadas</p>
               </div>
               <button
                 onClick={() => setPreview(null)}
                 disabled={confirmando}
-                className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50"
+                className="flex items-center gap-1 text-rotulo font-medium text-tinta-suave hover:text-tinta disabled:opacity-50"
               >
                 <X className="h-3.5 w-3.5" /> Cancelar
               </button>
             </div>
 
             <div className="p-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
-              <ResumoPill cor="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/40" label="Novos" valor={preview.resumo.novos} />
-              <ResumoPill cor="text-slate-500" bg="bg-slate-100 dark:bg-slate-800" label="Já existem" valor={preview.resumo.existentes} />
-              <ResumoPill cor="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/40" label="Repetidos" valor={preview.resumo.dupArquivo} />
-              <ResumoPill cor="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/40" label="E-mail inválido" valor={preview.resumo.emailInvalido} />
-              <ResumoPill cor="text-slate-500" bg="bg-slate-100 dark:bg-slate-800" label="Sem nome" valor={preview.resumo.semNome} />
+              <ResumoPill cor="text-ok" bg="bg-ok-fraco" label="Novos" valor={preview.resumo.novos} />
+              <ResumoPill cor="text-tinta-suave" bg="bg-recuo" label="Já existem" valor={preview.resumo.existentes} />
+              <ResumoPill cor="text-alerta" bg="bg-alerta-fraco" label="Repetidos" valor={preview.resumo.dupArquivo} />
+              <ResumoPill cor="text-alerta" bg="bg-alerta-fraco" label="E-mail inválido" valor={preview.resumo.emailInvalido} />
+              <ResumoPill cor="text-tinta-suave" bg="bg-recuo" label="Sem nome" valor={preview.resumo.semNome} />
             </div>
 
-            <div className="max-h-72 overflow-y-auto border-t border-slate-100 dark:border-slate-800">
-              <table className="w-full text-left text-[11px]">
-                <thead className="sticky top-0 bg-white dark:bg-slate-900">
-                  <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
+            <div className="max-h-72 overflow-y-auto border-t border-fio">
+              <table className="w-full text-left text-rotulo">
+                <thead className="sticky top-0 bg-superficie">
+                  <tr className="border-b border-fio text-tinta-fraca uppercase text-rotulo">
                     <th className="p-2 w-10">Linha</th>
                     <th className="p-2">Nome</th>
                     <th className="p-2">Empresa</th>
@@ -314,15 +314,15 @@ export function LeadsTab({
                     <th className="p-2">Situação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-fio">
                   {preview.classificadas.slice(0, 300).map((l) => (
                     <tr key={l._linha} className={l._status === "novo" ? "" : "opacity-70"}>
-                      <td className="p-2 text-slate-400">{l._linha}</td>
-                      <td className="p-2 font-semibold text-slate-800 dark:text-slate-200">{l.nome || <span className="text-rose-500">—</span>}</td>
-                      <td className="p-2 text-slate-500">{l.empresa || "—"}</td>
-                      <td className="p-2 text-slate-500">{l.email || l.cnpj || "—"}</td>
+                      <td className="p-2 text-tinta-fraca">{l._linha}</td>
+                      <td className="p-2 font-medium text-tinta">{l.nome || <span className="text-risco">—</span>}</td>
+                      <td className="p-2 text-tinta-suave">{l.empresa || "—"}</td>
+                      <td className="p-2 text-tinta-suave">{l.email || l.cnpj || "—"}</td>
                       <td className="p-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] ${COR_STATUS[l._status]}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-rotulo ${COR_STATUS[l._status]}`}>
                           {(l._status === "email_invalido" || l._status === "dup_arquivo") && <AlertTriangle className="h-3 w-3" />}
                           {rotuloStatus(l._status)}
                         </span>
@@ -332,15 +332,15 @@ export function LeadsTab({
                 </tbody>
               </table>
               {preview.classificadas.length > 300 && (
-                <p className="p-2 text-[11px] text-slate-400 text-center">Mostrando as primeiras 300 de {preview.classificadas.length} linhas.</p>
+                <p className="p-2 text-rotulo text-tinta-fraca text-center">Mostrando as primeiras 300 de {preview.classificadas.length} linhas.</p>
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+            <div className="p-4 border-t border-fio flex items-center justify-end gap-2">
               <button
                 onClick={confirmarImportacao}
                 disabled={confirmando || preview.resumo.novos === 0}
-                className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-xl shadow-md disabled:opacity-50"
               >
                 {confirmando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {confirmando ? progresso || "Importando..." : preview.resumo.novos === 0 ? "Nada novo para importar" : `Importar ${preview.resumo.novos} novos`}
@@ -350,23 +350,23 @@ export function LeadsTab({
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-fio flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Users2 className="h-4 w-4 text-amber-600" /> Leads sem dono ({contatosSemDono.length})
+            <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+              <Users2 className="h-4 w-4 text-alerta" /> Leads sem dono ({contatosSemDono.length})
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-rotulo text-tinta-suave">
               {selecionados.size} selecionados
               {teto !== undefined && contatosSemDono.length >= teto && (
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                <span className="font-medium text-alerta">
                   {" · "}mostrando os {teto} mais recentes; distribua estes e recarregue para ver o resto
                 </span>
               )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <select value={vendedorManual} onChange={(e) => setVendedorManual(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="">Escolher vendedor...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
@@ -375,14 +375,14 @@ export function LeadsTab({
             <button
               onClick={distribuirManual}
               disabled={!vendedorManual || selecionados.size === 0 || distribuindo}
-              className="px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl disabled:opacity-50"
             >
               Atribuir selecionados
             </button>
             <button
               onClick={distribuirAutomatico}
               disabled={distribuindo || (contatosSemDono.length === 0)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-50"
             >
               {distribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
               Distribuir automatico (round-robin)
@@ -390,9 +390,9 @@ export function LeadsTab({
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white dark:bg-slate-900">
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
+          <table className="w-full text-left text-rotulo">
+            <thead className="sticky top-0 bg-superficie">
+              <tr className="border-b border-fio text-tinta-fraca uppercase text-rotulo">
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
@@ -407,52 +407,52 @@ export function LeadsTab({
                 <th className="p-3">Origem</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-fio">
               {contatosSemDono.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                <tr key={c.id} className="hover:bg-recuo">
                   <td className="p-3"><input type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
-                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
-                  <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
-                  <td className="p-3 text-slate-500">{c.email || "—"}</td>
-                  <td className="p-3 text-slate-400 capitalize">{c.origem}</td>
+                  <td className="p-3 font-medium text-tinta">{c.nome}</td>
+                  <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
+                  <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
+                  <td className="p-3 text-tinta-fraca capitalize">{c.origem}</td>
                 </tr>
               ))}
               {contatosSemDono.length === 0 && (
-                <tr><td colSpan={5} className="p-6 text-center text-slate-400">Nenhum lead sem dono no momento.</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-tinta-fraca">Nenhum lead sem dono no momento.</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 dark:border-slate-800 space-y-3">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-fio space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <ArrowRightLeft className="h-4 w-4 text-indigo-600" /> Leads com vendedor ({comDonoFiltrados.length})
+              <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 text-acento" /> Leads com vendedor ({comDonoFiltrados.length})
               </h3>
-              <p className="text-xs text-slate-500">{selComDono.size} selecionados · reatribua ou devolva ao pool</p>
+              <p className="text-rotulo text-tinta-suave">{selComDono.size} selecionados · reatribua ou devolva ao pool</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-tinta-fraca" />
               <input
                 value={buscaComDono}
                 onChange={(e) => setBuscaComDono(e.target.value)}
                 placeholder="Buscar nome/empresa/e-mail..."
-                className="pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-56"
+                className="pl-8 pr-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl w-56"
               />
             </div>
-            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="all">Todos os vendedores</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
             <div className="flex-1" />
-            <select value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
+            <select value={novoResp} onChange={(e) => setNovoResp(e.target.value)} className="px-3 py-2 text-rotulo bg-recuo border border-fio rounded-xl">
               <option value="">Passar para...</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
@@ -461,23 +461,23 @@ export function LeadsTab({
             <button
               onClick={() => reatribuir(false)}
               disabled={reatribuindo || selComDono.size === 0 || !novoResp}
-              className="px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl disabled:opacity-50"
             >
               {reatribuindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Reatribuir"}
             </button>
             <button
               onClick={() => reatribuir(true)}
               disabled={reatribuindo || selComDono.size === 0}
-              className="px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl disabled:opacity-50"
+              className="px-3 py-2 text-rotulo font-medium text-tinta-suave bg-recuo hover:bg-fio rounded-xl disabled:opacity-50"
             >
               Devolver ao pool
             </button>
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-white dark:bg-slate-900">
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px]">
+          <table className="w-full text-left text-rotulo">
+            <thead className="sticky top-0 bg-superficie">
+              <tr className="border-b border-fio text-tinta-fraca uppercase text-rotulo">
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
@@ -494,17 +494,17 @@ export function LeadsTab({
                 <th className="p-3">Vendedor</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-fio">
               {comDonoFiltrados.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                <tr key={c.id} className="hover:bg-recuo">
                   <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
-                  <td className="p-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
-                  <td className="p-3 text-slate-500">{c.empresa || "—"}</td>
-                  <td className="p-3 text-indigo-600 dark:text-indigo-400 font-semibold">{c.responsavel?.nome || "—"}</td>
+                  <td className="p-3 font-medium text-tinta">{c.nome}</td>
+                  <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
+                  <td className="p-3 text-acento font-medium">{c.responsavel?.nome || "—"}</td>
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
-                <tr><td colSpan={4} className="p-6 text-center text-slate-400">Nenhum lead com vendedor neste filtro.</td></tr>
+                <tr><td colSpan={4} className="p-6 text-center text-tinta-fraca">Nenhum lead com vendedor neste filtro.</td></tr>
               )}
             </tbody>
           </table>
@@ -517,8 +517,8 @@ export function LeadsTab({
 function ResumoPill({ cor, bg, label, valor }: { cor: string; bg: string; label: string; valor: number }) {
   return (
     <div className={`rounded-xl px-3 py-2 ${bg}`}>
-      <p className={`text-lg font-extrabold ${cor}`}>{valor}</p>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+      <p className={`text-titulo font-medium ${cor}`}>{valor}</p>
+      <p className="text-rotulo font-medium uppercase tracking-wide text-tinta-suave">{label}</p>
     </div>
   );
 }

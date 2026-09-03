@@ -72,20 +72,20 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <BadgePercent className="h-5 w-5 text-indigo-600" />
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Aprovação de descontos</h3>
+          <BadgePercent className="h-5 w-5 text-acento" />
+          <h3 className="text-titulo font-medium text-tinta">Aprovação de descontos</h3>
         </div>
-        <span className="px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+        <span className="px-3 py-1 text-rotulo font-medium rounded-full bg-alerta-fraco text-alerta">
           {pendentes} aguardando
         </span>
       </div>
 
-      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
+      {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
       {ordenadas.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-10 text-center">
-          <BadgePercent className="h-8 w-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">Nenhuma solicitação de desconto até agora.</p>
+        <div className="bg-superficie rounded-2xl border border-fio p-10 text-center">
+          <BadgePercent className="h-8 w-8 text-tinta-fraca mx-auto mb-2" />
+          <p className="text-corpo text-tinta-fraca">Nenhuma solicitação de desconto até agora.</p>
         </div>
       ) : (
         <div className="grid gap-3">
@@ -95,29 +95,29 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
             return (
               <div
                 key={s.id}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border p-4 ${
-                  pendente ? "border-amber-300 dark:border-amber-800" : "border-slate-200 dark:border-slate-800"
+                className={`bg-superficie rounded-2xl border p-4 ${
+                  pendente ? "border-alerta/40" : "border-fio"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Link href={`/negocios/${s.negocio?.id}`} className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:text-indigo-600">
+                      <Link href={`/negocios/${s.negocio?.id}`} className="font-medium text-corpo text-tinta hover:text-acento">
                         {nomeNegocio(s)}
                       </Link>
-                      {s.plano?.nome && <span className="text-[11px] text-slate-400">· {s.plano.nome}</span>}
+                      {s.plano?.nome && <span className="text-rotulo text-tinta-fraca">· {s.plano.nome}</span>}
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-rotulo text-tinta-suave mt-0.5">
                       Vendedor: {s.vendedor?.nome || "—"} · {new Date(s.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                     </p>
                   </div>
                   <span
-                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-full capitalize ${
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1 text-rotulo font-medium rounded-full capitalize ${
                       s.status === "aprovado"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        ? "bg-ok-fraco text-ok"
                         : s.status === "recusado"
-                          ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                          ? "bg-risco-fraco text-risco"
+                          : "bg-alerta-fraco text-alerta"
                     }`}
                   >
                     {s.status === "aprovado" ? <CheckCircle2 className="h-3.5 w-3.5" /> : s.status === "recusado" ? <XCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
@@ -125,24 +125,24 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
                   </span>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 flex-wrap text-sm">
-                  <span className="text-slate-400 line-through">{formatarMoeda(Number(s.valor_mensal_base))}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="font-extrabold text-indigo-700 dark:text-indigo-300">{formatarMoeda(Number(s.valor_mensal_solicitado))}</span>
-                  <span className="text-slate-500">/mês</span>
+                <div className="mt-3 flex items-center gap-2 flex-wrap text-corpo">
+                  <span className="text-tinta-fraca line-through">{formatarMoeda(Number(s.valor_mensal_base))}</span>
+                  <ArrowRight className="h-3.5 w-3.5 text-tinta-fraca" />
+                  <span className="font-medium text-acento">{formatarMoeda(Number(s.valor_mensal_solicitado))}</span>
+                  <span className="text-tinta-suave">/mês</span>
                   {pct > 0 && (
-                    <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    <span className="px-2 py-0.5 text-rotulo font-medium rounded-full bg-acento-fraco text-acento">
                       -{pct}%
                     </span>
                   )}
                   {Number(s.valor_setup_solicitado) > 0 && (
-                    <span className="text-[11px] text-slate-500">· setup {formatarMoeda(Number(s.valor_setup_solicitado))}</span>
+                    <span className="text-rotulo text-tinta-suave">· setup {formatarMoeda(Number(s.valor_setup_solicitado))}</span>
                   )}
                 </div>
 
                 {s.motivo && (
-                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2">
-                    <span className="font-semibold">Motivo:</span> {s.motivo}
+                  <p className="mt-2 text-rotulo text-tinta-suave bg-recuo rounded-lg px-3 py-2">
+                    <span className="font-medium">Motivo:</span> {s.motivo}
                   </p>
                 )}
 
@@ -152,20 +152,20 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
                       value={respostas[s.id] || ""}
                       onChange={(e) => setRespostas((prev) => ({ ...prev, [s.id]: e.target.value }))}
                       placeholder="Resposta ao vendedor (opcional)"
-                      className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg"
+                      className="w-full px-3 py-2 text-rotulo bg-recuo border border-fio rounded-lg"
                     />
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => decidir(s.id, true)}
                         disabled={decidindo === s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-lg disabled:opacity-60"
                       >
                         {decidindo === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
                       </button>
                       <button
                         onClick={() => decidir(s.id, false)}
                         disabled={decidindo === s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg disabled:opacity-60"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-risco-tinta bg-risco-solido hover:bg-risco-solido-hover rounded-lg disabled:opacity-60"
                       >
                         <ThumbsDown className="h-3.5 w-3.5" /> Recusar
                       </button>
@@ -173,7 +173,7 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
                   </div>
                 ) : (
                   s.resposta_admin && (
-                    <p className="mt-2 text-[11px] text-slate-500">
+                    <p className="mt-2 text-rotulo text-tinta-suave">
                       Resposta: {s.resposta_admin}
                     </p>
                   )

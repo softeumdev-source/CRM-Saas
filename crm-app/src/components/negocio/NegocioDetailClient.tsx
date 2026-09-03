@@ -276,32 +276,32 @@ export function NegocioDetailClient({
 
   return (
     <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600">
+      <Link href="/" className="inline-flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-acento">
         <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao pipeline
       </Link>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <Building2 className="h-5 w-5 text-indigo-600" />
-              <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
+              <Building2 className="h-5 w-5 text-acento" />
+              <h1 className="text-titulo font-medium text-tinta">
                 {negocio.contato?.empresa || negocio.contato?.nome}
               </h1>
               {fechado && (
                 <span
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${
+                  className={`px-2.5 py-1 text-rotulo font-medium rounded-full ${
                     negocio.ganho
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                      ? "bg-ok-fraco text-ok"
+                      : "bg-risco-fraco text-risco"
                   }`}
                 >
                   {negocio.ganho ? "Ganho" : "Perdido"}
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{negocio.titulo}</p>
-            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+            <p className="text-rotulo text-tinta-suave mt-1">{negocio.titulo}</p>
+            <div className="flex items-center gap-3 mt-2 text-rotulo text-tinta-suave flex-wrap">
               {negocio.contato?.email && (
                 <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{negocio.contato.email}</span>
               )}
@@ -333,7 +333,7 @@ export function NegocioDetailClient({
             {entrega && (
               <button
                 onClick={() => { setDestinatario(''); setEntregando(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded-xl transition-colors duration-150 ease-out"
+                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <ArrowRightLeft className="h-3.5 w-3.5" /> Entregar ao vendedor
               </button>
@@ -341,7 +341,7 @@ export function NegocioDetailClient({
             {podeFechar.ganho && (
               <button
                 onClick={() => { setMotivoPerda(''); setEncerrando(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors duration-150 ease-out"
+                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-ok bg-ok-fraco hover:bg-ok-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <Trophy className="h-3.5 w-3.5" /> Ganhei
               </button>
@@ -349,7 +349,7 @@ export function NegocioDetailClient({
             {podeFechar.perda && (
               <button
                 onClick={() => { setMotivoPerda(''); setEncerrando(false); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 rounded-xl transition-colors duration-150 ease-out"
+                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-risco bg-risco-fraco hover:bg-risco-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <XCircle className="h-3.5 w-3.5" /> {entrega ? "Descartar" : "Perdi"}
               </button>
@@ -360,13 +360,13 @@ export function NegocioDetailClient({
         {/* Termômetro de cadência: o mesmo sinal da bolinha do card */}
         <div className="flex items-center gap-2 mt-4 flex-wrap">
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg ${
               comAtividadeHoje
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                : "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                ? "bg-ok-fraco text-ok"
+                : "bg-alerta-fraco text-alerta"
             }`}
           >
-            <span className={`h-2 w-2 rounded-full ${comAtividadeHoje ? "bg-emerald-500" : "bg-amber-500"}`} />
+            <span className={`h-2 w-2 rounded-full ${comAtividadeHoje ? "bg-ok" : "bg-alerta"}`} />
             {comAtividadeHoje
               ? "Atividade registrada hoje"
               : dias === null
@@ -376,10 +376,10 @@ export function NegocioDetailClient({
 
           {proxima ? (
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg ${
                 proximaAtrasada
-                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
-                  : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300"
+                  ? "bg-risco-fraco text-risco"
+                  : "bg-acento-fraco text-acento"
               }`}
             >
               {proximaAtrasada ? <AlertTriangle className="h-3 w-3" /> : <CalendarClock className="h-3 w-3" />}
@@ -388,45 +388,45 @@ export function NegocioDetailClient({
           ) : (
             <button
               onClick={() => setAba("cadencia")}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 hover:bg-amber-100"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-alerta-fraco text-alerta hover:bg-alerta-fraco"
             >
               <Clock className="h-3 w-3" /> Sem próximo passo — agendar
             </button>
           )}
 
           {negocio.ultima_atividade_em && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-recuo text-tinta-suave">
               <CheckCircle2 className="h-3 w-3" /> Último contato: {formatarDataHora(negocio.ultima_atividade_em)}
             </span>
           )}
         </div>
 
         {erro && (
-          <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2 mt-3">{erro}</p>
+          <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2 mt-3">{erro}</p>
         )}
 
         <div className="grid sm:grid-cols-2 gap-3 mt-4">
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <p className="text-[10px] font-bold uppercase text-slate-400">Etapa</p>
+          <div className="bg-recuo rounded-xl p-3">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Etapa</p>
             <select
               value={negocio.etapa_id || ""}
               onChange={(e) => mudarEtapa(e.target.value)}
-              className="w-full mt-1 text-sm font-bold bg-transparent focus:outline-hidden"
+              className="w-full mt-1 text-corpo font-medium bg-transparent focus:outline-hidden"
             >
               {etapas.map((et) => (
                 <option key={et.id} value={et.id}>{et.nome}</option>
               ))}
             </select>
           </div>
-          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-3">
-            <p className="text-[10px] font-bold uppercase text-slate-400">Responsável</p>
+          <div className="bg-recuo rounded-xl p-3">
+            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Responsável</p>
             <select
               value={negocio.responsavel_id || ""}
               onChange={(e) => {
                 const resp = responsaveis.find((v) => v.id === e.target.value) || null;
                 atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
               }}
-              className="w-full mt-1 text-sm font-bold bg-transparent focus:outline-hidden"
+              className="w-full mt-1 text-corpo font-medium bg-transparent focus:outline-hidden"
             >
               <option value="">Sem dono (pool)</option>
               {responsaveis.map((v) => (
@@ -438,10 +438,10 @@ export function NegocioDetailClient({
               data ele fica parado para sempre — é por isso que o campo avisa
               quando está vazio, em vez de só existir. */}
           {negocio.etapa?.funcao === "nutricao" && (
-            <div className="sm:col-span-2 bg-violet-50 dark:bg-violet-950/30 rounded-xl p-3">
+            <div className="sm:col-span-2 bg-info-fraco rounded-xl p-3">
               <label
                 htmlFor={idRetomada}
-                className="text-[10px] font-bold uppercase text-violet-600 dark:text-violet-400"
+                className="text-rotulo font-medium uppercase text-info"
               >
                 Voltar a procurar em
               </label>
@@ -454,9 +454,9 @@ export function NegocioDetailClient({
                     retomar_em: e.target.value ? new Date(`${e.target.value}T09:00`).toISOString() : null,
                   })
                 }
-                className="mt-1 w-full max-w-xs px-3 py-2 text-sm font-bold rounded-xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                className="mt-1 w-full max-w-xs px-3 py-2 text-corpo font-medium rounded-xl bg-superficie border border-info/40 focus-visible:outline-2 focus-visible:outline-offset-2 "
               />
-              <p className="mt-1.5 text-[11px] text-violet-700 dark:text-violet-300">
+              <p className="mt-1.5 text-rotulo text-info">
                 {negocio.retomar_em
                   ? `O lead volta sozinho para o início do funil em ${formatarDataHora(negocio.retomar_em)}.`
                   : "Sem data, este lead fica parado aqui para sempre — ninguém vai ser lembrado dele."}
@@ -465,10 +465,10 @@ export function NegocioDetailClient({
           )}
 
           {(negocio.valor ?? 0) > 0 && (
-            <div className="sm:col-span-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl p-3">
-              <p className="text-[10px] font-bold uppercase text-indigo-500">Valor da proposta</p>
-              <p className="mt-1 text-sm font-extrabold text-indigo-600">
-                {formatarMoeda(negocio.valor)}<span className="text-xs font-semibold text-slate-500">/mês</span>
+            <div className="sm:col-span-2 bg-acento-fraco rounded-xl p-3">
+              <p className="text-rotulo font-medium uppercase text-acento">Valor da proposta</p>
+              <p className="mt-1 text-corpo font-medium text-acento">
+                {formatarMoeda(negocio.valor)}<span className="text-rotulo font-medium text-tinta-suave">/mês</span>
               </p>
             </div>
           )}
@@ -528,8 +528,8 @@ export function NegocioDetailClient({
           }
         >
           <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              <strong className="font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-corpo text-tinta-suave">
+              <strong className="font-medium text-tinta">
                 {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
               </strong>{" "}
               sai da prospecção e entra em <strong>{entrega.funil.nome}</strong>, na etapa{" "}
@@ -574,8 +574,8 @@ export function NegocioDetailClient({
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            <strong className="font-bold text-slate-900 dark:text-slate-100">
+          <p className="text-corpo text-tinta-suave">
+            <strong className="font-medium text-tinta">
               {negocio.contato?.empresa || negocio.contato?.nome}
             </strong>{" "}
             sai do funil e passa a contar nas métricas de conversão.

@@ -87,13 +87,13 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
           onPointerMove={handleMove}
           onPointerUp={handleUp}
           onPointerLeave={handleUp}
-          className="w-full h-full bg-white rounded-xl border-2 border-dashed border-slate-300 touch-none cursor-crosshair"
+          className="w-full h-full bg-superficie rounded-xl border-2 border-dashed border-fio-forte touch-none cursor-crosshair"
         />
       </div>
       <button
         type="button"
         onClick={limpar}
-        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-600"
+        className="flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-risco"
       >
         <Eraser className="h-3.5 w-3.5" />
         Limpar assinatura

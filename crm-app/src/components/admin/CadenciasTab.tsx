@@ -115,7 +115,7 @@ export function CadenciasTab() {
 
   if (carregando) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-8 flex items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando cadências…
       </div>
     );
@@ -124,17 +124,17 @@ export function CadenciasTab() {
   return (
     <div className="space-y-5">
       {erro && (
-        <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">
+        <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
           {erro}
         </p>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
         <div>
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Send className="h-4 w-4 text-indigo-600" /> Cadências ({cadencias.length})
+          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <Send className="h-4 w-4 text-acento" /> Cadências ({cadencias.length})
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-rotulo text-tinta-suave mt-1">
             O interruptor que importa é o de autonomia. Com ele desligado, cada mensagem espera
             alguém aprovar antes de sair. Ligue só quando confiar no que está sendo escrito — o
             e-mail enviado não volta.
@@ -142,18 +142,18 @@ export function CadenciasTab() {
         </div>
 
         {cadencias.length === 0 ? (
-          <p className="text-xs text-slate-500">Nenhuma cadência cadastrada.</p>
+          <p className="text-rotulo text-tinta-suave">Nenhuma cadência cadastrada.</p>
         ) : (
           <div className="space-y-3">
             {cadencias.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3"
+                className="rounded-2xl border border-fio p-4 space-y-3"
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100">{c.nome}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="font-medium text-corpo text-tinta">{c.nome}</p>
+                    <p className="text-rotulo text-tinta-suave mt-0.5">
                       {c.tipo} · {(c.passos || []).length} toques
                     </p>
                   </div>
@@ -179,7 +179,7 @@ export function CadenciasTab() {
                 </div>
 
                 {c.autonoma && (
-                  <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2 flex items-start gap-2">
+                  <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2 flex items-start gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />
                     As mensagens desta cadência saem sem ninguém ler. Todo lead inscrito nela vai
                     receber os {(c.passos || []).length} toques automaticamente.
@@ -190,8 +190,8 @@ export function CadenciasTab() {
                   {[...(c.passos || [])]
                     .sort((a, b) => a.ordem - b.ordem)
                     .map((p) => (
-                      <li key={p.id} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                        <span className="h-5 w-5 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold">
+                      <li key={p.id} className="text-rotulo text-tinta-suave flex items-center gap-2">
+                        <span className="h-5 w-5 shrink-0 rounded-full bg-recuo flex items-center justify-center text-rotulo font-medium">
                           {p.ordem}
                         </span>
                         {p.atraso_horas === 0 ? "na hora" : `+${p.atraso_horas}h`} · {p.canal}
@@ -207,12 +207,12 @@ export function CadenciasTab() {
       </div>
 
       {whats && (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
+        <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
           <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-emerald-600" /> WhatsApp
+            <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-ok" /> WhatsApp
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-rotulo text-tinta-suave mt-1">
               Mensagem iniciada pela empresa só sai por template aprovado pela Meta. Use um número
               separado do comercial: se ele for bloqueado a ponto de ser banido, você perde o
               descartável, não o número da empresa.
@@ -223,21 +223,21 @@ export function CadenciasTab() {
             <div
               className={`rounded-2xl border p-4 ${
                 whats.pausado_automaticamente
-                  ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30"
-                  : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40"
+                  ? "border-risco/40 bg-risco-fraco"
+                  : "border-fio bg-recuo"
               }`}
             >
               <p
-                className={`text-sm font-bold flex items-center gap-2 ${
+                className={`text-corpo font-medium flex items-center gap-2 ${
                   whats.pausado_automaticamente
-                    ? "text-rose-900 dark:text-rose-200"
-                    : "text-slate-800 dark:text-slate-200"
+                    ? "text-risco"
+                    : "text-tinta"
                 }`}
               >
                 {whats.pausado_automaticamente ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                 {whats.pausado_automaticamente ? "Pausado pelo monitor" : "Canal desligado"}
               </p>
-              <p className="text-[11px] mt-1 text-slate-600 dark:text-slate-300">
+              <p className="text-rotulo mt-1 text-tinta-suave">
                 {whats.pausado_motivo ||
                   "O canal nasce desligado. Ligue só com o número separado no ar e os templates já aprovados."}
                 {whats.pausado_em && ` (${formatarDataHora(whats.pausado_em)})`}
@@ -254,10 +254,10 @@ export function CadenciasTab() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="rounded-2xl border border-ok/40 bg-ok-fraco p-4 flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">Canal ligado</p>
-                <p className="text-[11px] text-emerald-800 dark:text-emerald-300 mt-0.5">
+                <p className="text-corpo font-medium text-ok">Canal ligado</p>
+                <p className="text-rotulo text-ok mt-0.5">
                   Até {whats.limite_por_hora}/hora e {whats.limite_por_dia}/dia, com no mínimo{" "}
                   {whats.horas_entre_mensagens_por_lead}h entre mensagens para o mesmo lead. O monitor
                   pausa sozinho se mais de {Math.round(Number(whats.limite_taxa_falha) * 100)}% das
@@ -277,12 +277,12 @@ export function CadenciasTab() {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
         <div>
-          <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-indigo-600" /> Modelos de mensagem ({templates.length})
+          <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+            <FileText className="h-4 w-4 text-acento" /> Modelos de mensagem ({templates.length})
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-rotulo text-tinta-suave mt-1">
             O texto aceita <code className="font-mono">{"{{primeiro_nome}}"}</code>,{" "}
             <code className="font-mono">{"{{contato}}"}</code>,{" "}
             <code className="font-mono">{"{{empresa}}"}</code> e{" "}
@@ -294,13 +294,13 @@ export function CadenciasTab() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 p-3"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-fio p-3"
             >
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                <p className="text-corpo font-medium text-tinta truncate">
                   {t.nome}
                 </p>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="text-rotulo text-tinta-suave truncate">
                   {t.canal} · {t.categoria} · {t.assunto || "sem assunto"}
                 </p>
               </div>
@@ -338,12 +338,12 @@ export function CadenciasTab() {
         <div className="space-y-3">
           {editando?.canal === "email" && (
             <div>
-              <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Assunto</label>
+              <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Assunto</label>
               <Entrada value={assunto} onChange={(e) => setAssunto(e.target.value)} />
             </div>
           )}
           <div>
-            <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+            <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
               {editando?.canal === "email" ? "Corpo (HTML)" : "Mensagem"}
             </label>
             <AreaTexto rows={14} value={corpo} onChange={(e) => setCorpo(e.target.value)} />

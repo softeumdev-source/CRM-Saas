@@ -111,7 +111,7 @@ export function PdfSignViewer({
   if (carregando) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-acento" />
       </div>
     );
   }
@@ -123,18 +123,18 @@ export function PdfSignViewer({
     // essencial no celular, onde o iframe às vezes não renderiza inline.
     return (
       <div className="space-y-3">
-        <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+        <div className="rounded-xl overflow-hidden border border-fio bg-recuo">
           <iframe src={pdfUrl} className="w-full h-[500px]" title="Proposta" />
         </div>
         <a
           href={pdfUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md"
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md"
         >
           <FileSignature className="h-4 w-4" /> Abrir proposta em tela cheia
         </a>
-        <p className="text-[11px] text-slate-500 text-center">
+        <p className="text-rotulo text-tinta-suave text-center">
           Você pode ler a proposta acima e assinar no painel abaixo normalmente.
         </p>
       </div>
@@ -143,33 +143,33 @@ export function PdfSignViewer({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 bg-slate-100 rounded-xl px-4 py-2">
+      <div className="flex items-center justify-between mb-3 bg-recuo rounded-xl px-4 py-2">
         <button
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
           disabled={paginaAtual <= 1}
-          className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30"
+          className="p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-xs font-bold text-slate-600">
+        <span className="text-rotulo font-semibold text-tinta-suave">
           Página {paginaAtual} / {totalPaginas}
         </span>
         <button
           onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
           disabled={paginaAtual >= totalPaginas}
-          className="p-1.5 rounded-lg hover:bg-slate-200 disabled:opacity-30"
+          className="p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      <div ref={containerRef} className="relative border border-slate-200 rounded-xl overflow-hidden bg-slate-200">
+      <div ref={containerRef} className="relative border border-fio rounded-xl overflow-hidden bg-fio">
         <canvas ref={canvasRef} className="w-full h-auto block" />
 
         {outrosCamposPagina.map((campo) => (
           <div
             key={campo.id}
-            className="absolute flex items-center justify-center gap-1 rounded-md border-2 border-dashed opacity-30 pointer-events-none"
+            className="absolute flex items-center justify-center gap-1 rounded-lg border-2 border-dashed opacity-30 pointer-events-none"
             style={{
               left: `${campo.x * 100}%`,
               top: `${campo.y * 100}%`,
@@ -179,7 +179,7 @@ export function PdfSignViewer({
               borderColor: "#94a3b8",
             }}
           >
-            <span className="text-[8px] font-bold text-slate-400">Outro signatário</span>
+            <span className="text-[8px] font-semibold text-tinta-fraca">Outro signatário</span>
           </div>
         ))}
 
@@ -198,11 +198,11 @@ export function PdfSignViewer({
             }}
           >
             {assinado ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-ok" />
             ) : (
               <>
                 <FileSignature className="h-4 w-4" style={{ color: cor.text }} />
-                <span className="text-[10px] font-bold" style={{ color: cor.text }}>Assinar aqui</span>
+                <span className="text-rotulo font-semibold" style={{ color: cor.text }}>Assinar aqui</span>
               </>
             )}
           </div>

@@ -111,18 +111,18 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   if (carregando) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+      <div className="min-h-screen flex items-center justify-center bg-recuo">
+        <Loader2 className="h-6 w-6 animate-spin text-acento" />
       </div>
     );
   }
 
   if (erro && !dados) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md text-center shadow-lg">
-          <ShieldCheck className="h-10 w-10 text-rose-500 mx-auto mb-3" />
-          <p className="text-sm font-bold text-slate-800">{erro}</p>
+      <div className="min-h-screen flex items-center justify-center bg-recuo p-4">
+        <div className="bg-superficie rounded-2xl border border-fio p-8 max-w-md text-center shadow-lg">
+          <ShieldCheck className="h-10 w-10 text-risco mx-auto mb-3" />
+          <p className="text-corpo font-semibold text-tinta">{erro}</p>
         </div>
       </div>
     );
@@ -138,16 +138,16 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   const painelAssinatura = (
     <>
-      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-2 bg-recuo p-1 rounded-xl w-fit">
         <button
           onClick={() => setModoAssinatura("digitada")}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "digitada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+          className={`px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
         >
           Digitar nome
         </button>
         <button
           onClick={() => setModoAssinatura("desenhada")}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${modoAssinatura === "desenhada" ? "bg-white shadow-xs text-indigo-600" : "text-slate-500"}`}
+          className={`px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
         >
           Desenhar assinatura
         </button>
@@ -157,7 +157,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         <input
           value={nomeDigitado}
           onChange={(e) => setNomeDigitado(e.target.value)}
-          className="w-full px-4 py-3 text-2xl border-b-2 border-slate-300 focus:border-indigo-500 outline-hidden"
+          className="w-full px-4 py-3 text-display border-b-2 border-fio-forte focus:border-acento outline-hidden"
           style={{ fontFamily: "cursive" }}
         />
       ) : (
@@ -165,8 +165,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       )}
 
       <div>
-        <label htmlFor="page-1" className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-1">
-          <Mail className="h-3.5 w-3.5 text-indigo-600" />
+        <label htmlFor="page-1" className="flex items-center gap-2 text-rotulo font-medium text-tinta-suave mb-1">
+          <Mail className="h-3.5 w-3.5 text-acento" />
           E-mail de faturamento
         </label>
         <input id="page-1"
@@ -174,11 +174,11 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           value={emailFaturamento}
           onChange={(e) => setEmailFaturamento(e.target.value)}
           placeholder="email@empresa.com.br"
-          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+          className="w-full px-3 py-2 text-corpo border border-fio-forte rounded-xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
         />
       </div>
 
-      <label htmlFor="page-2" className="flex items-start gap-2 text-xs text-slate-600">
+      <label htmlFor="page-2" className="flex items-start gap-2 text-rotulo text-tinta-suave">
         <input id="page-2" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
         <span>
           Declaro que li e concordo com os termos das propostas Comercial e Técnica acima, e que esta
@@ -187,12 +187,12 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         </span>
       </label>
 
-      {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{erro}</p>}
+      {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
       <button
         onClick={handleAssinar}
         disabled={!aceite || enviando}
-        className="w-full py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+        className="w-full py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
         Assinar documento
@@ -201,32 +201,32 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   );
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-slate-900 text-white px-6 py-4 flex items-center gap-3">
-        <FileSignature className="h-5 w-5 text-indigo-400" />
+    <div className="min-h-screen bg-recuo">
+      <header className="bg-superficie text-white px-6 py-4 flex items-center gap-3">
+        <FileSignature className="h-5 w-5 text-acento" />
         <div>
-          <p className="font-extrabold text-sm">SOFTEUM · Assinatura Eletrônica</p>
-          <p className="text-[11px] text-slate-400">Proposta {dados.proposta.numero} · v{dados.proposta.versao}</p>
+          <p className="font-semibold text-corpo">SOFTEUM · Assinatura Eletrônica</p>
+          <p className="text-rotulo text-tinta-fraca">Proposta {dados.proposta.numero} · v{dados.proposta.versao}</p>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {concluido ? (
-          <div className="bg-white rounded-3xl border border-emerald-200 shadow-lg p-10 text-center">
-            <CheckCircle2 className="h-14 w-14 text-emerald-500 mx-auto mb-4" />
-            <h1 className="text-lg font-extrabold text-slate-900">Assinatura registrada com sucesso!</h1>
-            <p className="text-sm text-slate-500 mt-2">
+          <div className="bg-superficie rounded-2xl border border-ok/40 shadow-lg p-10 text-center">
+            <CheckCircle2 className="h-14 w-14 text-ok mx-auto mb-4" />
+            <h1 className="text-titulo font-semibold text-tinta">Assinatura registrada com sucesso!</h1>
+            <p className="text-corpo text-tinta-suave mt-2">
               Obrigado, {dados.signatario.nome}. A Softeum e o vendedor responsável foram notificados.
             </p>
             {docsAssinados ? (
-              <div className="mt-6 pt-6 border-t border-slate-100">
-                <p className="text-xs font-bold uppercase text-slate-400 mb-3">Baixe seus documentos assinados (com certificado de conclusão)</p>
+              <div className="mt-6 pt-6 border-t border-fio">
+                <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-3">Baixe seus documentos assinados (com certificado de conclusão)</p>
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   <a
                     href={docsAssinados.comercial}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md"
                   >
                     <FileText className="h-4 w-4" /> Proposta Comercial
                   </a>
@@ -234,38 +234,38 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     href={docsAssinados.tecnica}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-white bg-superficie hover:bg-recuo rounded-xl shadow-md"
                   >
                     <FileText className="h-4 w-4" /> Proposta Técnica
                   </a>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-slate-400 mt-4">
+              <p className="text-rotulo text-tinta-fraca mt-4">
                 Assim que todos os signatários concluírem, você receberá por e-mail os documentos assinados com o certificado de conclusão.
               </p>
             )}
           </div>
         ) : (
           <>
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6">
+            <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-6">
               <div className="flex items-center gap-2 mb-1">
-                <Building2 className="h-4 w-4 text-indigo-600" />
-                <h1 className="font-extrabold text-slate-900">{dados.contato.empresa || dados.contato.nome}</h1>
+                <Building2 className="h-4 w-4 text-acento" />
+                <h1 className="font-semibold text-tinta">{dados.contato.empresa || dados.contato.nome}</h1>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-rotulo text-tinta-suave">
                 {dados.negocio.titulo} · CNPJ {dados.contato.cnpj} · Aviso prévio de{" "}
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold uppercase text-indigo-600">Proposta Comercial — documento para assinatura</p>
+                  <p className="text-rotulo font-semibold uppercase text-acento">Proposta Comercial — documento para assinatura</p>
                   <a
                     href={comercialUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                    className="flex items-center gap-1 text-rotulo font-medium text-acento hover:text-acento"
                   >
                     <FileText className="h-3 w-3" /> Abrir em nova aba
                   </a>
@@ -280,29 +280,29 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     onCampoClick={() => setModalAssinatura(true)}
                   />
                 ) : (
-                  <div className="rounded-xl overflow-hidden border border-slate-200">
+                  <div className="rounded-xl overflow-hidden border border-fio">
                     <iframe src={comercialUrl} className="w-full h-[500px]" title="Proposta Comercial" />
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-indigo-200 shadow-xs p-6 space-y-4">
-              <h2 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <FileSignature className="h-4 w-4 text-indigo-600" />
+            <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-6 space-y-4">
+              <h2 className="font-semibold text-corpo text-tinta flex items-center gap-2">
+                <FileSignature className="h-4 w-4 text-acento" />
                 Assinar Proposta Comercial como {dados.signatario.nome}
               </h2>
               {painelAssinatura}
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
               <button
                 onClick={() => setTecnicaAberta(!tecnicaAberta)}
-                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-recuo transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-slate-400" />
-                  <p className="text-xs font-bold text-slate-600">Proposta Técnica (referência)</p>
+                  <FileText className="h-4 w-4 text-tinta-fraca" />
+                  <p className="text-rotulo font-semibold text-tinta-suave">Proposta Técnica (referência)</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <a
@@ -310,11 +310,11 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                    className="flex items-center gap-1 text-rotulo font-medium text-acento hover:text-acento"
                   >
                     <FileText className="h-3 w-3" /> Abrir em nova aba
                   </a>
-                  {tecnicaAberta ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                  {tecnicaAberta ? <ChevronUp className="h-4 w-4 text-tinta-fraca" /> : <ChevronDown className="h-4 w-4 text-tinta-fraca" />}
                 </div>
               </button>
               {tecnicaAberta && (
@@ -329,7 +329,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                       onCampoClick={() => setModalAssinatura(true)}
                     />
                   ) : (
-                    <div className="rounded-xl overflow-hidden border border-slate-200">
+                    <div className="rounded-xl overflow-hidden border border-fio">
                       <iframe src={tecnicaUrl} className="w-full h-[500px]" title="Proposta Técnica" />
                     </div>
                   )}
@@ -342,14 +342,14 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
       {modalAssinatura && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
-            <button onClick={() => setModalAssinatura(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+          <div className="bg-superficie rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
+            <button onClick={() => setModalAssinatura(false)} className="absolute top-4 right-4 text-tinta-fraca hover:text-tinta">
               <X className="h-5 w-5" />
             </button>
 
             <div className="flex items-center gap-2">
-              <FileSignature className="h-5 w-5 text-indigo-600" />
-              <h2 className="font-bold text-sm text-slate-900">Assinar como {dados.signatario.nome}</h2>
+              <FileSignature className="h-5 w-5 text-acento" />
+              <h2 className="font-semibold text-corpo text-tinta">Assinar como {dados.signatario.nome}</h2>
             </div>
 
             {painelAssinatura}
