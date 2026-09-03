@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { destinoDaEntrega } from "@/lib/pipelines";
 import { resultadoDaEtapa } from "@/lib/types";
+import { TIPOS_REUNIAO } from "@/lib/atividades";
 import type { EtapaPipeline } from "@/lib/types";
 
 /**
@@ -52,6 +53,32 @@ export async function moverEtapa({
   if (etapa.funcao === "entrega") {
     const destino = await destinoDaEntrega(supabase, etapa.pipeline_id, etapa.ordem);
     if (destino) {
+      // A entrega dizia "Reunião agendada" sem nunca conferir se havia uma.
+      // Dava para arrastar um lead frio direto para o board do vendedor, que o
+      // recebia com uma descrição mentindo. Reunião concluída nao conta: um
+      // no-show ja marcou a anterior como concluida, e o que autoriza a nova
+      // entrega e um agendamento NOVO.
+      const { data: reuniao, error: erroReuniao } = await supabase
+        .from("atividades")
+        .select("id")
+        .eq("negocio_id", negocioId)
+        .eq("concluida", false)
+        .in("tipo", TIPOS_REUNIAO)
+        .not("data_agendada", "is", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (erroReuniao) return { ok: false, erro: erroReuniao.message };
+      if (!reuniao) {
+        return {
+          ok: false,
+          erro:
+            "Este lead não tem reunião agendada. Agende pela aba Cadência — é o agendamento que " +
+            `entrega o lead para ${destino.pipeline.nome}. Para passar o card mesmo assim, use ` +
+            `"Mover para ${destino.pipeline.nome}" na tela do negócio.`,
+        };
+      }
+
       return transferirDeFunil({
         negocioId,
         etapaDestino: destino.etapa,

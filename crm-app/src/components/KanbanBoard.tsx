@@ -6,11 +6,13 @@ import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 import { LeadCard, type VarianteDoCard } from "@/components/LeadCard";
+import type { ResumoCadencia } from "@/lib/board";
 
 export function KanbanBoard({
   etapas,
   negocios,
   variante = "vendas",
+  cadencias,
   totaisPorEtapa,
   carregadosPorEtapa,
   carregandoMais,
@@ -22,6 +24,8 @@ export function KanbanBoard({
   negocios: NegocioComRelacoes[];
   /** Qual board e este. Vem de `pipeline.chave`, nao de adivinhacao. */
   variante?: VarianteDoCard;
+  /** Andamento da cadencia por negocio. Vazio fora do board do SDR. */
+  cadencias?: Record<string, ResumoCadencia>;
   /** Quantos existem no banco por etapa — pode ser mais do que está carregado. */
   totaisPorEtapa: Record<string, number>;
   /** Quantos estão carregados por etapa, ANTES dos filtros de busca/foco. */
@@ -49,6 +53,11 @@ export function KanbanBoard({
         {etapas.map((etapa) => {
           const doEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
           const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
+          // "Valor na etapa: R$ 0,00" em toda coluna era o mesmo ruido que o
+          // "R$ 0,00" gigante no card: em prospeccao o valor ainda nao existe.
+          // A coluna do SDR mede o que ele controla — quantos leads estao
+          // sendo tocados.
+          const emCadencia = doEtapa.filter((n) => cadencias?.[n.id]).length;
           const trabalhadosHoje = doEtapa.filter((n) => temAtividadeHoje(n)).length;
           const atrasados = doEtapa.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
           const cor = etapa.cor || "#6366f1";
@@ -107,8 +116,12 @@ export function KanbanBoard({
                   </button>
                 </div>
                 <div className="flex items-center justify-between text-rotulo text-tinta-suave">
-                  <span>Valor na etapa:</span>
-                  <span className="font-semibold text-tinta">{formatarMoeda(totalValor)}</span>
+                  <span>{variante === "sdr" ? "Em cadência:" : "Valor na etapa:"}</span>
+                  <span className="font-semibold text-tinta tabular">
+                    {variante === "sdr"
+                      ? `${emCadencia} de ${doEtapa.length}`
+                      : formatarMoeda(totalValor)}
+                  </span>
                 </div>
                 {doEtapa.length > 0 && (
                   <div className="flex items-center gap-3 mt-1.5 text-rotulo font-semibold">
@@ -148,7 +161,7 @@ export function KanbanBoard({
                         arrastando === negocio.id ? "opacity-40" : ""
                       }`}
                     >
-                      <LeadCard negocio={negocio} variante={variante} />
+                      <LeadCard negocio={negocio} variante={variante} cadencia={cadencias?.[negocio.id]} />
                     </div>
                   ))
                 )}

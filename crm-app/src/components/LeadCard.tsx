@@ -12,6 +12,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import type { NegocioComRelacoes } from "@/lib/types";
+import type { ResumoCadencia } from "@/lib/board";
 import { formatarMoeda, iniciais } from "@/lib/types";
 import { Ponto, Selo } from "@/components/ui";
 import {
@@ -28,8 +29,15 @@ import {
  *
  * A variante nao e cosmetica: o vendedor e o SDR olham para coisas
  * diferentes. O vendedor precisa de valor, probabilidade e CNPJ; o SDR precisa
- * saber se o lead respondeu e ha quanto tempo esta parado — em prospeccao o
- * valor e quase sempre zero, e um "R$ 0,00" gigante em todo card e ruido.
+ * saber por onde anda a cadencia e quando sai o proximo toque — em prospeccao
+ * o valor e quase sempre zero, e um "R$ 0,00" gigante em todo card e ruido.
+ *
+ * A primeira versao disto nao cumpriu o combinado: a variante so REMOVIA duas
+ * coisas (o valor e a probabilidade) e, no lugar do valor, punha um espacador
+ * da mesma altura. Os 17 outros elementos eram identicos e a silhueta tambem,
+ * entao os dois boards continuavam iguais. A causa era de dado, nao de layout:
+ * o andamento da cadencia nao chegava ao board. Agora chega (`cadencia`), e a
+ * variante e ADITIVA — faixa cheia de um lado, trilho de fios do outro.
  *
  * E UM componente com um `if`, e nao dois arquivos, porque duas copias
  * divergem: neste projeto ja aconteceu com `moverEtapa` (uma tinha fallback de
@@ -41,9 +49,12 @@ export type VarianteDoCard = "vendas" | "sdr";
 export function LeadCard({
   negocio,
   variante = "vendas",
+  cadencia,
 }: {
   negocio: NegocioComRelacoes;
   variante?: VarianteDoCard;
+  /** Andamento da cadencia deste negocio. So o board do SDR passa. */
+  cadencia?: ResumoCadencia;
 }) {
   const comAtividadeHoje = temAtividadeHoje(negocio);
   const dias = diasSemContato(negocio);
@@ -55,6 +66,12 @@ export function LeadCard({
   const naoLidas = negocio.respostas_nao_lidas ?? 0;
   const respondeu = naoLidas > 0;
   const IconeCanal = negocio.ultima_resposta_canal === "whatsapp" ? MessageCircle : Mail;
+  const IconeCadencia = cadencia?.canalProximo === "whatsapp" ? MessageCircle : Mail;
+
+  // O denominador do trilho. `Math.max` porque uma cadencia sem passos (0) ou
+  // um `passo_atual` que ja passou do ultimo renderizariam "Passo 1 de 0" e um
+  // trilho vazio — feio e, pior, mentiroso.
+  const totalDePassos = Math.max(cadencia?.totalPassos ?? 0, cadencia?.passoAtual ?? 0, 1);
 
   const statusContato = comAtividadeHoje
     ? "Atividade registrada hoje"
@@ -153,14 +170,20 @@ export function LeadCard({
             <CircleAlert className="h-3 w-3 shrink-0" aria-hidden /> Em nutrição sem data de retomada
           </p>
         )}
-        {!emNutricao && !proxima && !comAtividadeHoje && (
+        {/* No board do SDR este aviso nao vale: o bloco logo abaixo ja responde
+            a mesma pergunta com mais precisao — ou o trilho da cadencia (o
+            proximo passo EXISTE, e o proximo toque) ou "Fora de cadencia".
+            Deixar os dois punha dois ambares seguidos dizendo quase o mesmo. */}
+        {variante === "vendas" && !emNutricao && !proxima && !comAtividadeHoje && (
           <p className="flex items-center gap-1 text-rotulo font-medium text-alerta">
             <CircleAlert className="h-3 w-3 shrink-0" aria-hidden /> Sem próximo passo agendado
           </p>
         )}
       </div>
 
-      {/* O bloco do meio e o que separa as duas variantes. */}
+      {/* O bloco do meio e o que separa as duas variantes, e separa pela FORMA
+          antes do conteudo: faixa cheia de um lado, trilho de fios do outro.
+          E o que faz os dois boards se distinguirem de longe, borrados. */}
       {variante === "vendas" ? (
         <div className="my-3 flex items-center justify-between gap-2 rounded-xl bg-recuo px-3 py-2">
           <span className="text-corpo-lg font-semibold text-tinta tabular">
@@ -172,8 +195,50 @@ export function LeadCard({
             </Selo>
           )}
         </div>
+      ) : cadencia ? (
+        <div className="my-3 space-y-1.5">
+          <div
+            className="flex items-center gap-1"
+            role="img"
+            aria-label={`${cadencia.nome}: passo ${cadencia.passoAtual} de ${totalDePassos}`}
+          >
+            {Array.from({ length: totalDePassos }, (_, i) => {
+              const ordem = i + 1;
+              return (
+                <span
+                  key={ordem}
+                  className={`h-1 flex-1 rounded-full ${
+                    ordem < cadencia.passoAtual
+                      ? "bg-acento"
+                      : ordem === cadencia.passoAtual
+                        ? "bg-acento/45"
+                        : "bg-fio-forte"
+                  }`}
+                />
+              );
+            })}
+          </div>
+          <p className="flex items-center gap-1 text-rotulo text-tinta-suave">
+            <IconeCadencia className="h-3 w-3 shrink-0" aria-hidden />
+            <span className="tabular">
+              Passo {cadencia.passoAtual} de {totalDePassos}
+            </span>
+            {cadencia.status === "pausada"
+              ? " · pausada"
+              : cadencia.proximoEnvioEm
+                ? ` · ${descreverPrazo(cadencia.proximoEnvioEm)}`
+                : ""}
+          </p>
+        </div>
       ) : (
-        <div className="my-3" />
+        <div className="my-3 space-y-1.5">
+          <div className="border-t border-dashed border-fio-forte" />
+          {/* Lead que ninguem esta tocando e o problema numero um de um SDR —
+              nao um espaco em branco. */}
+          <p className="flex items-center gap-1 text-rotulo font-medium text-alerta">
+            <CircleAlert className="h-3 w-3 shrink-0" aria-hidden /> Fora de cadência
+          </p>
+        </div>
       )}
 
       <div className="flex items-center justify-between border-t border-fio pt-2.5">

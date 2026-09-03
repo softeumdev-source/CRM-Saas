@@ -99,10 +99,14 @@ export function etapaComFuncao(
  * O outro lado de uma entrega: o funil para onde este aponta, e a etapa de
  * MESMA ORDEM dentro dele.
  *
- * Casar por `ordem` só é honesto porque os dois funis têm listas idênticas —
- * é exatamente o que a migration `20260903170000` garantiu. Casar por nome
- * quebraria assim que um admin renomeasse uma etapa; casar por posição no
+ * Casar por `ordem` só é honesto porque os dois funis compartilham o começo da
+ * lista — é o que as migrations `20260903170000` e `…210000` garantem: o funil
+ * do SDR é o prefixo do de vendas até a etapa de entrega, na ordem 3. Casar por
+ * nome quebraria assim que um admin renomeasse uma etapa; casar por posição no
  * array quebraria se um funil ganhasse uma etapa antes do outro.
+ *
+ * `etapaDaEntrega` acima é esta mesma regra sem ida ao banco. As duas têm que
+ * continuar concordando.
  */
 export async function destinoDaEntrega(
   supabase: Cliente,
@@ -130,6 +134,25 @@ export async function destinoDaEntrega(
 
   if (!destino || !etapa) return null;
   return { pipeline: destino, etapa };
+}
+
+/**
+ * A MESMA regra de `destinoDaEntrega`, para quem já tem as duas listas de
+ * etapas na mão e não precisa ir ao banco de novo.
+ *
+ * Existe porque os dois caminhos da entrega divergiram: arrastar o card usava
+ * `destinoDaEntrega` (etapa de mesma ordem, "Demonstração Agendada") e o botão
+ * "Entregar ao vendedor" usava `etapaComFuncao(…, "entrada")` ("Novo Lead").
+ * Mesma intenção, duas colunas diferentes. Vale a de mesma ordem: o lead chega
+ * ao vendedor COM reunião marcada, não como lead novo.
+ */
+export function etapaDaEntrega(
+  etapasOrigem: EtapaPipeline[],
+  etapasDestino: EtapaPipeline[],
+): EtapaPipeline | undefined {
+  const entrega = etapaComFuncao(etapasOrigem, "entrega");
+  if (!entrega) return undefined;
+  return etapasDestino.find((e) => e.ordem === entrega.ordem);
 }
 
 /** O funil de onde vêm os leads deste aqui — o outro lado do handoff. */

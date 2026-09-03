@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PhoneCall,
   Mail,
@@ -36,6 +36,7 @@ import {
   resumirTexto,
   dataDoPreset,
   descreverPrazo,
+  ehReuniao,
   estaAtrasada,
   formatarDataHora,
   paraInputDataHora,
@@ -61,6 +62,7 @@ export function CadenciaTab({
   usuarioAtual,
   onRegistrouAtividade,
   aoResponderComparecimento,
+  aoEntregarComReuniao,
 }: {
   /**
    * Só existe quando há um funil para onde devolver o no-show. Sem ele a
@@ -68,6 +70,15 @@ export function CadenciaTab({
    * de reagendamento do outro lado.
    */
   aoResponderComparecimento?: (atividadeId: string, compareceu: boolean) => Promise<string | void>;
+  /**
+   * Passa o lead para o funil do vendedor. Só existe no funil do SDR, e é o
+   * que transforma "agendar" e "entregar" numa ação só — o pedido era que o
+   * fluxo do SDR fosse ATÉ agendar o cliente no card do vendedor.
+   *
+   * Devolve a mensagem de erro, ou nada em caso de sucesso (a tela navega para
+   * o board, porque a RLS já não alcança este negócio).
+   */
+  aoEntregarComReuniao?: (info: { quando: string | null; comMeet: boolean }) => Promise<string | void>;
   negocio: NegocioComRelacoes;
   atividadesIniciais: AtividadeComUsuario[];
   usuarioAtual: Usuario;
@@ -250,9 +261,20 @@ export function CadenciaTab({
   const [agendandoGoogle, setAgendandoGoogle] = useState<string | null>(null);
 
   /**
-   * Cria o convite de verdade na agenda de quem clicou e manda para o cliente.
-   * O botão some depois, porque a atividade passa a ter `google_evento_id` — é
-   * o que impede um clique duplo virar dois convites na caixa do cliente.
+   * Cria o convite de verdade na agenda de quem clicou, manda para o cliente e,
+   * no funil do SDR, ENTREGA o lead ao vendedor na sequência.
+   *
+   * A ordem não é estilo, é a única garantia possível aqui: o convite é um
+   * efeito externo que não volta atrás dentro de uma transação, então ele vem
+   * primeiro. Convite falhou → nada se move. Convite criado e a transferência
+   * falhou → o evento existe, a atividade já tem `google_evento_id`, e o botão
+   * abaixo vira "Entregar ao vendedor", que termina o trabalho num clique. O
+   * que não pode acontecer é o contrário — lead entregue sem reunião nenhuma —,
+   * que é exatamente o que acontecia antes.
+   *
+   * O botão de criar some depois, porque a atividade passa a ter
+   * `google_evento_id`: é o que impede um clique duplo virar dois convites na
+   * caixa do cliente.
    */
   const criarConviteGoogle = async (id: string) => {
     setAgendandoGoogle(id);
@@ -278,10 +300,32 @@ export function CadenciaTab({
         ),
       );
       setErro(null);
+
+      if (aoEntregarComReuniao) {
+        const erroEntrega = await entregar(id, !!dados.meetLink);
+        if (erroEntrega) return;
+      }
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível criar o convite.");
     } finally {
       setAgendandoGoogle(null);
+    }
+  };
+
+  /**
+   * A entrega em si, isolada porque tem DOIS chamadores: o agendamento acima e
+   * o botão de retomada, para quando o convite saiu e a transferência não.
+   */
+  const entregar = async (atividadeId: string, comMeet: boolean): Promise<string | void> => {
+    if (!aoEntregarComReuniao) return;
+    const quando = atividades.find((a) => a.id === atividadeId)?.data_agendada ?? null;
+    const erroEntrega = await aoEntregarComReuniao({ quando, comMeet });
+    if (erroEntrega) {
+      setErro(
+        `O convite está criado, mas não consegui entregar o lead ao vendedor: ${erroEntrega}. ` +
+          "Tente de novo pelo botão \"Entregar ao vendedor\".",
+      );
+      return erroEntrega;
     }
   };
 
@@ -558,7 +602,7 @@ export function CadenciaTab({
                     {aoResponderComparecimento &&
                       atrasada &&
                       a.compareceu == null &&
-                      (a.tipo === "reuniao" || a.tipo === "demo") && (
+                      ehReuniao(a.tipo) && (
                         <div className="mt-2 flex items-center gap-2 flex-wrap rounded-xl bg-superficie/70 border border-risco/40 px-3 py-2">
                           <span className="text-rotulo font-medium text-tinta-suave">
                             O cliente compareceu?
@@ -581,43 +625,75 @@ export function CadenciaTab({
                           <span className="text-rotulo text-tinta-fraca">
                             &ldquo;Não veio&rdquo; devolve o lead para o SDR reagendar.
                           </span>
+                          {a.google_evento_id && <RespostaDoConvite atividadeId={a.id} />}
                         </div>
                       )}
 
                     {/* Reunião com hora marcada e sem convite ainda. Só
                         aparece para reunião/demo: convite de Google para uma
-                        ligação interna seria ruído na caixa do cliente. */}
-                    {(a.tipo === "reuniao" || a.tipo === "demo") && a.data_agendada && (
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        {a.google_evento_id ? (
-                          <>
-                            <span className="inline-flex items-center gap-1 text-rotulo font-medium text-ok">
-                              <CalendarCheck className="h-3 w-3" /> convite enviado
-                            </span>
-                            {a.google_meet_link && (
-                              <a
-                                href={a.google_meet_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-rotulo font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2  rounded"
-                              >
-                                abrir o Meet
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => void criarConviteGoogle(a.id)}
-                            disabled={agendandoGoogle === a.id}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
-                          >
-                            {agendandoGoogle === a.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CalendarPlus className="h-3 w-3" />
-                            )}
-                            Criar convite no Google
-                          </button>
+                        ligação interna seria ruído na caixa do cliente.
+
+                        No funil do SDR este é O botão do fluxo: agendar é a
+                        entrega. Antes eram duas ações que não se conheciam —
+                        criar o convite não movia nada, e mover o card não
+                        conferia se havia convite. */}
+                    {ehReuniao(a.tipo) && a.data_agendada && (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {a.google_evento_id ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 text-rotulo font-medium text-ok">
+                                <CalendarCheck className="h-3 w-3" /> convite enviado
+                              </span>
+                              {a.google_meet_link && (
+                                <a
+                                  href={a.google_meet_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-rotulo font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2  rounded"
+                                >
+                                  abrir o Meet
+                                </a>
+                              )}
+                              {/* A retomada: o convite saiu e a transferência
+                                  não. Um clique termina o que ficou pela
+                                  metade, em vez de deixar o lead preso no SDR
+                                  com reunião marcada. */}
+                              {aoEntregarComReuniao && !a.concluida && (
+                                <button
+                                  onClick={() => void entregar(a.id, !!a.google_meet_link)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg transition-colors duration-150 ease-out"
+                                >
+                                  <ArrowLeftRight className="h-3 w-3" /> Entregar ao vendedor
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => void criarConviteGoogle(a.id)}
+                              disabled={agendandoGoogle === a.id}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg transition-colors duration-150 ease-out disabled:opacity-60 ${
+                                aoEntregarComReuniao
+                                  ? "text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover"
+                                  : "text-acento bg-acento-fraco hover:bg-acento-fraco"
+                              }`}
+                            >
+                              {agendandoGoogle === a.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CalendarPlus className="h-3 w-3" />
+                              )}
+                              {aoEntregarComReuniao
+                                ? "Agendar e entregar ao vendedor"
+                                : "Criar convite no Google"}
+                            </button>
+                          )}
+                        </div>
+                        {aoEntregarComReuniao && !a.google_evento_id && (
+                          <p className="text-rotulo text-tinta-fraca">
+                            Manda o convite com Meet para o cliente e, dando certo, passa o lead para o
+                            funil do vendedor. Se o convite falhar, nada se move.
+                          </p>
                         )}
                       </div>
                     )}
@@ -779,5 +855,55 @@ export function CadenciaTab({
         }
       />
     </div>
+  );
+}
+
+/** Como o convite foi respondido, por tom e por texto. */
+const RSVP: Record<string, { texto: string; classe: string }> = {
+  aceito: { texto: "o cliente aceitou o convite", classe: "text-ok" },
+  recusado: { texto: "o cliente recusou o convite", classe: "text-risco" },
+  talvez: { texto: "o cliente respondeu “talvez”", classe: "text-alerta" },
+  sem_resposta: { texto: "o cliente não respondeu ao convite", classe: "text-alerta" },
+};
+
+/**
+ * O que o cliente respondeu ao convite, buscado quando a pergunta "compareceu?"
+ * aparece.
+ *
+ * É um componente próprio, e não um efeito no pai, porque assim a busca
+ * acontece exatamente uma vez por bloco renderizado — sem lista de ids já
+ * buscados e sem risco de laço quando a lista de atividades muda.
+ *
+ * Falha em silêncio de propósito: a rota degrada quando o organizador não tem
+ * conta conectada, e uma reunião sem RSVP legível não torna a pergunta menos
+ * necessária. A linha simplesmente não aparece.
+ */
+function RespostaDoConvite({ atividadeId }: { atividadeId: string }) {
+  const [resposta, setResposta] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    void (async () => {
+      try {
+        const r = await comPrazo(fetch(`/api/google/rsvp?atividadeId=${atividadeId}`), 10_000);
+        if (!r.ok) return;
+        const dados = await r.json();
+        if (vivo) setResposta(typeof dados.resposta === "string" ? dados.resposta : null);
+      } catch {
+        // Sem rede, sem conta, Google fora: nada disso é problema desta linha.
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, [atividadeId]);
+
+  const item = resposta ? RSVP[resposta] : undefined;
+  if (!item) return null;
+
+  return (
+    <span className={`flex items-center gap-1 text-rotulo font-medium ${item.classe}`}>
+      <CalendarCheck className="h-3 w-3 shrink-0" aria-hidden /> {item.texto}
+    </span>
   );
 }

@@ -6,6 +6,7 @@ import {
   carregarFunilDeOrigem,
   carregarPipelinePorId,
   etapaComFuncao,
+  etapaDaEntrega,
 } from "@/lib/pipelines";
 import { SELECT_NEGOCIO_COMPLETO, normalizarAba } from "@/lib/types";
 
@@ -72,10 +73,14 @@ export default async function NegocioPage({
       pipeline={pipeline}
       etapas={etapas}
       entrega={
-        destino && etapaComFuncao(etapasDestino, "entrada")
+        // Mesmo destino do arrasto: a etapa de mesma ordem da de entrega, que
+        // hoje é "Demonstração Agendada". Antes aqui era a etapa de ENTRADA do
+        // funil de destino, então o mesmo lead caía em "Novo Lead" pelo botão e
+        // em "Demonstração Agendada" pelo arrasto.
+        destino && etapaDaEntrega(etapas, etapasDestino)
           ? {
               funil: destino,
-              etapa: etapaComFuncao(etapasDestino, "entrada")!,
+              etapa: etapaDaEntrega(etapas, etapasDestino)!,
               responsaveis: responsaveisDestino || [],
             }
           : null

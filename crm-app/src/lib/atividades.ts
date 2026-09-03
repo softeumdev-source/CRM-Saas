@@ -183,6 +183,21 @@ export function ordenarPorCadencia(negocios: NegocioComRelacoes[], agora = new D
 
 export type AtividadeComUsuario = Atividade & { usuario: { id: string; nome: string } | null };
 
+/**
+ * Os tipos de atividade que valem como "reuniao com o cliente".
+ *
+ * Estava duplicado como `tipo === "reuniao" || tipo === "demo"` em dois pontos
+ * do CadenciaTab, e agora um terceiro ponto precisa da mesma pergunta: a trava
+ * que impede entregar um lead ao vendedor sem reuniao marcada. Tres copias de
+ * um literal e como um funil ganha um tipo novo e dois lugares nao ficam
+ * sabendo.
+ */
+export const TIPOS_REUNIAO: readonly string[] = ["reuniao", "demo"];
+
+export function ehReuniao(tipo: string | null | undefined): boolean {
+  return !!tipo && TIPOS_REUNIAO.includes(tipo);
+}
+
 export function ehTipoValido(tipo: string): tipo is TipoAtividade {
   return tipo in ROTULOS_ATIVIDADE;
 }

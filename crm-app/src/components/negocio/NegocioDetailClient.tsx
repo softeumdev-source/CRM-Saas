@@ -201,8 +201,14 @@ export function NegocioDetailClient({
     perda: etapas.some((e) => resultadoDaEtapa(e) === false),
   };
 
-  // Entrega do lead ao vendedor. Sai do funil do SDR e entra na etapa de
-  // entrada do funil de vendas, com dono definido ali mesmo.
+  // Entrega MANUAL, com dono escolhido na hora. O caminho normal é
+  // `entregarComReuniao`, disparado pelo agendamento; este continua existindo
+  // para quando alguém precisa nomear quem assume, e para retomar uma entrega
+  // que ficou pela metade.
+  //
+  // A descrição não fala mais em "reunião aceita": este caminho não confere
+  // reunião nenhuma, e dizer que houve uma era mentira registrada no
+  // histórico do negócio.
   const [entregando, setEntregando] = useState(false);
   const [destinatario, setDestinatario] = useState("");
   const [entregandoAgora, setEntregandoAgora] = useState(false);
@@ -217,8 +223,8 @@ export function NegocioDetailClient({
       responsavelId: destinatario || null,
       titulo: `Lead entregue ao funil ${entrega.funil.nome}`,
       descricao: dono
-        ? `Reunião aceita. Passado de "${negocio.etapa?.nome ?? "—"}" para ${dono.nome}, em "${entrega.etapa.nome}".`
-        : `Reunião aceita. Passado de "${negocio.etapa?.nome ?? "—"}" para o pool de "${entrega.etapa.nome}".`,
+        ? `Entrega manual: passado de "${negocio.etapa?.nome ?? "—"}" para ${dono.nome}, em "${entrega.etapa.nome}".`
+        : `Entrega manual: passado de "${negocio.etapa?.nome ?? "—"}" para o pool de "${entrega.etapa.nome}".`,
     });
     setEntregandoAgora(false);
     if (!r.ok) {
@@ -226,6 +232,43 @@ export function NegocioDetailClient({
       setErro(`Não foi possível entregar o lead: ${r.erro}`);
       return;
     }
+    router.push(voltarPara);
+    router.refresh();
+  };
+
+  /**
+   * A entrega ao vendedor disparada pelo AGENDAMENTO — o "o fluxo do SDR vai
+   * até agendar o cliente no card do vendedor".
+   *
+   * A diferença para `entregarAoVendedor` abaixo não é cosmética: aqui o lead
+   * cai no POOL do funil de destino, sem dono, porque quem assume é o próximo
+   * vendedor livre; lá alguém escolhe uma pessoa. E aqui a descrição diz a
+   * data da reunião porque, pela primeira vez, existe uma reunião de verdade
+   * para citar — as duas descrições antigas diziam "Reunião agendada" sem
+   * nunca terem conferido nada.
+   */
+  const entregarComReuniao = async ({
+    quando,
+    comMeet,
+  }: {
+    quando: string | null;
+    comMeet: boolean;
+  }): Promise<string | void> => {
+    if (!entrega) return;
+    const r = await transferirDeFunil({
+      negocioId: negocio.id,
+      etapaDestino: entrega.etapa,
+      responsavelId: null,
+      titulo: `Entregue para ${entrega.funil.nome}`,
+      descricao:
+        `Reunião agendada para ${formatarDataHora(quando)}${comMeet ? ", com Meet" : ""}. ` +
+        `O lead passou de "${negocio.etapa?.nome ?? "—"}" para "${entrega.etapa.nome}" em ` +
+        `${entrega.funil.nome}, sem dono, para o próximo vendedor livre assumir.`,
+    });
+    if (!r.ok) return r.erro;
+
+    // O negócio saiu do funil deste usuário: continuar nesta página daria 404
+    // na próxima leitura, porque a RLS já não o alcança.
     router.push(voltarPara);
     router.refresh();
   };
@@ -497,6 +540,7 @@ export function NegocioDetailClient({
       {aba === "cadencia" && (
         <CadenciaTab
           aoResponderComparecimento={devolucao ? responderComparecimento : undefined}
+          aoEntregarComReuniao={entrega ? entregarComReuniao : undefined}
           negocio={negocio}
           atividadesIniciais={atividades}
           usuarioAtual={usuarioAtual}

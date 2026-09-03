@@ -9,7 +9,14 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
-import { CARDS_POR_ETAPA, buscarNegociosDoBoard, contarPorEtapa } from "@/lib/board";
+import {
+  CARDS_POR_ETAPA,
+  buscarCadenciaDoBoard,
+  buscarNegociosDoBoard,
+  contarPorEtapa,
+  mapaDeCadencias,
+  type ResumoCadencia,
+} from "@/lib/board";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
@@ -31,6 +38,7 @@ export function KanbanPageClient({
   porEtapa: porEtapaInicial,
   responsaveis,
   usuarioAtual,
+  cadencias: cadenciasIniciais,
 }: {
   /** O funil desta tela. É ele que decide o recorte, o título e as métricas. */
   pipeline: Pipeline | null;
@@ -41,6 +49,8 @@ export function KanbanPageClient({
   /** Quem pode ser dono de um card deste funil (`pipelines.role_operador`). */
   responsaveis: Usuario[];
   usuarioAtual: Usuario;
+  /** Andamento da cadência por negócio. Vazio fora do board do SDR. */
+  cadencias: Record<string, ResumoCadencia>;
 }) {
   const pipelineId = pipeline?.id ?? null;
   // O SDR nao vende: o que ele entrega e reuniao, nao receita. Por isso o
@@ -49,6 +59,7 @@ export function KanbanPageClient({
 
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
   const [totais, setTotais] = useEstadoDaProp(totaisPorEtapa);
+  const [cadencias, setCadencias] = useEstadoDaProp(cadenciasIniciais);
   // Quantos cards por coluna estão carregados. Sobe quando o usuário pede mais;
   // o board inteiro recarrega com o teto novo, numa consulta só.
   const [porEtapa, setPorEtapa] = useState(porEtapaInicial);
@@ -61,18 +72,27 @@ export function KanbanPageClient({
   // filtrar por responsável aqui esconderia justamente os leads do pool.
   const [responsavel, setResponsavel] = useState<string>("todos");
   const [erro, setErro] = useState<string | null>(null);
+  // A entrega tira o card DESTE board. Sem uma palavra o card simplesmente
+  // some da tela e parece que o arrasto deu errado.
+  const [aviso, setAviso] = useState<string | null>(null);
 
+  // A cadência entra AQUI também, e não só na carga do servidor: sem isto o
+  // trilho do card congelaria no primeiro render e passaria a mentir a cada
+  // tick de realtime — que é frequente, porque todo passo enviado toca
+  // `negocios`.
   const recarregar = useCallback(async () => {
     const supabase = createClient();
-    const [{ data }, { data: novosTotais }] = await Promise.all([
+    const [{ data }, { data: novosTotais }, inscricoes] = await Promise.all([
       buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
       contarPorEtapa(supabase, pipelineId),
+      ehSdr ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
     ]);
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
     if (novosTotais) {
       setTotais(Object.fromEntries(novosTotais.map((t) => [t.etapa_id, Number(t.total)])));
     }
-  }, [pipelineId, porEtapa]);
+    if (ehSdr) setCadencias(mapaDeCadencias(inscricoes.data));
+  }, [pipelineId, porEtapa, ehSdr, setNegocios, setTotais, setCadencias]);
 
   // Busca com o teto novo ANTES de mexer no estado: assim o board nunca fica
   // um render com o teto alto e os cards antigos.
@@ -136,6 +156,7 @@ export function KanbanPageClient({
         ),
       );
       setErro(null);
+      setAviso(null);
 
       if (!etapa) return;
       const r = await moverEtapa({
@@ -151,6 +172,9 @@ export function KanbanPageClient({
         setNegocios(anterior);
         setErro(`Não foi possível mover o negócio: ${r.erro}`);
         return;
+      }
+      if (etapa.funcao === "entrega") {
+        setAviso(`Lead entregue: o card saiu deste board e está com o time do outro funil, sem dono.`);
       }
       void recarregar();
     },
@@ -327,12 +351,16 @@ export function KanbanPageClient({
         {erro && (
           <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>
         )}
+        {aviso && (
+          <p className="text-rotulo font-medium text-ok bg-ok-fraco rounded-lg px-3 py-2">{aviso}</p>
+        )}
       </div>
 
       <KanbanBoard
         etapas={etapas}
         negocios={filtrados}
         variante={ehSdr ? "sdr" : "vendas"}
+        cadencias={cadencias}
         totaisPorEtapa={totais}
         carregadosPorEtapa={carregadosPorEtapa}
         carregandoMais={carregandoMais}
