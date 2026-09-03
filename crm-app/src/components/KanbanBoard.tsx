@@ -5,11 +5,12 @@ import { Plus, Layers, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
-import { LeadCard } from "@/components/LeadCard";
+import { LeadCard, type VarianteDoCard } from "@/components/LeadCard";
 
 export function KanbanBoard({
   etapas,
   negocios,
+  variante = "vendas",
   totaisPorEtapa,
   carregadosPorEtapa,
   carregandoMais,
@@ -19,6 +20,8 @@ export function KanbanBoard({
 }: {
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
+  /** Qual board e este. Vem de `pipeline.chave`, nao de adivinhacao. */
+  variante?: VarianteDoCard;
   /** Quantos existem no banco por etapa — pode ser mais do que está carregado. */
   totaisPorEtapa: Record<string, number>;
   /** Quantos estão carregados por etapa, ANTES dos filtros de busca/foco. */
@@ -145,7 +148,7 @@ export function KanbanBoard({
                         arrastando === negocio.id ? "opacity-40" : ""
                       }`}
                     >
-                      <LeadCard negocio={negocio} />
+                      <LeadCard negocio={negocio} variante={variante} />
                     </div>
                   ))
                 )}

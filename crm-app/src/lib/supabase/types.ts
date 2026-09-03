@@ -589,9 +589,11 @@ export type Database = {
           aprovada_em: string | null
           aprovada_por: string | null
           assunto: string | null
+          automatica: boolean
           canal: string
           contato_id: string | null
           corpo: string
+          corpo_formato: string
           criado_em: string | null
           destino: string | null
           direcao: string
@@ -605,11 +607,13 @@ export type Database = {
           passo_id: string | null
           provedor_id: string | null
           proxima_tentativa_em: string | null
+          recebida_em: string | null
           reservada_em: string | null
           status: string
           template_externo: string | null
           tenant_id: string | null
           tentativas: number
+          thread_externo: string | null
           ultimo_erro: string | null
           variaveis: string[] | null
         }
@@ -618,9 +622,11 @@ export type Database = {
           aprovada_em?: string | null
           aprovada_por?: string | null
           assunto?: string | null
+          automatica?: boolean
           canal?: string
           contato_id?: string | null
           corpo: string
+          corpo_formato?: string
           criado_em?: string | null
           destino?: string | null
           direcao?: string
@@ -634,11 +640,13 @@ export type Database = {
           passo_id?: string | null
           provedor_id?: string | null
           proxima_tentativa_em?: string | null
+          recebida_em?: string | null
           reservada_em?: string | null
           status?: string
           template_externo?: string | null
           tenant_id?: string | null
           tentativas?: number
+          thread_externo?: string | null
           ultimo_erro?: string | null
           variaveis?: string[] | null
         }
@@ -647,9 +655,11 @@ export type Database = {
           aprovada_em?: string | null
           aprovada_por?: string | null
           assunto?: string | null
+          automatica?: boolean
           canal?: string
           contato_id?: string | null
           corpo?: string
+          corpo_formato?: string
           criado_em?: string | null
           destino?: string | null
           direcao?: string
@@ -663,11 +673,13 @@ export type Database = {
           passo_id?: string | null
           provedor_id?: string | null
           proxima_tentativa_em?: string | null
+          recebida_em?: string | null
           reservada_em?: string | null
           status?: string
           template_externo?: string | null
           tenant_id?: string | null
           tentativas?: number
+          thread_externo?: string | null
           ultimo_erro?: string | null
           variaveis?: string[] | null
         }
@@ -773,10 +785,15 @@ export type Database = {
           prioridade: string | null
           probabilidade: number | null
           responsavel_id: string | null
+          respostas_lidas_em: string | null
+          respostas_nao_lidas: number
           retomar_em: string | null
           tenant_id: string | null
           titulo: string
           ultima_atividade_em: string | null
+          ultima_resposta_canal: string | null
+          ultima_resposta_em: string | null
+          ultima_resposta_whatsapp_em: string | null
           valor: number | null
         }
         Insert: {
@@ -793,10 +810,15 @@ export type Database = {
           prioridade?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
+          respostas_lidas_em?: string | null
+          respostas_nao_lidas?: number
           retomar_em?: string | null
           tenant_id?: string | null
           titulo: string
           ultima_atividade_em?: string | null
+          ultima_resposta_canal?: string | null
+          ultima_resposta_em?: string | null
+          ultima_resposta_whatsapp_em?: string | null
           valor?: number | null
         }
         Update: {
@@ -813,10 +835,15 @@ export type Database = {
           prioridade?: string | null
           probabilidade?: number | null
           responsavel_id?: string | null
+          respostas_lidas_em?: string | null
+          respostas_nao_lidas?: number
           retomar_em?: string | null
           tenant_id?: string | null
           titulo?: string
           ultima_atividade_em?: string | null
+          ultima_resposta_canal?: string | null
+          ultima_resposta_em?: string | null
+          ultima_resposta_whatsapp_em?: string | null
           valor?: number | null
         }
         Relationships: [
@@ -1600,10 +1627,15 @@ export type Database = {
           prioridade: string | null
           probabilidade: number | null
           responsavel_id: string | null
+          respostas_lidas_em: string | null
+          respostas_nao_lidas: number
           retomar_em: string | null
           tenant_id: string | null
           titulo: string
           ultima_atividade_em: string | null
+          ultima_resposta_canal: string | null
+          ultima_resposta_em: string | null
+          ultima_resposta_whatsapp_em: string | null
           valor: number | null
         }[]
         SetofOptions: {
@@ -1635,9 +1667,11 @@ export type Database = {
           aprovada_em: string | null
           aprovada_por: string | null
           assunto: string | null
+          automatica: boolean
           canal: string
           contato_id: string | null
           corpo: string
+          corpo_formato: string
           criado_em: string | null
           destino: string | null
           direcao: string
@@ -1651,11 +1685,13 @@ export type Database = {
           passo_id: string | null
           provedor_id: string | null
           proxima_tentativa_em: string | null
+          recebida_em: string | null
           reservada_em: string | null
           status: string
           template_externo: string | null
           tenant_id: string | null
           tentativas: number
+          thread_externo: string | null
           ultimo_erro: string | null
           variaveis: string[] | null
         }[]

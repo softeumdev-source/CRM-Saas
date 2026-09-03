@@ -332,6 +332,7 @@ export function KanbanPageClient({
       <KanbanBoard
         etapas={etapas}
         negocios={filtrados}
+        variante={ehSdr ? "sdr" : "vendas"}
         totaisPorEtapa={totais}
         carregadosPorEtapa={carregadosPorEtapa}
         carregandoMais={carregandoMais}
