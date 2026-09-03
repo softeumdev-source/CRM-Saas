@@ -61,6 +61,7 @@ export function MensagensTab({
   const [inscrevendo, setInscrevendo] = useState(false);
   const [agindo, setAgindo] = useState<string | null>(null);
 
+  const [reescrevendo, setReescrevendo] = useState<string | null>(null);
   const [editando, setEditando] = useState<Mensagem | null>(null);
   const [assuntoEdit, setAssuntoEdit] = useState("");
   const [corpoEdit, setCorpoEdit] = useState("");
@@ -132,6 +133,36 @@ export function MensagensTab({
   const cadenciaEscolhida = cadencias.find((c) => c.id === escolhida) || cadencias[0];
   const plano = cadenciaEscolhida ? planoDaCadencia(cadenciaEscolhida.passos || []) : [];
   const aguardando = mensagens.filter((m) => m.status === "aguardando_aprovacao");
+
+  /**
+   * Pede à IA um texto melhor para uma mensagem que ainda espera aprovação.
+   * A rota não envia nada e recusa o texto se ele falar de preço, desconto ou
+   * garantia — o aviso aqui é o dessa recusa, e é informação útil, não ruído.
+   */
+  const reescreverComIa = async (mensagemId: string) => {
+    setReescrevendo(mensagemId);
+    try {
+      const resp = await comPrazo(
+        fetch("/api/ia/mensagem", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mensagemId }),
+        }),
+        20_000,
+      );
+      const dados = await resp.json();
+      if (!resp.ok) {
+        setErro(dados.error || "Não foi possível reescrever.");
+        return;
+      }
+      setErro(null);
+      void carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível reescrever.");
+    } finally {
+      setReescrevendo(null);
+    }
+  };
 
   const executar = async (chave: string, acao: () => Promise<{ ok: boolean; erro?: string }>) => {
     setAgindo(chave);
@@ -212,6 +243,19 @@ export function MensagensTab({
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <Botao
+                    tamanho="sm"
+                    variante="sutil"
+                    disabled={reescrevendo === m.id}
+                    onClick={() => void reescreverComIa(m.id)}
+                  >
+                    {reescrevendo === m.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Bot className="h-3.5 w-3.5" />
+                    )}
+                    Reescrever com IA
+                  </Botao>
                   <Botao
                     tamanho="sm"
                     variante="sutil"
