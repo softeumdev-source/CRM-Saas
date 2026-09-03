@@ -15,22 +15,24 @@ import { Loader2, type LucideIcon } from "lucide-react";
  */
 
 type Variante = "primario" | "secundario" | "sutil" | "perigo";
-type Tamanho = "sm" | "md";
+type Tamanho = "sm" | "md" | "lg";
 
 const VARIANTE: Record<Variante, string> = {
-  primario: "bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800",
-  secundario:
-    "bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-200 " +
-    "dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700",
-  sutil:
-    "text-slate-500 hover:bg-slate-100 hover:text-slate-800 " +
-    "dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
-  perigo: "bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800",
+  primario:
+    "bg-acento-solido text-acento-tinta hover:bg-acento-solido-hover active:bg-acento-solido-hover",
+  secundario: "bg-recuo text-tinta hover:bg-fio active:bg-fio",
+  sutil: "text-tinta-suave hover:bg-recuo hover:text-tinta",
+  perigo:
+    "bg-risco-solido text-risco-tinta hover:bg-risco-solido-hover active:bg-risco-solido-hover",
 };
 
 const TAMANHO: Record<Tamanho, string> = {
-  sm: "text-[11px] gap-1.5 rounded-lg px-3 py-1.5",
-  md: "text-xs gap-2 rounded-xl px-4 py-2.5",
+  sm: "text-rotulo gap-1.5 rounded-lg px-2.5 py-1.5",
+  md: "text-rotulo gap-2 rounded-xl px-4 py-2.5",
+  // `lg` existe porque o botao primario de largura total estava redesenhado a
+  // mao em quatro geometrias diferentes (gerar proposta, salvar contato,
+  // inscrever na cadencia, convidar vendedor).
+  lg: "text-corpo gap-2 rounded-xl px-5 py-3",
 };
 
 export interface BotaoProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -39,6 +41,7 @@ export interface BotaoProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   /** Troca o icone por um spinner e desabilita o botao. */
   carregando?: boolean;
   icone?: LucideIcon;
+  larguraTotal?: boolean;
 }
 
 export function Botao({
@@ -46,6 +49,7 @@ export function Botao({
   tamanho = "md",
   carregando = false,
   icone: Icone,
+  larguraTotal = false,
   disabled,
   className = "",
   children,
@@ -56,12 +60,14 @@ export function Botao({
       type={props.type ?? "button"}
       disabled={disabled || carregando}
       className={[
-        "inline-flex items-center justify-center font-bold whitespace-nowrap",
-        // transicoes nomeadas: nunca transition-colors duration-150 ease-out, que anima ate layout
+        // `font-semibold`, nao `font-bold`: o app tinha 372 usos de peso e
+        // nenhum `font-normal`, entao o negrito nao distinguia mais nada.
+        "inline-flex items-center justify-center font-semibold whitespace-nowrap",
+        // transicoes nomeadas: nunca `transition-all`, que anima ate layout
         "transition-[background-color,color] duration-150 ease-out",
-        // o projeto inteiro nao tinha um anel de foco sequer
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500",
+        "foco",
         "disabled:cursor-not-allowed disabled:opacity-60",
+        larguraTotal ? "w-full" : "",
         VARIANTE[variante],
         TAMANHO[tamanho],
         className,

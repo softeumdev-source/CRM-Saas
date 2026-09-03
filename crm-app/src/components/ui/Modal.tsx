@@ -91,7 +91,7 @@ export function Modal({
       style={{ isolation: "isolate" }}
     >
       <div
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+        className="absolute inset-0 bg-[rgb(12_15_20/0.55)] backdrop-blur-xs"
         onClick={aoFechar}
         aria-hidden
       />
@@ -103,18 +103,20 @@ export function Modal({
         aria-label={titulo}
         tabIndex={-1}
         className={[
-          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-3xl",
-          "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl",
+          "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl",
+          // O modal e a unica coisa que FLUTUA de verdade, entao e ele que leva
+          // a sombra forte — cartao normal fica no fio (craft R10).
+          "bg-superficie border border-fio shadow-flutuante",
           largura === "lg" ? "max-w-2xl" : "max-w-lg",
         ].join(" ")}
       >
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/40">
-          <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">{titulo}</h3>
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-fio px-5 py-4">
+          <h3 className="text-corpo-lg font-semibold text-tinta">{titulo}</h3>
           <button
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="rounded-xl p-1.5 text-slate-400 transition-colors duration-150 ease-out hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="foco rounded-lg p-1.5 text-tinta-fraca transition-[background-color,color] duration-150 ease-out hover:bg-recuo hover:text-tinta"
           >
             <X className="h-4 w-4" aria-hidden />
           </button>
@@ -123,7 +125,7 @@ export function Modal({
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
 
         {rodape && (
-          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-fio px-5 py-3">
             {rodape}
           </div>
         )}

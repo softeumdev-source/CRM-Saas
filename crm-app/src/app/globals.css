@@ -1,11 +1,161 @@
 @import "tailwindcss";
 
+/*
+ * Sistema de design do CRM. As regras estao escritas em DESIGN.md; aqui ficam
+ * os valores.
+ *
+ * A ideia central e que a COR SEJA UM TOKEN, nunca uma classe `slate-900` com
+ * um `dark:slate-100` do lado. Havia 774 `dark:` escritos a mao em
+ * src/components — duas paletas mantidas em paralelo, que ja tinham divergido.
+ * Com token, o tema escuro e a redefinicao de um punhado de variaveis num lugar
+ * so, e cada `dark:` apagado durante a migracao some sem levar o modo escuro
+ * junto.
+ *
+ * O que NAO virou token, de proposito:
+ * - raio: o app usa a escala do Tailwind. A regra e usar so `rounded-lg` (8px),
+ *   `rounded-xl` (12px) e `rounded-2xl` (16px) — hoje sao seis raios sem
+ *   criterio. Redefinir `--radius-*` mudaria `rounded-lg` em 86 lugares de uma
+ *   vez, entao a escala se estreita por revisao, nao por sobrescrita.
+ * - espacamento: a escala de 4px do Tailwind ja serve. A regra e nao usar valor
+ *   arbitrario (`h-4.5`, `mt-[13px]`).
+ */
+
 :root {
-  --background: #f1f5f9;
-  --foreground: #0f172a;
+  /* Superficies, do fundo para a frente. Nenhuma e branco puro (craft R7):
+     sem degrau entre fundo e cartao, o cartao some. */
+  --cor-fundo: #f5f6f8;
+  --cor-superficie: #ffffff;
+  --cor-recuo: #f0f2f5;
+  --cor-fio: #e2e6eb;
+  --cor-fio-forte: #ccd3db;
+
+  /* Tinta. Tres niveis bastam para hierarquia — e e a COR que cria hierarquia
+     aqui, nao o peso: o projeto tinha 372 usos de peso e nenhum `font-normal`,
+     entao o negrito parou de significar qualquer coisa (craft R9). */
+  --cor-tinta: #191d27;
+  --cor-tinta-suave: #58616f;
+  --cor-tinta-fraca: #868f9c;
+
+  /* Acao e semantica. Cada uma tem um par forte/fraco: o forte para texto e
+     preenchimento solido, o fraco para fundo de selo e caixa de aviso. */
+  --cor-acento: #4f46e5;
+  --cor-acento-fraco: #eef0fe;
+  --cor-ok: #0e7a51;
+  /* Preenchimento solido tem par proprio: no escuro o acento CLAREIA, e texto
+     branco sobre roxo claro perde contraste. Entao no escuro o botao inverte —
+     fundo claro, tinta escura — em vez de ficar ilegivel. */
+  --cor-acento-solido: #4f46e5;
+  --cor-acento-solido-hover: #4338ca;
+  --cor-acento-tinta: #ffffff;
+  --cor-risco-solido: #b22440;
+  --cor-risco-solido-hover: #971d36;
+  --cor-risco-tinta: #ffffff;
+  --cor-ok-fraco: #e6f5ee;
+  --cor-alerta: #96600a;
+  --cor-alerta-fraco: #fdf3e1;
+  --cor-risco: #b22440;
+  --cor-risco-fraco: #fdeef1;
+  --cor-info: #0a6d9c;
+  --cor-info-fraco: #e7f3fa;
+
+  /* Sombra so para o que flutua (craft R10); estrutura e feita de fio.
+     Baixa opacidade e duas camadas: sombra de alfa alto le como adesivo. */
+  --sombra-cartao: 0 1px 2px rgb(16 20 28 / 0.04);
+  --sombra-flutuante: 0 4px 6px -2px rgb(16 20 28 / 0.06), 0 12px 24px -6px rgb(16 20 28 / 0.10);
+
+  /* Mantidos porque o app antigo ainda referencia estes dois. */
+  --background: var(--cor-fundo);
+  --foreground: var(--cor-tinta);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Mesmos papeis, outros valores. Nada de preto puro, pelo mesmo motivo do
+       branco: sem degrau, nao se ve o cartao. */
+    --cor-fundo: #0f1218;
+    --cor-superficie: #171b23;
+    --cor-recuo: #1e232d;
+    --cor-fio: #2a303c;
+    --cor-fio-forte: #3a4250;
+
+    --cor-tinta: #e9ecf1;
+    --cor-tinta-suave: #a3acba;
+    --cor-tinta-fraca: #78818f;
+
+    /* Os acentos clareiam: texto colorido precisa de mais luminancia para
+       manter contraste sobre superficie escura. Os "fracos" deixam de ser
+       lavados e viram um tingimento escuro da propria cor. */
+    --cor-acento: #8b86f8;
+    --cor-acento-fraco: #211f45;
+    --cor-ok: #46c48d;
+    --cor-acento-solido: #7d78f2;
+    --cor-acento-solido-hover: #918cf9;
+    --cor-acento-tinta: #14142b;
+    --cor-risco-solido: #e35f7d;
+    --cor-risco-solido-hover: #ef7690;
+    --cor-risco-tinta: #2c0d16;
+    --cor-ok-fraco: #102f22;
+    --cor-alerta: #e0a63c;
+    --cor-alerta-fraco: #33260c;
+    --cor-risco: #f2718c;
+    --cor-risco-fraco: #3a1520;
+    --cor-info: #57b3e0;
+    --cor-info-fraco: #0d2937;
+
+    --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.30);
+    --sombra-flutuante: 0 4px 6px -2px rgb(0 0 0 / 0.35), 0 12px 24px -6px rgb(0 0 0 / 0.45);
+  }
 }
 
 @theme inline {
+  --color-fundo: var(--cor-fundo);
+  --color-superficie: var(--cor-superficie);
+  --color-recuo: var(--cor-recuo);
+  --color-fio: var(--cor-fio);
+  --color-fio-forte: var(--cor-fio-forte);
+
+  --color-tinta: var(--cor-tinta);
+  --color-tinta-suave: var(--cor-tinta-suave);
+  --color-tinta-fraca: var(--cor-tinta-fraca);
+
+  --color-acento: var(--cor-acento);
+  --color-acento-fraco: var(--cor-acento-fraco);
+  --color-acento-solido: var(--cor-acento-solido);
+  --color-acento-solido-hover: var(--cor-acento-solido-hover);
+  --color-acento-tinta: var(--cor-acento-tinta);
+  --color-risco-solido: var(--cor-risco-solido);
+  --color-risco-solido-hover: var(--cor-risco-solido-hover);
+  --color-risco-tinta: var(--cor-risco-tinta);
+  --color-ok: var(--cor-ok);
+  --color-ok-fraco: var(--cor-ok-fraco);
+  --color-alerta: var(--cor-alerta);
+  --color-alerta-fraco: var(--cor-alerta-fraco);
+  --color-risco: var(--cor-risco);
+  --color-risco-fraco: var(--cor-risco-fraco);
+  --color-info: var(--cor-info);
+  --color-info-fraco: var(--cor-info-fraco);
+
+  /* Cinco tamanhos, piso de 12px — o app tinha corpo de texto a 10 e 11px.
+     Os nomes nao colidem com `text-xs/sm/base` do Tailwind de proposito: as
+     telas migram uma a uma e as duas escalas precisam conviver enquanto isso.
+     A entrelinha aperta conforme o tamanho cresce (craft R9). */
+  --text-rotulo: 0.75rem;
+  --text-rotulo--line-height: 1.4;
+  --text-rotulo--letter-spacing: 0.01em;
+  --text-corpo: 0.875rem;
+  --text-corpo--line-height: 1.55;
+  --text-corpo-lg: 1rem;
+  --text-corpo-lg--line-height: 1.5;
+  --text-titulo: 1.25rem;
+  --text-titulo--line-height: 1.3;
+  --text-titulo--letter-spacing: -0.01em;
+  --text-display: 1.75rem;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.02em;
+
+  --shadow-cartao: var(--sombra-cartao);
+  --shadow-flutuante: var(--sombra-flutuante);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   /* Apontava para --font-geist-sans e --font-geist-mono, que nunca existiram
@@ -15,16 +165,24 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617;
-    --foreground: #f1f5f9;
-  }
+body {
+  background: var(--cor-fundo);
+  color: var(--cor-tinta);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
+/* Numero em coluna alinha por algarismo. Sem isto, valor de negocio e
+   contagem "dancam" de linha para linha (craft R9). */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* O anel de foco do app, num lugar so. Havia UMA ocorrencia de `focus-visible`
+   em todo src/components/admin (craft R11). */
+@utility foco {
+  &:focus-visible {
+    outline: 2px solid var(--cor-acento);
+    outline-offset: 2px;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -32,6 +190,19 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4);
+  background: var(--cor-fio-forte);
   border-radius: 999px;
+}
+
+/* Movimento e fisica, nao enfeite (craft R12). Quem pede menos movimento
+   recebe uma experiencia reduzida, nao uma quebrada. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

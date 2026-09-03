@@ -5,16 +5,15 @@ import { useId } from "react";
  * ligado ao campo por htmlFor/id — clicar no rotulo nao focava nada e o leitor
  * de tela nao associava os dois. Aqui as duas coisas sao automaticas.
  *
- * O visual e o mesmo dos campos que ja existiam: fundo slate-50, filete
- * slate-200, raio 12px.
+ * O `id` vem de `useId()`, e isso e o ponto: existia um `Campo` local em
+ * PlanosTab com `id="planostab-1"` FIXO, renderizado quatro vezes no mesmo
+ * formulario — quatro rotulos apontando para o mesmo campo.
  */
 const CONTROLE =
-  "w-full px-3 py-2 text-sm rounded-xl " +
-  "bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 " +
-  "text-slate-900 dark:text-slate-100 placeholder:text-slate-400 " +
+  "w-full px-3 py-2 text-corpo rounded-xl foco " +
+  "bg-recuo border border-fio text-tinta placeholder:text-tinta-fraca " +
   "transition-[border-color] duration-150 ease-out " +
-  "hover:border-slate-300 dark:hover:border-slate-600 " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 " +
+  "hover:border-fio-forte " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 
 export function Campo({
@@ -38,12 +37,13 @@ export function Campo({
 
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      <label
-        htmlFor={id}
-        className="text-[11px] font-bold uppercase text-slate-400 dark:text-slate-500"
-      >
+      <label htmlFor={id} className="text-rotulo font-medium text-tinta-suave">
         {rotulo}
-        {obrigatorio && <span className="text-rose-500"> *</span>}
+        {obrigatorio && (
+          <span className="text-risco" aria-hidden>
+            {" *"}
+          </span>
+        )}
       </label>
 
       {children({ id, "aria-describedby": idAuxiliar })}
@@ -51,7 +51,7 @@ export function Campo({
       {(erro || dica) && (
         <span
           id={idAuxiliar}
-          className={`text-[11px] ${erro ? "font-semibold text-rose-600" : "text-slate-400"}`}
+          className={`text-rotulo ${erro ? "font-medium text-risco" : "text-tinta-fraca"}`}
         >
           {erro || dica}
         </span>
@@ -73,8 +73,13 @@ export function AreaTexto({
 
 // A setinha nativa e reposta a mao porque appearance-none a remove — sem isso
 // o select fica indistinguivel de um input de texto.
+//
+// A cor e um cinza fixo, e nao um token: mascarar o SVG com `currentColor`
+// exigiria um pseudo-elemento (a mascara no proprio <select> apagaria o texto).
+// Este tom fica entre `--cor-tinta-fraca` clara (#868f9c) e escura (#78818f),
+// entao le bem nos dois temas.
 const SETA =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2394a3b8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\")";
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b95a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E\")";
 
 export function Selecao({
   className = "",
@@ -83,7 +88,7 @@ export function Selecao({
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={`${CONTROLE} cursor-pointer appearance-none pr-9 font-semibold ${className}`}
+      className={`${CONTROLE} cursor-pointer appearance-none pr-9 font-medium ${className}`}
       style={{
         backgroundImage: SETA,
         backgroundRepeat: "no-repeat",
