@@ -71,30 +71,48 @@ export function ehEtapaDePerda(etapa: { resultado?: string | null } | null | und
 }
 
 /**
- * Papeis de usuario.
- *
- * O CHECK do banco (usuarios_role_check e convites_role_check) hoje aceita so
- * 'admin' e 'vendedor'. Estas listas existem para o papel deixar de estar
- * cravado como literal espalhado pelo codigo — o `sdr` entra aqui, numa linha,
- * em vez de ser cacado em seis arquivos.
+ * Papeis de usuario. Espelha o CHECK do banco (usuarios_role_check e
+ * convites_role_check). Existe para o papel nao ficar cravado como literal
+ * espalhado pelo codigo.
  */
-export const PAPEIS = ["admin", "vendedor"] as const;
+export const PAPEIS = ["admin", "vendedor", "sdr"] as const;
 export type Papel = (typeof PAPEIS)[number];
 
 export const ROTULO_PAPEL: Record<string, string> = {
   admin: "Administrador",
   vendedor: "Vendedor",
+  sdr: "SDR",
+};
+
+export const DESCRICAO_PAPEL: Record<string, string> = {
+  admin: "Ve tudo, gere o time, os planos e as metas.",
+  vendedor: "Trabalha o funil de vendas e fecha negocio.",
+  sdr: "Prospecta, qualifica, agenda a reuniao e entrega ao vendedor.",
 };
 
 /**
- * Quem forma o time medido no painel: aparece nas metas, no funil por pessoa e
- * nos seletores de responsavel. O admin fica de fora de proposito — ele gere,
- * nao e medido —, mas continua podendo ser dono de negocio.
+ * Quem forma o time MEDIDO no painel: metas, ranking e funil por pessoa.
+ *
+ * O SDR nao entra: ele opera negocio, mas o funil dele e outro, com outras
+ * metricas. Se entrasse aqui apareceria no ranking de vendas com zero, que e
+ * pior do que nao aparecer. O admin tambem fica de fora — ele gere, nao e
+ * medido —, mas os dois continuam podendo ser donos de negocio.
  */
 export const PAPEIS_TIME: readonly string[] = ["vendedor"];
 
 export function ehDoTime(usuario: { role?: string | null } | null | undefined): boolean {
   return !!usuario?.role && PAPEIS_TIME.includes(usuario.role);
+}
+
+/**
+ * Quem pode ser dono de um negocio. Quem opera um funil especifico sai de
+ * `pipelines.role_operador`, nao daqui: esta lista e so o "e gente que trabalha
+ * negocio", usada quando nao ha um funil no contexto.
+ */
+export const PAPEIS_OPERADORES: readonly string[] = ["vendedor", "sdr"];
+
+export function operaNegocios(usuario: { role?: string | null } | null | undefined): boolean {
+  return !!usuario?.role && PAPEIS_OPERADORES.includes(usuario.role);
 }
 
 export function ehPapelValido(valor: unknown): valor is Papel {

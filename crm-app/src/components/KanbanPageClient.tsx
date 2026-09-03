@@ -26,13 +26,14 @@ export function KanbanPageClient({
   pipelineId,
   etapas,
   negocios: negociosIniciais,
-  vendedores,
+  responsaveis,
   usuarioAtual,
 }: {
   pipelineId: string | null;
   etapas: EtapaPipeline[];
   negocios: NegocioComRelacoes[];
-  vendedores: Usuario[];
+  /** Quem pode ser dono de um card deste funil (`pipelines.role_operador`). */
+  responsaveis: Usuario[];
   usuarioAtual: Usuario;
 }) {
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
@@ -245,8 +246,8 @@ export function KanbanPageClient({
               onChange={(e) => setResponsavel(e.target.value)}
               className="px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
             >
-              <option value="todos">Todos os vendedores</option>
-              {vendedores.map((v) => (
+              <option value="todos">Todos os responsáveis</option>
+              {responsaveis.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>
@@ -283,7 +284,7 @@ export function KanbanPageClient({
           pipelineId={pipelineId}
           etapas={etapas}
           etapaInicial={etapaNovoNegocio}
-          vendedores={vendedores}
+          responsaveis={responsaveis}
           usuarioAtual={usuarioAtual}
           onClose={() => setModalAberto(false)}
         />

@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
-import { carregarEtapas } from "@/lib/pipelines";
-import { SELECT_NEGOCIO_COMPLETO, ehAbaValida, PAPEIS_TIME } from "@/lib/types";
+import { carregarEtapas, carregarPipelinePorId } from "@/lib/pipelines";
+import { SELECT_NEGOCIO_COMPLETO, ehAbaValida } from "@/lib/types";
 
 export default async function NegocioPage({
   params,
@@ -24,16 +24,20 @@ export default async function NegocioPage({
 
   if (!negocio) notFound();
 
+  const pipeline = await carregarPipelinePorId(supabase, negocio.pipeline_id);
+
   const [
     etapas,
-    { data: vendedores },
+    { data: responsaveis },
     { data: planos },
     { data: atividades },
     { data: propostas },
     { data: usuarioAtual },
   ] = await Promise.all([
     carregarEtapas(supabase, negocio.pipeline_id),
-    supabase.from("usuarios").select("*").in("role", PAPEIS_TIME).eq("ativo", true),
+    // Mesma regra do board: os donos possiveis saem do `role_operador` do
+    // funil em que o negocio esta.
+    supabase.from("usuarios").select("*").eq("role", pipeline?.role_operador ?? "vendedor").eq("ativo", true),
     supabase.from("planos").select("*").eq("ativo", true).order("valor_plataforma_base"),
     supabase.from("atividades").select("*, usuario:usuarios(*)").eq("negocio_id", id).order("criado_em", { ascending: false }),
     supabase
@@ -48,7 +52,7 @@ export default async function NegocioPage({
     <NegocioDetailClient
       negocioInicial={negocio as never}
       etapas={etapas}
-      vendedores={vendedores || []}
+      responsaveis={responsaveis || []}
       planos={planos || []}
       atividadesIniciais={(atividades as never) || []}
       propostasIniciais={(propostas as never) || []}

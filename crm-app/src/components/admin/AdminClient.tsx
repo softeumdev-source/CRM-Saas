@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
-import { ehDoTime } from "@/lib/types";
+import { ehDoTime, operaNegocios } from "@/lib/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
@@ -66,8 +66,14 @@ export function AdminClient({
 
   // Era `u.role === "vendedor"` cravado: qualquer papel novo ficava invisivel
   // no painel inteiro — inclusive nas listas de quem pode receber lead.
+  //
+  // Duas listas, porque sao duas perguntas diferentes: quem e MEDIDO no funil
+  // de vendas (so vendedor) e quem faz parte do TIME e precisa ser gerido (o
+  // SDR entra aqui, senao ele nao aparece no painel nem pode ser desativado).
   const vendedores = usuarios.filter(ehDoTime);
   const vendedoresAtivos = vendedores.filter((u) => u.ativo !== false);
+  const membros = usuarios.filter(operaNegocios);
+  const membrosAtivos = membros.filter((u) => u.ativo !== false);
   const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
 
   return (
@@ -86,7 +92,7 @@ export function AdminClient({
         <div className="flex flex-wrap items-center bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shrink-0">
           {[
             { id: "desempenho", label: "Desempenho", icon: LineChart },
-            { id: "vendedores", label: `Vendedores (${vendedoresAtivos.length})`, icon: Users },
+            { id: "vendedores", label: `Time (${membrosAtivos.length})`, icon: Users },
             { id: "funil", label: "Funil do Vendedor", icon: BarChart3 },
             { id: "planos", label: `Planos (${planos.length})`, icon: Package },
             { id: "leads", label: `Leads (${contatosSemDono.length} sem dono)`, icon: UserSquare2 },
@@ -110,7 +116,7 @@ export function AdminClient({
       </div>
 
       {aba === "desempenho" && <DesempenhoTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} historicoEtapas={historicoEtapas || []} />}
-      {aba === "vendedores" && <VendedoresTab vendedores={vendedores} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
+      {aba === "vendedores" && <VendedoresTab membros={membros} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
       {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
       {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}
       {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}

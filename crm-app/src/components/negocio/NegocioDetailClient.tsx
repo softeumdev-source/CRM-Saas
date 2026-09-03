@@ -35,7 +35,7 @@ const ABAS: { id: Aba; label: string }[] = [
 export function NegocioDetailClient({
   negocioInicial,
   etapas,
-  vendedores,
+  responsaveis,
   planos,
   atividadesIniciais,
   propostasIniciais,
@@ -44,7 +44,7 @@ export function NegocioDetailClient({
 }: {
   negocioInicial: NegocioComRelacoes;
   etapas: EtapaPipeline[];
-  vendedores: Usuario[];
+  responsaveis: Usuario[];
   planos: Plano[];
   atividadesIniciais: AtividadeComUsuario[];
   propostasIniciais: PropostaComRelacoes[];
@@ -282,13 +282,13 @@ export function NegocioDetailClient({
             <select
               value={negocio.responsavel_id || ""}
               onChange={(e) => {
-                const resp = vendedores.find((v) => v.id === e.target.value) || null;
+                const resp = responsaveis.find((v) => v.id === e.target.value) || null;
                 atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
               }}
               className="w-full mt-1 text-sm font-bold bg-transparent focus:outline-hidden"
             >
               <option value="">Sem dono (pool)</option>
-              {vendedores.map((v) => (
+              {responsaveis.map((v) => (
                 <option key={v.id} value={v.id}>{v.nome}</option>
               ))}
             </select>

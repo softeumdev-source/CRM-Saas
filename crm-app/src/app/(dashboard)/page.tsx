@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { KanbanPageClient } from "@/components/KanbanPageClient";
 import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipelines";
 import type { NegocioComRelacoes } from "@/lib/types";
-import { SELECT_NEGOCIO_COMPLETO, PAPEIS_TIME } from "@/lib/types";
+import { SELECT_NEGOCIO_COMPLETO } from "@/lib/types";
 
 export default async function KanbanPage() {
   const supabase = await createClient();
@@ -15,14 +15,17 @@ export default async function KanbanPage() {
   // extra aqui no board do vendedor.
   const pipeline = await carregarPipeline(supabase);
 
-  const [etapas, { data: negocios }, { data: usuarios }, { data: usuarioAtual }] = await Promise.all([
+  const [etapas, { data: negocios }, { data: responsaveis }, { data: usuarioAtual }] = await Promise.all([
     carregarEtapas(supabase, pipeline?.id),
     supabase
       .from("negocios")
       .select(SELECT_NEGOCIO_COMPLETO)
       .eq("pipeline_id", recorteDeFunil(pipeline?.id))
       .order("criado_em", { ascending: false }),
-    supabase.from("usuarios").select("*").in("role", PAPEIS_TIME).eq("ativo", true),
+    // Quem pode ser dono de um card DESTE funil sai do proprio funil
+    // (`role_operador`): o board do vendedor oferece vendedores, o do SDR
+    // oferece SDRs. Antes era a lista fixa de "quem e do time".
+    supabase.from("usuarios").select("*").eq("role", pipeline?.role_operador ?? "vendedor").eq("ativo", true),
     supabase.from("usuarios").select("*").eq("id", user!.id).single(),
   ]);
 
@@ -31,7 +34,7 @@ export default async function KanbanPage() {
       pipelineId={pipeline?.id ?? null}
       etapas={etapas}
       negocios={(negocios as unknown as NegocioComRelacoes[]) || []}
-      vendedores={usuarios || []}
+      responsaveis={responsaveis || []}
       usuarioAtual={usuarioAtual!}
     />
   );

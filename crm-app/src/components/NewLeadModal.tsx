@@ -4,14 +4,14 @@ import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { EtapaPipeline, Usuario } from "@/lib/types";
-import { ehDoTime } from "@/lib/types";
+import { operaNegocios } from "@/lib/types";
 import { Botao, Campo, Entrada, Modal, Selecao } from "@/components/ui";
 
 export function NewLeadModal({
   pipelineId,
   etapas,
   etapaInicial,
-  vendedores,
+  responsaveis,
   usuarioAtual,
   onClose,
 }: {
@@ -20,7 +20,7 @@ export function NewLeadModal({
   etapas: EtapaPipeline[];
   /** Etapa em que o card será criado (vem do botão "+" da coluna). */
   etapaInicial?: string | null;
-  vendedores: Usuario[];
+  responsaveis: Usuario[];
   usuarioAtual: Usuario;
   onClose: () => void;
 }) {
@@ -37,7 +37,7 @@ export function NewLeadModal({
   const [titulo, setTitulo] = useState("");
   const [etapaId, setEtapaId] = useState(etapaInicial || etapas[0]?.id || "");
   // Quem opera negocio ja entra como dono; admin deixa no pool de proposito.
-  const [responsavelId, setResponsavelId] = useState(ehDoTime(usuarioAtual) ? usuarioAtual.id : "");
+  const [responsavelId, setResponsavelId] = useState(operaNegocios(usuarioAtual) ? usuarioAtual.id : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +177,7 @@ export function NewLeadModal({
                   onChange={(e) => setResponsavelId(e.target.value)}
                 >
                   <option value="">Sem dono (pool)</option>
-                  {vendedores.map((v) => (
+                  {responsaveis.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.nome}
                     </option>

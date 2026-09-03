@@ -49,6 +49,16 @@ export function recorteDeFunil(pipelineId: string | null | undefined): string {
   return pipelineId || NENHUM_FUNIL;
 }
 
+/** O funil de um negócio, quando já se tem o id dele. */
+export async function carregarPipelinePorId(
+  supabase: Cliente,
+  pipelineId: string | null | undefined,
+): Promise<Pipeline | null> {
+  if (!pipelineId) return null;
+  const { data } = await supabase.from("pipelines").select("*").eq("id", pipelineId).maybeSingle();
+  return data ?? null;
+}
+
 /** Etapas de um único funil, na ordem em que aparecem no board. */
 export async function carregarEtapas(
   supabase: Cliente,

@@ -3,17 +3,18 @@
 import { useEffect, useState } from "react";
 import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Convite, NegocioComRelacoes, Usuario } from "@/lib/types";
-import { formatarMoeda, iniciais } from "@/lib/types";
-import { Botao, Confirmar } from "@/components/ui";
+import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
+import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
+import { Botao, Confirmar, Selecao } from "@/components/ui";
 
 export function VendedoresTab({
-  vendedores,
+  membros,
   convites: convitesIniciais,
   negocios,
   usuarioAtual,
 }: {
-  vendedores: Usuario[];
+  /** Todo mundo que opera negocio: vendedores e SDRs. */
+  membros: Usuario[];
   convites: Convite[];
   negocios: NegocioComRelacoes[];
   usuarioAtual: Usuario;
@@ -21,6 +22,7 @@ export function VendedoresTab({
   const [convites, setConvites] = useState(convitesIniciais);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [papel, setPapel] = useState<Papel>("vendedor");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [linkGerado, setLinkGerado] = useState<string | null>(null);
@@ -28,12 +30,12 @@ export function VendedoresTab({
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [emailErro, setEmailErro] = useState<string | null>(null);
   const [remetenteTest, setRemetenteTest] = useState(false);
-  const [vendedoresState, setVendedoresState] = useState(vendedores);
+  const [membrosState, setMembrosState] = useState(membros);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
 
   // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
-  useEffect(() => setVendedoresState(vendedores), [vendedores]);
+  useEffect(() => setMembrosState(membros), [membros]);
   useEffect(() => setConvites(convitesIniciais), [convitesIniciais]);
 
   const handleConvidar = async (e: React.FormEvent) => {
@@ -43,12 +45,12 @@ export function VendedoresTab({
     const resp = await fetch("/api/vendedores/convidar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome: nome.trim(), email: email.trim() }),
+      body: JSON.stringify({ nome: nome.trim(), email: email.trim(), role: papel }),
     });
     const data = await resp.json();
     setEnviando(false);
     if (!resp.ok) {
-      setErro(data.error || "Erro ao convidar vendedor.");
+      setErro(data.error || "Erro ao enviar o convite.");
       return;
     }
     setLinkGerado(data.link);
@@ -56,11 +58,12 @@ export function VendedoresTab({
     setEmailErro(data.emailErro || null);
     setRemetenteTest(data.remetenteTest || false);
     setConvites((prev) => [
-      { id: data.convite_id, token: data.token, email, nome, role: "vendedor", status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
+      { id: data.convite_id, token: data.token, email, nome, role: papel, status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
       ...prev,
     ]);
     setNome("");
     setEmail("");
+    setPapel("vendedor");
   };
 
   const copiarLink = () => {
@@ -87,26 +90,27 @@ export function VendedoresTab({
   const [desativando, setDesativando] = useState<Usuario | null>(null);
 
   const definirAtivo = async (v: Usuario, ativo: boolean): Promise<string | void> => {
-    const antes = vendedoresState;
-    setVendedoresState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo } : u)));
+    const antes = membrosState;
+    setMembrosState((prev) => prev.map((u) => (u.id === v.id ? { ...u, ativo } : u)));
     const { error } = await createClient().from("usuarios").update({ ativo }).eq("id", v.id);
     if (error) {
-      setVendedoresState(antes);
+      setMembrosState(antes);
       return error.message;
     }
   };
 
-  const totalMeta = vendedoresState.filter((v) => v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
+  const totalMeta = membrosState.filter((v) => ehDoTime(v) && v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
   const pendentes = convites.filter((c) => c.status === "pendente");
-  const vendedoresAtivos = vendedoresState.filter((v) => v.ativo !== false);
-  const vendedoresInativos = vendedoresState.filter((v) => v.ativo === false);
+  const ativos = membrosState.filter((v) => v.ativo !== false);
+  const inativos = membrosState.filter((v) => v.ativo === false);
+  const vendedoresAtivos = ativos.filter(ehDoTime);
 
   return (
     <div className="space-y-6">
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 space-y-4 h-fit">
           <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-indigo-600" /> Convidar novo vendedor
+            <UserPlus className="h-4 w-4 text-indigo-600" /> Convidar para o time
           </h3>
           <form onSubmit={handleConvidar} className="space-y-3">
             <input
@@ -124,6 +128,20 @@ export function VendedoresTab({
               placeholder="email@softeum.com.br"
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             />
+            <div>
+              <Selecao
+                aria-label="Papel de quem esta sendo convidado"
+                value={papel}
+                onChange={(e) => setPapel(e.target.value as Papel)}
+              >
+                {PAPEIS.map((p) => (
+                  <option key={p} value={p}>
+                    {ROTULO_PAPEL[p]}
+                  </option>
+                ))}
+              </Selecao>
+              <p className="mt-1 px-1 text-[11px] text-slate-400">{DESCRICAO_PAPEL[papel]}</p>
+            </div>
             {erro && <p className="text-xs font-semibold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-lg px-3 py-2">{erro}</p>}
             <button
               type="submit"
@@ -166,6 +184,9 @@ export function VendedoresTab({
                   <div key={c.id} className="flex items-center justify-between gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg">
                     <span className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300 truncate">
                       <Mail className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{c.email}</span>
+                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                        {ROTULO_PAPEL[c.role || ""] || c.role}
+                      </span>
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="flex items-center gap-1 text-amber-600"><Clock className="h-3 w-3" /> pendente</span>
@@ -194,8 +215,12 @@ export function VendedoresTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <p className="text-xs font-bold uppercase text-slate-400">Total de vendedores</p>
-            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{vendedoresAtivos.length}</p>
+            <p className="text-xs font-bold uppercase text-slate-400">Time ativo</p>
+            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{ativos.length}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {vendedoresAtivos.length} {vendedoresAtivos.length === 1 ? "vendedor" : "vendedores"}
+              {ativos.length - vendedoresAtivos.length > 0 && ` · ${ativos.length - vendedoresAtivos.length} SDR`}
+            </p>
           </div>
           <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
             <p className="text-xs font-bold uppercase text-slate-400">Meta mensal somada</p>
@@ -206,7 +231,7 @@ export function VendedoresTab({
             <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{negocios.filter((n) => !n.ganho).length}</p>
           </div>
 
-          {vendedoresAtivos.map((v) => {
+          {ativos.map((v) => {
             const deles = negocios.filter((n) => n.responsavel_id === v.id);
             const valorAtivo = deles.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
@@ -216,21 +241,37 @@ export function VendedoresTab({
                     {iniciais(v.nome)}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{v.nome}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{v.nome}</p>
+                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {ROTULO_PAPEL[v.role || ""] || v.role}
+                      </span>
+                    </div>
                     <p className="text-xs text-slate-500 truncate">{v.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {/* A meta era somada no topo do painel mas nao havia onde
-                      defini-la — so mexendo direto no banco. */}
-                  <MetaMensal usuario={v} />
-                  <div className="text-right">
-                    <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
-                    <p className="text-[11px] text-slate-400">{deles.length} negócios</p>
-                  </div>
+                  {/* Meta e valor em carteira sao medida de vendedor. Para o
+                      SDR nao querem dizer nada: ele entrega reuniao, nao
+                      receita — mostrar R$ 0,00 ao lado do nome dele seria so
+                      um numero errado. */}
+                  {ehDoTime(v) ? (
+                    <>
+                      <MetaMensal usuario={v} />
+                      <div className="text-right">
+                        <p className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400">{formatarMoeda(valorAtivo)}</p>
+                        <p className="text-[11px] text-slate-400">{deles.length} negócios</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-right">
+                      <p className="text-sm font-extrabold text-slate-700 dark:text-slate-200">{deles.length}</p>
+                      <p className="text-[11px] text-slate-400">leads em mãos</p>
+                    </div>
+                  )}
                   <button
                     onClick={() => setDesativando(v)}
-                    title="Remover vendedor"
+                    title={`Remover ${ROTULO_PAPEL[v.role || ""] || "membro"} do time`}
                     className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
                   >
                     <UserX className="h-4 w-4" />
@@ -240,11 +281,11 @@ export function VendedoresTab({
             );
           })}
 
-          {vendedoresInativos.length > 0 && (
+          {inativos.length > 0 && (
             <div className="col-span-full">
-              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Vendedores removidos ({vendedoresInativos.length})</p>
+              <p className="text-[11px] font-bold uppercase text-slate-400 mb-2 mt-2">Removidos do time ({inativos.length})</p>
               <div className="space-y-2">
-                {vendedoresInativos.map((v) => (
+                {inativos.map((v) => (
                   <div key={v.id} className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 opacity-70">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-8 w-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-[10px] font-extrabold shrink-0">
@@ -257,7 +298,7 @@ export function VendedoresTab({
                     </div>
                     <button
                       onClick={() => void definirAtivo(v, true)}
-                      title="Reativar vendedor"
+                      title="Reativar acesso"
                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg"
                     >
                       <UserCheck className="h-3.5 w-3.5" /> Reativar
