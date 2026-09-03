@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" className={`${inter.variable} h-full`}>
-      <body className="min-h-full flex flex-col font-sans antialiased bg-recuo text-tinta selection:bg-acento selection:text-white">
+      <body className="min-h-full flex flex-col font-sans antialiased bg-fundo text-tinta selection:bg-acento selection:text-acento-tinta">
         {children}
       </body>
     </html>

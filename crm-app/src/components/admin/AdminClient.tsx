@@ -14,7 +14,7 @@ import { DesempenhoTab } from "@/components/admin/DesempenhoTab";
 import { DescontosTab } from "@/components/admin/DescontosTab";
 import { CadenciasTab } from "@/components/admin/CadenciasTab";
 import { IntegracoesTab } from "@/components/admin/IntegracoesTab";
-import { Abas, useAbaNaUrl, useIdDeAbas } from "@/components/ui";
+import { Abas, PainelDaAba, useAbaNaUrl, useIdDeAbas } from "@/components/ui";
 
 /**
  * A lista e a fonte do tipo. Antes a uniao estava escrita a mao no `useState`
@@ -108,18 +108,23 @@ export function AdminClient({
   const descontosPendentes = (solicitacoesDesconto || []).filter((s) => s.status === "pendente").length;
 
   return (
-    <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-      <div className="bg-superficie rounded-2xl p-5 border border-fio shadow-cartao flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div>
-          <span className="px-3 py-1 text-rotulo font-medium bg-acento/20 text-acento rounded-full border border-acento/30">
-            Painel de Administracao
-          </span>
-          <h2 className="text-display font-medium tracking-tight mt-2">Gestao de Vendedores, Funil, Planos e Leads</h2>
-          <p className="text-rotulo text-tinta-fraca mt-1 max-w-2xl">
-            Convide vendedores, acompanhe o funil individual, configure os planos usados nas propostas e distribua os leads importados.
-          </p>
-        </div>
+    // O cabeçalho NÃO é um cartão. Cartão é conteúdo; isto é o "onde estou" da
+    // página, e antes ele acumulava quatro papéis numa caixa só — um selo de
+    // eyebrow, um título de 28px, um parágrafo de duas linhas e o trilho de 8
+    // abas espremido ao lado. Agora o título fica sobre o fundo da página e as
+    // abas ganham a própria linha, que é o que elas são: navegação.
+    <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6">
+      <header className="mb-5">
+        <h1 className="text-titulo font-semibold text-tinta">Administração</h1>
+        {/* `text-display` era gasto aqui numa frase estática. Ele existe para
+            "um número que é o assunto da tela" — e quem usa isso é o
+            Desempenho, não um rótulo que nunca muda. */}
+        <p className="text-corpo text-tinta-suave mt-1">
+          O time, o funil, os planos das propostas e a distribuição dos leads.
+        </p>
+      </header>
 
+      <div className="mb-6 border-b border-fio pb-px">
         <Abas
           abas={ABAS_ADMIN.map((a) => ({
             ...a,
@@ -137,14 +142,33 @@ export function AdminClient({
         />
       </div>
 
-      {aba === "desempenho" && <DesempenhoTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} historicoEtapas={historicoEtapas || []} />}
-      {aba === "vendedores" && <VendedoresTab membros={membros} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />}
-      {aba === "funil" && <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />}
-      {aba === "planos" && <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />}
-      {aba === "cadencias" && <CadenciasTab />}
-      {aba === "integracoes" && <IntegracoesTab usuarioAtual={usuarioAtual} />}
-      {aba === "leads" && <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />}
-      {aba === "descontos" && <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />}
+      {/* `PainelDaAba` estava construído e não ligado: as 8 abas apontavam
+          `aria-controls` para elementos que não existiam. Um leitor de tela
+          seguia o vínculo e não achava nada. */}
+      <PainelDaAba idBase={idDasAbas} chave="desempenho" ativa={aba === "desempenho"}>
+        <DesempenhoTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} historicoEtapas={historicoEtapas || []} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="vendedores" ativa={aba === "vendedores"}>
+        <VendedoresTab membros={membros} convites={convites} negocios={negocios} usuarioAtual={usuarioAtual} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="funil" ativa={aba === "funil"}>
+        <FunilTab vendedores={vendedoresAtivos} negocios={negocios} etapas={etapas} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="planos" ativa={aba === "planos"}>
+        <PlanosTab planosIniciais={planos} tenantId={usuarioAtual.tenant_id} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="cadencias" ativa={aba === "cadencias"}>
+        <CadenciasTab />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="integracoes" ativa={aba === "integracoes"}>
+        <IntegracoesTab usuarioAtual={usuarioAtual} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="leads" ativa={aba === "leads"}>
+        <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />
+      </PainelDaAba>
+      <PainelDaAba idBase={idDasAbas} chave="descontos" ativa={aba === "descontos"}>
+        <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />
+      </PainelDaAba>
     </div>
   );
 }

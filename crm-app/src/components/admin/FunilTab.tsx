@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
+import { Cartao } from "@/components/ui";
 
 export function FunilTab({
   vendedores,
@@ -35,7 +36,7 @@ export function FunilTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <Cartao className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div>
             <label htmlFor="funiltab-1" className="text-rotulo font-medium text-tinta-suave uppercase tracking-wider block mb-1">Buscar vendedor</label>
@@ -69,9 +70,9 @@ export function FunilTab({
           <p className="text-titulo font-medium text-acento">{formatarMoeda(totalValor)}</p>
           <p className="text-rotulo text-tinta-fraca">{negociosFiltrados.length} negócios</p>
         </div>
-      </div>
+      </Cartao>
 
-      <div className="bg-superficie p-6 rounded-2xl border border-fio shadow-xs space-y-4">
+      <Cartao className="space-y-4">
         <h3 className="font-medium text-tinta text-corpo-lg">Distribuição por etapa</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {etapas.map((etapa) => {
@@ -112,7 +113,7 @@ export function FunilTab({
             );
           })}
         </div>
-      </div>
+      </Cartao>
     </div>
   );
 }

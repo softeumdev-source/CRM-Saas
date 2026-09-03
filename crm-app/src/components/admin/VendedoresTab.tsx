@@ -5,7 +5,7 @@ import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserChec
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
 import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
-import { Botao, Confirmar, Selecao } from "@/components/ui";
+import { Botao, Cartao, Confirmar, Selecao } from "@/components/ui";
 
 export function VendedoresTab({
   membros,
@@ -108,7 +108,7 @@ export function VendedoresTab({
   return (
     <div className="space-y-6">
       <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
-        <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4 h-fit">
+        <Cartao className="space-y-4 h-fit">
           <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-acento" /> Convidar para o time
           </h3>
@@ -211,25 +211,25 @@ export function VendedoresTab({
               </div>
             </div>
           )}
-        </div>
+        </Cartao>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
-          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+          <Cartao>
             <p className="text-rotulo font-medium uppercase text-tinta-fraca">Time ativo</p>
             <p className="text-display font-medium text-tinta mt-1">{ativos.length}</p>
             <p className="text-rotulo text-tinta-fraca mt-0.5">
               {vendedoresAtivos.length} {vendedoresAtivos.length === 1 ? "vendedor" : "vendedores"}
               {ativos.length - vendedoresAtivos.length > 0 && ` · ${ativos.length - vendedoresAtivos.length} SDR`}
             </p>
-          </div>
-          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+          </Cartao>
+          <Cartao>
             <p className="text-rotulo font-medium uppercase text-tinta-fraca">Meta mensal somada</p>
             <p className="text-display font-medium text-acento mt-1">{formatarMoeda(totalMeta)}</p>
-          </div>
-          <div className="bg-superficie p-5 rounded-2xl border border-fio shadow-xs">
+          </Cartao>
+          <Cartao>
             <p className="text-rotulo font-medium uppercase text-tinta-fraca">Negócios ativos</p>
             <p className="text-display font-medium text-ok mt-1">{negocios.filter((n) => !n.ganho).length}</p>
-          </div>
+          </Cartao>
 
           {ativos.map((v) => {
             const deles = negocios.filter((n) => n.responsavel_id === v.id);

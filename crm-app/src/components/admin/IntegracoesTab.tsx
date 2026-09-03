@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { Botao, Confirmar, Selo } from "@/components/ui";
+import { Botao, Cartao, Confirmar, Selo } from "@/components/ui";
 import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
 import { formatarDataHora } from "@/lib/atividades";
 import { temGmail } from "@/lib/google/escopos";
@@ -65,9 +65,9 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
 
   if (carregando) {
     return (
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
+      <Cartao className="p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando integrações…
-      </div>
+      </Cartao>
     );
   }
 
@@ -79,7 +79,7 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
         </p>
       )}
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+      <Cartao className="space-y-4">
         <div>
           <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
             <Calendar className="h-4 w-4 text-acento" /> Google Agenda
@@ -155,7 +155,7 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
             </div>
           </div>
         )}
-      </div>
+      </Cartao>
 
       <CaixaDeEntradaGoogle integracao={minha ?? null} />
 

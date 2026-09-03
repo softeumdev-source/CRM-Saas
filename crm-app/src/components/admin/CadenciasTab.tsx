@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { AreaTexto, Botao, Entrada, Modal } from "@/components/ui";
+import { AreaTexto, Botao, Cartao, Entrada, Modal } from "@/components/ui";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
 import { formatarDataHora } from "@/lib/atividades";
@@ -124,9 +124,9 @@ export function CadenciasTab() {
 
   if (carregando) {
     return (
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
+      <Cartao className="p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando cadências…
-      </div>
+      </Cartao>
     );
   }
 
@@ -138,7 +138,7 @@ export function CadenciasTab() {
         </p>
       )}
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+      <Cartao className="space-y-4">
         <div>
           <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
             <Send className="h-4 w-4 text-acento" /> Cadências ({cadencias.length})
@@ -213,10 +213,10 @@ export function CadenciasTab() {
             ))}
           </div>
         )}
-      </div>
+      </Cartao>
 
       {whats && (
-        <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+        <Cartao className="space-y-4">
           <div>
             <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-ok" /> WhatsApp
@@ -283,10 +283,10 @@ export function CadenciasTab() {
               </Botao>
             </div>
           )}
-        </div>
+        </Cartao>
       )}
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+      <Cartao className="space-y-4">
         <div>
           <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
             <FileText className="h-4 w-4 text-acento" /> Modelos de mensagem ({templates.length})
@@ -331,7 +331,7 @@ export function CadenciasTab() {
             </div>
           ))}
         </div>
-      </div>
+      </Cartao>
 
       <Modal
         aberto={editando !== null}

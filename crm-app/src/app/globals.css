@@ -67,6 +67,23 @@
   --cor-info: #0a6d9c;
   --cor-info-fraco: #e7f3fa;
 
+
+  /* Rampa ORDINAL do gráfico — uma cor só, clara -> escura, para categoria com
+     ordem natural (as etapas do funil). Não é decoração: as barras do funil
+     eram SEIS matizes diferentes para UMA série, que é o "rainbow / non-neighbor
+     sequential" do manual — o matiz não dizia nada que o comprimento da barra
+     já não dissesse, e o resultado lia como bloco saturado.
+     Gerada por lightness uniforme em OKLCH sobre o matiz do acento (277°) e
+     VALIDADA pelo script da skill nas quatro checagens ordinais: lightness
+     monótona, ΔL >= 0.06 entre vizinhos, ponta clara a 2.43:1 sobre a
+     superfície, e matiz único (spread 1°). */
+  --grafico-1: #939fff;
+  --grafico-2: #7e87ff;
+  --grafico-3: #6a71f2;
+  --grafico-4: #585bda;
+  --grafico-5: #4644c2;
+  --grafico-6: #372daa;
+
   /* Sombra so para o que flutua (craft R10); estrutura e feita de fio.
      Baixa opacidade e duas camadas: sombra de alfa alto le como adesivo. */
   --sombra-cartao: 0 1px 2px rgb(16 20 28 / 0.04);
@@ -128,6 +145,16 @@ b {
     --cor-info: #57b3e0;
     --cor-info-fraco: #0d2937;
 
+
+    /* A mesma rampa ESCOLHIDA para o fundo escuro, não invertida
+       automaticamente: aqui quem corre risco de sumir é o degrau mais escuro.
+       Validada contra #171b23 — ponta a 2.40:1, ΔL >= 0.06, matiz único. */
+    --grafico-1: #adbbff;
+    --grafico-2: #97a3ff;
+    --grafico-3: #818cf9;
+    --grafico-4: #6d76e1;
+    --grafico-5: #5a60c9;
+    --grafico-6: #484bb2;
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.30);
     --sombra-flutuante: 0 4px 6px -2px rgb(0 0 0 / 0.35), 0 12px 24px -6px rgb(0 0 0 / 0.45);
   }
@@ -182,6 +209,12 @@ b {
   --text-display--line-height: 1.15;
   --text-display--letter-spacing: -0.02em;
 
+  --color-grafico-1: var(--grafico-1);
+  --color-grafico-2: var(--grafico-2);
+  --color-grafico-3: var(--grafico-3);
+  --color-grafico-4: var(--grafico-4);
+  --color-grafico-5: var(--grafico-5);
+  --color-grafico-6: var(--grafico-6);
   --shadow-cartao: var(--sombra-cartao);
   --shadow-flutuante: var(--sombra-flutuante);
 

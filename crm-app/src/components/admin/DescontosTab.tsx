@@ -6,6 +6,7 @@ import { BadgePercent, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, Loade
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { formatarMoeda } from "@/lib/types";
+import { Cartao } from "@/components/ui";
 
 const SELECT =
   "*, negocio:negocios(id, titulo, contato:contatos(nome, empresa)), vendedor:usuarios!solicitacoes_desconto_vendedor_id_fkey(nome), plano:planos(nome)";
@@ -83,10 +84,10 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
       {erro && <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">{erro}</p>}
 
       {ordenadas.length === 0 ? (
-        <div className="bg-superficie rounded-2xl border border-fio p-10 text-center">
+        <Cartao className="p-10 text-center">
           <BadgePercent className="h-8 w-8 text-tinta-fraca mx-auto mb-2" />
           <p className="text-corpo text-tinta-fraca">Nenhuma solicitação de desconto até agora.</p>
-        </div>
+        </Cartao>
       ) : (
         <div className="grid gap-3">
           {ordenadas.map((s) => {

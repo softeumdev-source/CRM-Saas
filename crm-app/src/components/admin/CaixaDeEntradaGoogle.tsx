@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Check, Inbox } from "lucide-react";
-import { Botao } from "@/components/ui";
+import { Botao, Cartao } from "@/components/ui";
 import { formatarDataHora } from "@/lib/atividades";
 import { temGmail } from "@/lib/google/escopos";
 import type { Tables } from "@/lib/supabase/types";
@@ -30,7 +30,7 @@ export function CaixaDeEntradaGoogle({
   > | null;
 }) {
   return (
-    <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5 space-y-4">
+    <Cartao className="space-y-4">
       <div>
         <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
           <Inbox className="h-4 w-4 text-acento" /> Caixa de entrada no card
@@ -116,6 +116,6 @@ export function CaixaDeEntradaGoogle({
           )}
         </div>
       )}
-    </div>
+    </Cartao>
   );
 }
