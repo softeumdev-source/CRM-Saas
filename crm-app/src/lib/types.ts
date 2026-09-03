@@ -71,6 +71,21 @@ export function ehEtapaDePerda(etapa: { resultado?: string | null } | null | und
 }
 
 /**
+ * Etapa que NÃO é um degrau do funil de conversão: a de perda e a de nutrição.
+ *
+ * Nutrição é um estacionamento, não um avanço — o lead fica lá esperando uma
+ * data de retomada. Sem esta função ela entraria no funil como último degrau e
+ * faria duas coisas erradas: criaria uma linha final sem sentido no gráfico e,
+ * pior, todo negócio estacionado contaria como tendo ALCANÇADO "Fechado
+ * (Ganho)", porque o funil mede avanço por `ordem` e a nutrição vem depois.
+ */
+export function foraDoFunil(
+  etapa: { resultado?: string | null; funcao?: string | null } | null | undefined,
+): boolean {
+  return ehEtapaDePerda(etapa) || etapa?.funcao === "nutricao";
+}
+
+/**
  * Papeis de usuario. Espelha o CHECK do banco (usuarios_role_check e
  * convites_role_check). Existe para o papel nao ficar cravado como literal
  * espalhado pelo codigo.

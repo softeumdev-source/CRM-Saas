@@ -78,16 +78,58 @@ export async function carregarEtapas(
  * `etapas_pipeline.funcao`.
  *
  * `resultado` diz o que a etapa significa para o NEGÓCIO (ganho/perda);
- * `funcao` diz o que ela significa para o FLUXO — para onde o handoff entrega,
- * para onde o no-show volta, onde o lead fica parado esperando data.
+ * `funcao` diz o que ela significa para o FLUXO — de onde o lead entra, ao
+ * chegar onde ele passa sozinho para o outro funil, para onde o no-show volta,
+ * onde ele fica parado esperando data.
+ *
+ * É `funcao`, e não o nome da etapa, que decide o fluxo: com os dois funis
+ * usando a MESMA lista de nomes, decidir por nome entregaria também o card do
+ * vendedor ao chegar em "Demonstração Agendada".
  */
-export type FuncaoEtapa = "entrada" | "retorno" | "nutricao";
+export type FuncaoEtapa = "entrada" | "retorno" | "nutricao" | "entrega";
 
 export function etapaComFuncao(
   etapas: EtapaPipeline[],
   funcao: FuncaoEtapa,
 ): EtapaPipeline | undefined {
   return etapas.find((e) => e.funcao === funcao);
+}
+
+/**
+ * O outro lado de uma entrega: o funil para onde este aponta, e a etapa de
+ * MESMA ORDEM dentro dele.
+ *
+ * Casar por `ordem` só é honesto porque os dois funis têm listas idênticas —
+ * é exatamente o que a migration `20260903170000` garantiu. Casar por nome
+ * quebraria assim que um admin renomeasse uma etapa; casar por posição no
+ * array quebraria se um funil ganhasse uma etapa antes do outro.
+ */
+export async function destinoDaEntrega(
+  supabase: Cliente,
+  pipelineOrigemId: string | null | undefined,
+  ordem: number,
+): Promise<{ pipeline: Pipeline; etapa: EtapaPipeline } | null> {
+  if (!pipelineOrigemId) return null;
+
+  const { data: origem } = await supabase
+    .from("pipelines")
+    .select("*")
+    .eq("id", pipelineOrigemId)
+    .maybeSingle();
+  if (!origem?.pipeline_destino_id) return null;
+
+  const [{ data: destino }, { data: etapa }] = await Promise.all([
+    supabase.from("pipelines").select("*").eq("id", origem.pipeline_destino_id).maybeSingle(),
+    supabase
+      .from("etapas_pipeline")
+      .select("*")
+      .eq("pipeline_id", origem.pipeline_destino_id)
+      .eq("ordem", ordem)
+      .maybeSingle(),
+  ]);
+
+  if (!destino || !etapa) return null;
+  return { pipeline: destino, etapa };
 }
 
 /** O funil de onde vêm os leads deste aqui — o outro lado do handoff. */

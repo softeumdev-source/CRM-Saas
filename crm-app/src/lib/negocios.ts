@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { destinoDaEntrega } from "@/lib/pipelines";
 import { resultadoDaEtapa } from "@/lib/types";
 import type { EtapaPipeline } from "@/lib/types";
 
@@ -35,6 +36,39 @@ export async function moverEtapa({
   sufixoDescricao?: string;
 }): Promise<ResultadoMover> {
   const supabase = createClient();
+
+  // Etapa marcada como `entrega` nao e uma coluna onde o card para: e a
+  // passagem para o outro funil. O SDR agenda a reuniao e o negocio ja segue
+  // para o vendedor, na etapa de mesmo nome, sem dono — o proximo vendedor
+  // livre assume. E o "quando for agendada, manda para o vendedor".
+  //
+  // A decisao vem de `funcao`, nunca do nome: os dois funis usam a MESMA lista
+  // de nomes, entao decidir por nome entregaria tambem o card do vendedor ao
+  // chegar em "Demonstracao Agendada" — ele iria para o funil do SDR.
+  //
+  // Vai pela RPC em vez de update + update: e uma escrita so, transacional, e
+  // ela ja valida permissao. Fazer o update aqui e transferir depois deixaria
+  // o negocio parado no funil do SDR se a segunda chamada falhasse.
+  if (etapa.funcao === "entrega") {
+    const destino = await destinoDaEntrega(supabase, etapa.pipeline_id, etapa.ordem);
+    if (destino) {
+      return transferirDeFunil({
+        negocioId,
+        etapaDestino: destino.etapa,
+        // Sem dono de proposito: cai no pool do funil de destino e aparece no
+        // board de todos os vendedores, que e realtime. Notificar cada um seria
+        // ruido — e o mesmo criterio que `retomar_leads_em_nutricao` ja usa.
+        responsavelId: null,
+        titulo: `Entregue para ${destino.pipeline.nome}`,
+        descricao:
+          `Reunião agendada em "${etapa.nome}": o negócio passou para ${destino.pipeline.nome}, ` +
+          `na etapa "${destino.etapa.nome}", sem dono, para o próximo vendedor livre assumir.`,
+      });
+    }
+    // Sem funil de destino configurado a etapa e so mais uma coluna: segue o
+    // caminho normal em vez de recusar o movimento.
+  }
+
   const ganho = resultadoDaEtapa(etapa);
 
   const { error } = await supabase

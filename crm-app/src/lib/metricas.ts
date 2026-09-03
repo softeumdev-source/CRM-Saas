@@ -1,5 +1,5 @@
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
-import { ehEtapaDePerda } from "@/lib/types";
+import { foraDoFunil } from "@/lib/types";
 
 export type PeriodoChave = "mes" | "30d" | "90d" | "ano" | "tudo";
 
@@ -143,22 +143,26 @@ export function funilConversao(
   const ordemPorEtapa = new Map<string, number>();
   for (const e of etapas) ordemPorEtapa.set(e.id, e.ordem);
 
-  // Etapas do funil = todas menos as que ENCERRAM o negócio como perda.
+  // Etapas do funil = todas menos as que não são degrau: perda e nutrição.
   //
   // Antes isto era `probabilidade === 0 && ordem === max(ordem)`, e era a
   // regressão silenciosa mais perigosa do projeto: acrescentar qualquer etapa
   // de SDR mudaria o max(ordem), a etapa de perda deixaria de ser encontrada,
   // e o funil do vendedor se reconfiguraria sozinho — toda contagem por etapa
   // e toda taxa de conversão. Agora a etapa diz de si mesma.
-  const etapasFunil = etapas.filter((e) => !ehEtapaDePerda(e)).sort((a, b) => a.ordem - b.ordem);
-  const ordensPerdido = new Set(etapas.filter(ehEtapaDePerda).map((e) => e.ordem));
+  //
+  // O conjunto é de `id`, não de `ordem`: com os dois funis usando a mesma
+  // lista, ordem repete entre funis e passou a ser um identificador ruim.
+  const etapasFunil = etapas.filter((e) => !foraDoFunil(e)).sort((a, b) => a.ordem - b.ordem);
+  const idsForaDoFunil = new Set(etapas.filter(foraDoFunil).map((e) => e.id));
 
   // Maior ordem (dentro do funil) que cada negócio alcançou.
   const maxOrdem = new Map<string, number>();
   const registrar = (negocioId: string, etapaId: string | null | undefined) => {
     if (!etapaId) return;
+    if (idsForaDoFunil.has(etapaId)) return;
     const ord = ordemPorEtapa.get(etapaId);
-    if (ord === undefined || ordensPerdido.has(ord)) return;
+    if (ord === undefined) return;
     const atual = maxOrdem.get(negocioId) ?? 0;
     if (ord > atual) maxOrdem.set(negocioId, ord);
   };
