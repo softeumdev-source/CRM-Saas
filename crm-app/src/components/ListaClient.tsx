@@ -43,12 +43,13 @@ export function ListaClient({
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
   }, [pipelineId]);
 
+  // Sem `atividades`: o gatilho `atividades_tocar_negocio` já toca `negocios`
+  // em tudo que esta tela mostra. Ver o comentário no KanbanPageClient.
   useSincronizacao(recarregar, {
     canal: "lista-negocios",
     tabelas: [
       { tabela: "negocios", filtro: `pipeline_id=eq.${recorteDeFunil(pipelineId)}` },
       { tabela: "contatos" },
-      { tabela: "atividades" },
     ],
   });
 

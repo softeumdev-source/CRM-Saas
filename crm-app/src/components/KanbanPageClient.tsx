@@ -54,16 +54,23 @@ export function KanbanPageClient({
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
   }, [pipelineId]);
 
-  // O filtro por funil chega até o Realtime: sem ele, mexer num negócio do SDR
-  // faria este board recarregar inteiro à toa. Funciona porque `negocios` está
-  // com `replica identity full` — sem isso o Postgres não manda a coluna nos
-  // eventos de UPDATE/DELETE e o board pararia de atualizar ao arrastar card.
+  // Duas coisas nesta assinatura:
+  //
+  // 1. O filtro por funil chega até o Realtime — sem ele, mexer num negócio do
+  //    SDR faria este board recarregar inteiro à toa. Funciona porque
+  //    `negocios` está com `replica identity full`: sem isso o Postgres não
+  //    manda a coluna nos eventos de UPDATE/DELETE e o board pararia de
+  //    atualizar ao arrastar card.
+  // 2. `atividades` NÃO é assinada. Toda mudança de atividade que este board
+  //    mostra já toca `negocios` pelo gatilho `atividades_tocar_negocio`
+  //    (criar, concluir, reagendar e excluir), então assinar as duas fazia
+  //    cada atividade recarregar o board duas vezes — e a assinatura de
+  //    `atividades` não tem filtro de funil, o que anularia o item 1.
   useSincronizacao(recarregar, {
     canal: "pipeline",
     tabelas: [
       { tabela: "negocios", filtro: `pipeline_id=eq.${recorteDeFunil(pipelineId)}` },
       { tabela: "contatos" },
-      { tabela: "atividades" },
     ],
   });
 
