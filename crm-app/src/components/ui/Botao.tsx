@@ -26,13 +26,24 @@ const VARIANTE: Record<Variante, string> = {
     "bg-risco-solido text-risco-tinta hover:bg-risco-solido-hover active:bg-risco-solido-hover",
 };
 
+/**
+ * `pointer-coarse:min-h-11` em todos os tamanhos: 44px e o alvo de toque
+ * minimo, e medido no navegador a 390px o `md` dava 36,8px e o `sm` 27px.
+ * Num CRM isso importa mais do que a media: "Reconectar" e "Desconectar" ficam
+ * COLADOS na tela de integracoes, e um dos dois e destrutivo — errar o dedo ali
+ * desconecta a conta de alguem.
+ *
+ * A variante e por PONTEIRO, nao por largura: um monitor estreito nao vira
+ * touch, e um tablet largo nao deixa de ser. No mouse a densidade continua a
+ * mesma, que e o que um CRM cheio de lista precisa.
+ */
 const TAMANHO: Record<Tamanho, string> = {
-  sm: "text-rotulo gap-1.5 rounded-lg px-2.5 py-1.5",
-  md: "text-rotulo gap-2 rounded-xl px-4 py-2.5",
+  sm: "text-rotulo gap-1.5 rounded-lg px-2.5 py-1.5 pointer-coarse:min-h-11",
+  md: "text-rotulo gap-2 rounded-xl px-4 py-2.5 pointer-coarse:min-h-11",
   // `lg` existe porque o botao primario de largura total estava redesenhado a
   // mao em quatro geometrias diferentes (gerar proposta, salvar contato,
   // inscrever na cadencia, convidar vendedor).
-  lg: "text-corpo gap-2 rounded-xl px-5 py-3",
+  lg: "text-corpo gap-2 rounded-xl px-5 py-3 pointer-coarse:min-h-11",
 };
 
 export interface BotaoProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

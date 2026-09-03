@@ -44,6 +44,20 @@ O tema escuro é a redefinição desses tokens num só lugar. **Cada `dark:` apa
 
 O par sólido existe porque no escuro o acento **clareia** — texto branco sobre roxo claro perde contraste, então o botão inverte (fundo claro, tinta escura) em vez de ficar ilegível.
 
+#### Contraste: os números, medidos
+
+Todo texto do app é 12px ou 14px, ou seja **texto normal** para o WCAG: o piso é **4,5:1**, não os 3:1 de texto grande. A tabela é o pior caso de cada tinta — sobre `bg-recuo`, que é a superfície mais escura no claro e mais clara no escuro:
+
+| Token | claro (fundo / cartão / recuo) | escuro (fundo / cartão / recuo) |
+|---|---|---|
+| `text-tinta` | 15,58 · 16,85 · 15,02 | 15,83 · 14,57 · 13,30 |
+| `text-tinta-suave` | 5,79 · 6,26 · 5,58 | 8,18 · 7,53 · 6,87 |
+| `text-tinta-fraca` | 4,70 · 5,09 · 4,53 | 5,38 · 4,95 · 4,52 |
+
+`tinta-fraca` já reprovou uma vez: nasceu `#868f9c` / `#78818f` e dava **3,02 · 3,27 · 2,92** no claro. Passava desapercebido porque a medição anterior só olhou `tinta` e os acentos. Ao mexer nos três níveis de tinta, **meça os nove pares** — o cartão e o recuo são onde o texto de fato fica, e o fundo é o par mais folgado dos três.
+
+Os coloridos (`acento`, `ok`, `alerta`, `risco`, `info`) passam sobre `bg-superficie` e sobre o próprio par `-fraco` nos dois temas, do 4,76:1 (`ok` sobre `ok-fraco` no claro) para cima.
+
 ### Hierarquia vem de cor e tamanho, não de peso
 
 Cinco tamanhos, piso de 12px (havia corpo de texto a 10px e 11px):

@@ -34,7 +34,11 @@
      entao o negrito parou de significar qualquer coisa (craft R9). */
   --cor-tinta: #191d27;
   --cor-tinta-suave: #58616f;
-  --cor-tinta-fraca: #868f9c;
+  /* Era #868f9c, e reprovava em WCAG AA nas TRES superficies (3.02 / 3.27 /
+     2.92 contra o minimo de 4.5:1 para texto normal). O app usa este token em
+     131 lugares, sempre a 12px — nunca em tamanho grande, onde 3:1 bastaria.
+     Medido no navegador, nao estimado. Agora: 4.70 / 5.09 / 4.53. */
+  --cor-tinta-fraca: #666f7c;
 
   /* Acao e semantica. Cada uma tem um par forte/fraco: o forte para texto e
      preenchimento solido, o fraco para fundo de selo e caixa de aviso. */
@@ -71,6 +75,16 @@
   --foreground: var(--cor-tinta);
 }
 
+/* O navegador rende `strong`/`b` em 700, e a spec deste projeto para em 600
+   (`font-semibold`). Sem este reset o app tem QUATRO pesos — 400/500/600/700 —
+   e o quarto entra por acidente, por causa de uma tag no meio do texto, nao
+   por decisao de hierarquia. Medido: peso 700 aparecia em toda copy com
+   `<strong>`. */
+strong,
+b {
+  font-weight: 600;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     /* Mesmos papeis, outros valores. Nada de preto puro, pelo mesmo motivo do
@@ -83,7 +97,10 @@
 
     --cor-tinta: #e9ecf1;
     --cor-tinta-suave: #a3acba;
-    --cor-tinta-fraca: #78818f;
+    /* Era #78818f: passava sobre o fundo (4.76) e reprovava sobre cartao
+       (4.38) e recuo (4.00) — justamente onde o texto de fato fica.
+       Agora: 5.38 / 4.95 / 4.52. */
+    --cor-tinta-fraca: #818a98;
 
     /* Os acentos clareiam: texto colorido precisa de mais luminancia para
        manter contraste sobre superficie escura. Os "fracos" deixam de ser
