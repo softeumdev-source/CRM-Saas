@@ -52,9 +52,19 @@ Todo texto do app é 12px ou 14px, ou seja **texto normal** para o WCAG: o piso 
 |---|---|---|
 | `text-tinta` | 15,58 · 16,85 · 15,02 | 15,83 · 14,57 · 13,30 |
 | `text-tinta-suave` | 5,79 · 6,26 · 5,58 | 8,18 · 7,53 · 6,87 |
-| `text-tinta-fraca` | 4,70 · 5,09 · 4,53 | 5,38 · 4,95 · 4,52 |
+| `text-tinta-fraca` | 4,77 · 5,16 · 4,60 | 5,89 · 5,42 · 4,95 |
 
-`tinta-fraca` já reprovou uma vez: nasceu `#868f9c` / `#78818f` e dava **3,02 · 3,27 · 2,92** no claro. Passava desapercebido porque a medição anterior só olhou `tinta` e os acentos. Ao mexer nos três níveis de tinta, **meça os nove pares** — o cartão e o recuo são onde o texto de fato fica, e o fundo é o par mais folgado dos três.
+**E os fundos TINGIDOS contam também.** `bg-acento-fraco` e companhia não são decoração: são fundo de balão de mensagem, de selo e de caixa de aviso — texto real fica em cima deles. Pior par de cada tinta sobre os cinco tingidos:
+
+| Token | claro | escuro |
+|---|---|---|
+| `text-tinta` | 14,87 | 12,22 |
+| `text-tinta-suave` | 5,52 | 6,31 |
+| `text-tinta-fraca` | 4,55 | 4,54 |
+
+`tinta-fraca` já reprovou **duas** vezes, e a segunda foi culpa da correção incompleta da primeira. Nasceu `#868f9c` / `#78818f` e dava 3,02 no claro. Virou `#666f7c` / `#818a98` — e aí o balão de mensagem enviada deu **4,49** no claro, e no escuro **quatro dos cinco tingidos** reprovaram (4,15 a 4,47). A medição tinha olhado as três superfícies e esquecido os tingidos.
+
+Portanto: ao mexer em qualquer nível de tinta, **meça os OITO fundos** — `fundo`, `superficie`, `recuo` e os cinco `-fraco`. Medir só as superfícies é como esta regra nasceu errada duas vezes.
 
 Os coloridos (`acento`, `ok`, `alerta`, `risco`, `info`) passam sobre `bg-superficie` e sobre o próprio par `-fraco` nos dois temas, do 4,76:1 (`ok` sobre `ok-fraco` no claro) para cima.
 

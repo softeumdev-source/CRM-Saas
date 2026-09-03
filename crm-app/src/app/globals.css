@@ -34,11 +34,13 @@
      entao o negrito parou de significar qualquer coisa (craft R9). */
   --cor-tinta: #191d27;
   --cor-tinta-suave: #58616f;
-  /* Era #868f9c, e reprovava em WCAG AA nas TRES superficies (3.02 / 3.27 /
-     2.92 contra o minimo de 4.5:1 para texto normal). O app usa este token em
-     131 lugares, sempre a 12px — nunca em tamanho grande, onde 3:1 bastaria.
-     Medido no navegador, nao estimado. Agora: 4.70 / 5.09 / 4.53. */
-  --cor-tinta-fraca: #666f7c;
+  /* Duas correcoes, e a segunda so apareceu porque a primeira foi incompleta.
+     Nasceu #868f9c e reprovava nas TRES superficies (3.02 / 3.27 / 2.92 contra
+     o minimo de 4.5:1). Virou #666f7c — e ai o balao de mensagem enviada, que
+     usa `bg-acento-fraco`, deu 4.49:1. A medicao tinha olhado so as superficies
+     e esquecido os cinco fundos TINGIDOS, que sao fundo de balao, de selo e de
+     caixa de aviso. Agora sao os OITO pares, e o pior e 4.55:1. */
+  --cor-tinta-fraca: #656e7b;
 
   /* Acao e semantica. Cada uma tem um par forte/fraco: o forte para texto e
      preenchimento solido, o fraco para fundo de selo e caixa de aviso. */
@@ -97,10 +99,11 @@ b {
 
     --cor-tinta: #e9ecf1;
     --cor-tinta-suave: #a3acba;
-    /* Era #78818f: passava sobre o fundo (4.76) e reprovava sobre cartao
-       (4.38) e recuo (4.00) — justamente onde o texto de fato fica.
-       Agora: 5.38 / 4.95 / 4.52. */
-    --cor-tinta-fraca: #818a98;
+    /* No escuro o buraco era maior: com #818a98 as superficies passavam, mas
+       QUATRO dos cinco fundos tingidos reprovavam — acento 4.47, ok 4.15,
+       alerta 4.23, info 4.33. Os oito pares agora passam, com o pior em
+       4.54:1. */
+    --cor-tinta-fraca: #88919f;
 
     /* Os acentos clareiam: texto colorido precisa de mais luminancia para
        manter contraste sobre superficie escura. Os "fracos" deixam de ser

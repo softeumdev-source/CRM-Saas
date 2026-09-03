@@ -23,6 +23,7 @@ export function CadenciasTab() {
   const [editando, setEditando] = useState<Template | null>(null);
   const [assunto, setAssunto] = useState("");
   const [corpo, setCorpo] = useState("");
+  const [externoId, setExternoId] = useState("");
 
   const carregar = useCallback(async () => {
     const supabase = createClient();
@@ -103,7 +104,15 @@ export function CadenciasTab() {
     setSalvando(alvo.id);
     const { error } = await createClient()
       .from("templates_mensagem")
-      .update({ assunto: assunto || null, corpo })
+      .update({
+        assunto: assunto || null,
+        corpo,
+        // Só o WhatsApp tem id na Meta. Gravar isso num modelo de e-mail seria
+        // guardar lixo num campo que ninguém lê.
+        ...(alvo.canal === "whatsapp"
+          ? { template_externo_id: externoId.trim() || null }
+          : {}),
+      })
       .eq("id", alvo.id);
     setSalvando(null);
     if (error) {
@@ -301,7 +310,10 @@ export function CadenciasTab() {
                   {t.nome}
                 </p>
                 <p className="text-rotulo text-tinta-suave truncate">
-                  {t.canal} · {t.categoria} · {t.assunto || "sem assunto"}
+                  {t.canal} · {t.categoria} ·{" "}
+                  {t.canal === "whatsapp"
+                    ? t.template_externo_id || "sem modelo aprovado na Meta"
+                    : t.assunto || "sem assunto"}
                 </p>
               </div>
               <Botao
@@ -311,6 +323,7 @@ export function CadenciasTab() {
                   setEditando(t);
                   setAssunto(t.assunto || "");
                   setCorpo(t.corpo);
+                  setExternoId(t.template_externo_id || "");
                 }}
               >
                 Editar
@@ -348,6 +361,33 @@ export function CadenciasTab() {
             </label>
             <AreaTexto rows={14} value={corpo} onChange={(e) => setCorpo(e.target.value)} />
           </div>
+
+          {/* Sem este campo NENHUM template de WhatsApp podia ser enviado: a
+              cadência exige o nome aprovado na Meta e recusa o passo para
+              sempre quando ele está em branco — sem erro visível, só um lead
+              que nunca recebe nada. */}
+          {editando?.canal === "whatsapp" && (
+            <div>
+              <label
+                className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1"
+                htmlFor="template-externo-id"
+              >
+                Nome do template na Meta
+              </label>
+              <Entrada
+                id="template-externo-id"
+                value={externoId}
+                onChange={(e) => setExternoId(e.target.value)}
+                placeholder="ex.: primeiro_contato_pt_br"
+              />
+              <p className="text-rotulo text-tinta-suave mt-1">
+                O nome exato do modelo <strong>já aprovado</strong> no Gerenciador da Meta
+                (Ferramentas &rsaquo; Modelos de mensagem). Em branco, este passo da cadência não
+                sai — e o texto acima é só a prévia que fica na fila de aprovação, não o que a Meta
+                envia.
+              </p>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

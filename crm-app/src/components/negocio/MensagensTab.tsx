@@ -486,6 +486,7 @@ export function MensagensTab({
           mensagens={mensagens}
           whatsapp={whatsapp}
           idBase={idDasAbas}
+          aoEnviar={() => void carregar()}
         />
       </Cartao>
 

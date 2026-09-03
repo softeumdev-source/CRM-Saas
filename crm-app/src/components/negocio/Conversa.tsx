@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Ban, Clock, Mail, MessageCircle, Send, ShieldAlert } from "lucide-react";
 import { formatarDataHora } from "@/lib/atividades";
 import { descreverRestante, janelaDeResposta } from "@/lib/whatsapp/janela";
@@ -44,15 +44,20 @@ export function Conversa({
   mensagens,
   whatsapp,
   idBase,
+  aoEnviar,
 }: {
   negocio: NegocioComRelacoes;
   mensagens: Mensagem[];
   /** Estado real do canal. `null` = ainda carregando. */
   whatsapp: { configurado: boolean; pausado: boolean; motivo: string | null } | null;
   idBase: string;
+  /** Chamado depois de um envio que deu certo, para o pai recarregar a lista. */
+  aoEnviar?: () => void;
 }) {
   const [canal, setCanal] = useState<CanalConversa>("whatsapp");
   const [rascunho, setRascunho] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   const doCanal = useMemo(
     () =>
@@ -71,7 +76,70 @@ export function Conversa({
     [mensagens],
   );
 
-  const janela = janelaDeResposta(negocio.ultima_resposta_whatsapp_em);
+  // A janela ANDA. Sem este relógio, `acabando` é calculado uma vez e nunca
+  // mais: a pessoa vê "faltam 12min", digita, e clica cinco minutos depois de
+  // a janela ter fechado — recebendo um 409 que a interface poderia ter
+  // evitado. Um minuto de granularidade basta para uma contagem em horas.
+  //
+  // `useSyncExternalStore` porque o relógio é exatamente o que ele resolve: um
+  // valor que **só existe no cliente**. O terceiro argumento é o retrato do
+  // SERVIDOR, e devolver `null` ali é o que impede a falha de hidratação —
+  // medida no navegador com `useState(() => new Date())`: o servidor
+  // renderizava "faltam 5h59" e o cliente hidratava "faltam 5h58" sempre que os
+  // dois caíam em minutos diferentes. Intermitente, que é o pior tipo.
+  //
+  // O retrato é o MINUTO inteiro, não o instante: precisa ser estável entre
+  // chamadas (`===`) ou o React entra em laço, e um contador em horas não
+  // precisa de mais que isso.
+  const minuto = useSyncExternalStore(
+    (avisar) => {
+      const t = setInterval(avisar, 60_000);
+      return () => clearInterval(t);
+    },
+    () => Math.floor(Date.now() / 60_000),
+    () => null,
+  );
+  const janela =
+    minuto === null
+      ? null
+      : janelaDeResposta(negocio.ultima_resposta_whatsapp_em, new Date(minuto * 60_000));
+
+  // A chave de idempotência é da MENSAGEM, não do clique: dois cliques no mesmo
+  // texto mandam a mesma chave, o segundo insert bate na trava e o cliente não
+  // recebe duas vezes. Zerada quando o envio dá certo E quando o texto muda —
+  // texto diferente é mensagem diferente.
+  //
+  // Criada dentro do handler, e não durante o render: mexer em `ref` no corpo
+  // do componente quebra com renderização concorrente, e `randomUUID()` ali
+  // daria um valor no servidor e outro na hidratação.
+  const chave = useRef<string | null>(null);
+
+  const enviar = useCallback(async () => {
+    setEnviando(true);
+    setErro(null);
+    chave.current ??= crypto.randomUUID();
+    try {
+      const r = await fetch("/api/whatsapp/responder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ negocioId: negocio.id, texto: rascunho, chave: chave.current }),
+      });
+      const dados = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        // O rascunho NÃO é apagado: perder o texto digitado por causa de uma
+        // janela que fechou é o pior desfecho possível desta tela.
+        setErro(dados?.error || "Não foi possível enviar.");
+        return;
+      }
+      setRascunho("");
+      chave.current = null;
+      aoEnviar?.();
+    } catch {
+      setErro("Sem conexão. O texto continua aqui.");
+    } finally {
+      setEnviando(false);
+    }
+  }, [negocio.id, rascunho, aoEnviar]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -98,12 +166,28 @@ export function Conversa({
       </div>
 
       {canal === "whatsapp" ? (
+        // `janela` é nula até a montagem — ver o comentário do relógio acima.
+        janela && (
         <CompositorWhatsapp
           janela={janela}
           whatsapp={whatsapp}
           rascunho={rascunho}
-          aoMudar={setRascunho}
+          aoMudar={(v) => {
+            setRascunho(v);
+            if (erro) setErro(null);
+            // Editar o texto faz dele OUTRA mensagem, e a chave tem que
+            // acompanhar. Sem isto: a primeira tentativa grava, a resposta se
+            // perde na rede, a pessoa corrige o texto e clica de novo — e a
+            // rota, vendo a mesma chave, devolve "já enviada". A tela limparia
+            // o rascunho e a pessoa acreditaria que o texto CORRIGIDO saiu.
+            // Saiu o antigo.
+            chave.current = null;
+          }}
+          enviando={enviando}
+          erro={erro}
+          aoEnviar={enviar}
         />
+        )
       ) : (
         <Alerta tom="info" icone={Mail} titulo="Responder por e-mail">
           A resposta por e-mail sai pela cadência, com revisão antes de enviar. O inbox aqui é a
@@ -162,11 +246,17 @@ function CompositorWhatsapp({
   whatsapp,
   rascunho,
   aoMudar,
+  enviando,
+  erro,
+  aoEnviar,
 }: {
   janela: ReturnType<typeof janelaDeResposta>;
   whatsapp: { configurado: boolean; pausado: boolean; motivo: string | null } | null;
   rascunho: string;
   aoMudar: (v: string) => void;
+  enviando: boolean;
+  erro: string | null;
+  aoEnviar: () => void;
 }) {
   // Precedencia deliberada: o canal desligado ganha da janela. Mostrar
   // "janela aberta, escreva aqui" com o numero pausado seria mentir.
@@ -187,8 +277,17 @@ function CompositorWhatsapp({
     );
   }
 
+  // Dois estados diferentes, e tratá-los como um só manda a pessoa esperar uma
+  // coisa que não vai acontecer. `expiraEm` nulo é o caso "nunca houve
+  // conversa": ninguém vai "responder de volta" porque ninguém escreveu ainda.
   if (!janela.aberta) {
-    return (
+    return janela.expiraEm === null ? (
+      <Alerta tom="neutro" icone={Clock} titulo="Este cliente ainda não escreveu">
+        A caixa de texto só abre depois que ele mandar a primeira mensagem — é a regra da Meta, e
+        é o que separa conversa de abordagem. Para dar o primeiro toque, use um modelo aprovado
+        pela cadência.
+      </Alerta>
+    ) : (
       <Alerta tom="alerta" icone={Clock} titulo="A janela de 24 horas está fechada">
         Fora dela a Meta só aceita um modelo aprovado — texto livre aqui derrubaria a nota de
         qualidade do número. Assim que o cliente responder, a caixa de texto volta.
@@ -209,10 +308,25 @@ function CompositorWhatsapp({
         onChange={(e) => aoMudar(e.target.value)}
         placeholder="Escreva a resposta…"
         aria-label="Resposta por WhatsApp"
+        disabled={enviando}
       />
+      {/* O motivo da recusa fica NA TELA, e o rascunho continua no textarea.
+          Quase todo erro aqui é recuperável — a janela fechou, o canal pausou,
+          o teto da hora encheu — e apagar o texto junto seria punir a pessoa
+          por uma coisa que não foi ela que fez. */}
+      {erro && (
+        <Alerta tom="risco" icone={ShieldAlert} titulo="A mensagem não foi enviada">
+          {erro}
+        </Alerta>
+      )}
       <div className="flex justify-end">
-        <Botao variante="primario" icone={Send} disabled={!rascunho.trim()}>
-          Enviar
+        <Botao
+          variante="primario"
+          icone={Send}
+          disabled={!rascunho.trim() || enviando}
+          onClick={aoEnviar}
+        >
+          {enviando ? "Enviando…" : "Enviar"}
         </Botao>
       </div>
     </div>

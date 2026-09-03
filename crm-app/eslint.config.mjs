@@ -20,12 +20,29 @@ const eslintConfig = defineConfig([
           message:
             "Leia etapas por carregarEtapas()/carregarFunil() de @/lib/pipelines — consulta direta ignora o funil e mistura as etapas do SDR com as do vendedor.",
         },
+        // Texto livre no WhatsApp fora da janela de 24h é violação de política
+        // da Meta, e o preço é a nota de qualidade do número cair até o
+        // banimento. `enviarTextoLivre` NÃO confere a janela — a conferência
+        // precisa da linha do negócio, junto do `pausado` e do teto por hora, e
+        // acontece numa rota só. Esta trava existe para que usar a função no
+        // lugar errado seja impossível por descuido, e não só desaconselhado
+        // por um comentário.
+        {
+          selector: "ImportSpecifier[imported.name='enviarTextoLivre']",
+          message:
+            "enviarTextoLivre só pode ser importado por src/app/api/whatsapp/responder/route.ts, que é onde a janela de 24h, o `pausado` e o teto por hora são conferidos. Para mensagem fora da janela use enviarTemplate.",
+        },
       ],
     },
   },
   {
     // O módulo que centraliza a consulta precisa poder fazê-la.
     files: ["src/lib/pipelines.ts"],
+    rules: { "no-restricted-syntax": "off" },
+  },
+  {
+    // A única rota autorizada a mandar texto livre — é ela que confere a janela.
+    files: ["src/app/api/whatsapp/responder/route.ts"],
     rules: { "no-restricted-syntax": "off" },
   },
   // Override default ignores of eslint-config-next.
