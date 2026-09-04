@@ -92,6 +92,16 @@ export function LeadCard({
   return (
     <Link
       href={`/negocios/${negocio.id}`}
+      // `prefetch={false}` não é micro-otimização: MEDIDO nos logs de produção,
+      // abrir o Kanban disparava 12 requisições a 8 páginas `/negocios/<id>`
+      // no MESMO segundo (02:04:27). O Next prefetcha todo `<Link>` que entra
+      // no viewport, e cada prefetch RENDERIZA a página inteira do negócio no
+      // servidor — com as consultas dela, atravessando até o banco.
+      //
+      // Num board de 25 cards isso é o trabalho de 25 páginas para abrir uma. A
+      // navegação real (o clique) continua rápida: o que se perde é o palpite
+      // de que a pessoa vai abrir justamente aquele card.
+      prefetch={false}
       className={[
         "foco group block rounded-2xl border bg-superficie p-3.5 shadow-cartao",
         "transition-[border-color] duration-150 ease-out",
