@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, X, AlertTriangle } from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
 import {
@@ -214,6 +214,47 @@ export function LeadsTab({
     setSelecionados(new Set());
   };
 
+  const [resumoProspeccao, setResumoProspeccao] = useState<string | null>(null);
+
+  /**
+   * O elo que faltava entre a planilha e o Kanban de prospecção.
+   *
+   * A importação acima grava só em `contatos`. Até aqui, para um lead virar
+   * card era preciso abrir o board e clicar "+ Novo Negócio", redigitando
+   * tudo — inviável com uma planilha de centenas de linhas.
+   *
+   * Exige SELEÇÃO, e é de propósito: `distribuirAutomatico` cai na lista
+   * inteira quando nada está marcado, mas ali o efeito é reversível (troca um
+   * dono). Aqui cada lead vira card E entra numa cadência que vai escrever para
+   * o cliente. Mandar a lista inteira por engano não se desfaz com um clique.
+   */
+  const enviarParaProspeccao = async () => {
+    const ids = Array.from(selecionados);
+    if (ids.length === 0) return;
+    setDistribuindo(true);
+    setErro(null);
+    setResumoProspeccao(null);
+    const { data, error } = await createClient().rpc("enviar_para_prospeccao", { p_contato_ids: ids });
+    setDistribuindo(false);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    const r = (data ?? {}) as {
+      criados?: number; pulados?: number; sem_email?: number;
+      inscritos?: number; tem_cadencia?: boolean;
+    };
+    // Conta o que ACONTECEU, em vez de dizer "pronto!". Um lead pulado ou sem
+    // e-mail é informação que muda o que a pessoa faz a seguir.
+    const partes = [`${r.criados ?? 0} ${r.criados === 1 ? "lead entrou" : "leads entraram"} na prospecção`];
+    if (r.tem_cadencia && (r.inscritos ?? 0) > 0) partes.push(`${r.inscritos} na cadência`);
+    if (!r.tem_cadencia) partes.push("sem cadência ativa no funil — ninguém foi inscrito");
+    if ((r.sem_email ?? 0) > 0) partes.push(`${r.sem_email} sem e-mail (card criado, fora da cadência)`);
+    if ((r.pulados ?? 0) > 0) partes.push(`${r.pulados} já tinha negócio aberto`);
+    setResumoProspeccao(partes.join(" · "));
+    setSelecionados(new Set());
+  };
+
   const selecionarTodosPool = () => {
     setSelecionados((prev) => (prev.size === contatosSemDono.length ? new Set() : new Set(contatosSemDono.map((c) => c.id))));
   };
@@ -377,7 +418,6 @@ export function LeadsTab({
               Atribuir selecionados
             </Botao>
             <Botao
-              variante="primario"
               tamanho="sm"
               onClick={distribuirAutomatico}
               disabled={distribuindo || contatosSemDono.length === 0}
@@ -385,8 +425,26 @@ export function LeadsTab({
             >
               Distribuir automático (round-robin)
             </Botao>
+            {/* O primário é este: distribuir manda o lead para um vendedor
+                trabalhar na mão; prospecção põe o SDR para tocar. */}
+            <Botao
+              variante="primario"
+              tamanho="sm"
+              onClick={() => void enviarParaProspeccao()}
+              disabled={distribuindo || selecionados.size === 0}
+              icone={distribuindo ? Loader2 : Send}
+            >
+              Enviar {selecionados.size > 0 ? selecionados.size : ""} para prospecção
+            </Botao>
           </div>
         </div>
+        {resumoProspeccao && (
+          <div className="px-4 pb-3">
+            <Alerta tom="ok" icone={Send}>
+              {resumoProspeccao}
+            </Alerta>
+          </div>
+        )}
         <div className="max-h-[420px] overflow-y-auto">
           <table className="w-full text-left text-rotulo">
             <thead className="sticky top-0 bg-superficie">

@@ -1780,6 +1780,7 @@ export type Database = {
       disparar_despacho: { Args: never; Returns: string }
       disparar_sync_gmail: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
+      enviar_para_prospeccao: { Args: { p_contato_ids: string[] }; Returns: Json }
       google_guardar_refresh_token: {
         Args: {
           p_email: string
