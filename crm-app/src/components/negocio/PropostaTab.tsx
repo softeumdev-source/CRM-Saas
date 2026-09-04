@@ -68,10 +68,37 @@ function propostaVencida(p: { status?: string; criado_em?: string | null }): boo
   return dias != null && dias > VALIDADE_PROPOSTA_DIAS;
 }
 
+/**
+ * Um signatario NO FORMULARIO. A `chave` e so da tela: ela e o `key` do React e
+ * o identificador das edicoes, e e removida antes de a lista virar payload.
+ *
+ * Existe porque as duas listas usavam `key={i}` com botao de remover. Com o
+ * indice como chave, o React casa as linhas por posicao: ao apagar a linha do
+ * meio, ele reaproveita o DOM da linha seguinte em vez de descartar a certa.
+ * Com input controlado o TEXTO exibido continua certo — o que se perde e o
+ * foco, a posicao do cursor e a selecao, que ficam na linha errada. Num
+ * formulario que dispara contrato para cliente, "quase certo" nao serve.
+ */
 interface Signatario {
+  chave: string;
   nome: string;
   email: string;
 }
+
+/** Idem para a copia, que era um `string` cru e por isso nem chave tinha. */
+interface Copia {
+  chave: string;
+  valor: string;
+}
+
+/** `crypto.randomUUID` e o que o resto do projeto ja usa; roda so em handler. */
+const novoSignatario = (nome = "", email = ""): Signatario => ({
+  chave: crypto.randomUUID(),
+  nome,
+  email,
+});
+
+const novaCopia = (valor = ""): Copia => ({ chave: crypto.randomUUID(), valor });
 
 type EtapaEnvio = "signatarios" | "editor" | null;
 
@@ -111,7 +138,7 @@ export function PropostaTab({
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
   const [etapaEnvio, setEtapaEnvio] = useState<EtapaEnvio>(null);
   const [signatarios, setSignatarios] = useState<Signatario[]>([]);
-  const [copias, setCopias] = useState<string[]>([]);
+  const [copias, setCopias] = useState<Copia[]>([]);
   const [pdfComercialUrl, setPdfComercialUrl] = useState<string | null>(null);
   const [camposAssinatura, setCamposAssinatura] = useState<CampoAssinatura[]>([]);
   const [documentoEditor, setDocumentoEditor] = useState<"comercial" | "tecnica">("comercial");
@@ -258,7 +285,7 @@ export function PropostaTab({
   const abrirEnvio = (propostaId: string) => {
     setEditandoEnvioId(propostaId);
     setEtapaEnvio("signatarios");
-    setSignatarios([{ nome: negocio.contato?.nome || "", email: negocio.contato?.email || "" }]);
+    setSignatarios([novoSignatario(negocio.contato?.nome || "", negocio.contato?.email || "")]);
     setCopias([]);
     setCamposAssinatura([]);
     setErro(null);
@@ -299,8 +326,12 @@ export function PropostaTab({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        signatarios: signatariosValidos,
-        copias: copias.filter((c) => c.trim()),
+        // `chave` e estado de tela e nao pode atravessar a fronteira. A rota
+        // hoje le so `nome` e `email`, entao mandar a mais seria inerte — mas
+        // depender disso e apostar que ninguem vai escrever um `...s` ali
+        // depois. Aqui a forma do que sai fica explicita.
+        signatarios: signatariosValidos.map(({ nome, email }) => ({ nome, email })),
+        copias: copias.map((c) => c.valor).filter((v) => v.trim()),
         campos_assinatura: campos,
       }),
     });
@@ -623,29 +654,47 @@ export function PropostaTab({
                         <span className="w-6 h-6 rounded-full bg-acento-solido text-acento-tinta text-rotulo font-medium flex items-center justify-center">1</span>
                         <p className="text-rotulo font-medium text-tinta-suave">Quem vai assinar?</p>
                       </div>
-                      {signatarios.map((s, i) => (
-                        <div key={i} className="flex items-center gap-2">
+                      {/* Editado e removido POR CHAVE, nao por indice: com o
+                          indice, remover uma linha faz as de baixo mudarem de
+                          numero, e um handler que ainda carregue o indice
+                          antigo passa a escrever na linha errada. */}
+                      {signatarios.map((s) => (
+                        <div key={s.chave} className="flex items-center gap-2">
                           <input
                             value={s.nome}
-                            onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
+                            onChange={(e) =>
+                              setSignatarios((prev) =>
+                                prev.map((x) => (x.chave === s.chave ? { ...x, nome: e.target.value } : x)),
+                              )
+                            }
                             placeholder="Nome completo"
+                            aria-label="Nome do signatário"
                             className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           <input
                             value={s.email}
-                            onChange={(e) => setSignatarios((prev) => prev.map((x, j) => (j === i ? { ...x, email: e.target.value } : x)))}
+                            onChange={(e) =>
+                              setSignatarios((prev) =>
+                                prev.map((x) => (x.chave === s.chave ? { ...x, email: e.target.value } : x)),
+                              )
+                            }
                             placeholder="email@empresa.com"
+                            aria-label="E-mail do signatário"
                             className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           {signatarios.length > 1 && (
-                            <button onClick={() => setSignatarios((prev) => prev.filter((_, j) => j !== i))} className="text-tinta-fraca hover:text-risco">
+                            <button
+                              onClick={() => setSignatarios((prev) => prev.filter((x) => x.chave !== s.chave))}
+                              aria-label={`Remover signatário ${s.nome || "sem nome"}`}
+                              className="text-tinta-fraca hover:text-risco"
+                            >
                               <X className="h-4 w-4" />
                             </button>
                           )}
                         </div>
                       ))}
                       <button
-                        onClick={() => setSignatarios((prev) => [...prev, { nome: "", email: "" }])}
+                        onClick={() => setSignatarios((prev) => [...prev, novoSignatario()])}
                         className="text-rotulo font-medium text-acento flex items-center gap-1"
                       >
                         <Plus className="h-3 w-3" /> Adicionar signatário
@@ -653,21 +702,30 @@ export function PropostaTab({
 
                       <div className="pt-2 border-t border-fio">
                         <p className="text-rotulo font-medium text-tinta-suave mb-2">Enviar cópia para (opcional)</p>
-                        {copias.map((c, i) => (
-                          <div key={i} className="flex items-center gap-2 mb-2">
+                        {copias.map((c) => (
+                          <div key={c.chave} className="flex items-center gap-2 mb-2">
                             <input
-                              value={c}
-                              onChange={(e) => setCopias((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))}
+                              value={c.valor}
+                              onChange={(e) =>
+                                setCopias((prev) =>
+                                  prev.map((x) => (x.chave === c.chave ? { ...x, valor: e.target.value } : x)),
+                                )
+                              }
                               placeholder="email@empresa.com"
+                              aria-label="E-mail para cópia"
                               className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                             />
-                            <button onClick={() => setCopias((prev) => prev.filter((_, j) => j !== i))} className="text-tinta-fraca hover:text-risco">
+                            <button
+                              onClick={() => setCopias((prev) => prev.filter((x) => x.chave !== c.chave))}
+                              aria-label={`Remover cópia ${c.valor || "sem e-mail"}`}
+                              className="text-tinta-fraca hover:text-risco"
+                            >
                               <X className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
                         <button
-                          onClick={() => setCopias((prev) => [...prev, ""])}
+                          onClick={() => setCopias((prev) => [...prev, novaCopia()])}
                           className="text-rotulo font-medium text-acento flex items-center gap-1"
                         >
                           <Plus className="h-3 w-3" /> Adicionar cópia
