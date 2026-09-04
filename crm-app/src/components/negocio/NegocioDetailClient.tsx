@@ -447,10 +447,11 @@ export function NegocioDetailClient({
             {entrega && (
               <button
                 onClick={() => {
-                  // Pre-seleciona quem era o dono ANTES do reaquecimento. O
-                  // lead so tem `vendedor_origem_id` se voltou da nutricao para
-                  // o SDR; nesse caso devolver ao rodizio jogaria fora o
-                  // relacionamento que aquele vendedor construiu.
+                  // Pre-seleciona quem era o dono ANTES de o lead ir para o
+                  // SDR. Dois caminhos gravam `vendedor_origem_id`: o lead que
+                  // voltou da nutricao, e o lead mandado para a prospeccao a
+                  // partir da carteira de um vendedor. Nos dois, devolver ao
+                  // rodizio jogaria fora o relacionamento ja construido.
                   //
                   // So se ele ainda estiver entre os que podem receber: um
                   // vendedor desativado nao pode ser pre-selecionado, ou a
@@ -674,7 +675,7 @@ export function NegocioDetailClient({
               rotulo="Quem assume"
               dica={
                 negocio.vendedor_origem_id && destinatario === negocio.vendedor_origem_id
-                  ? "Já vem escolhido: este lead foi para reaquecimento vindo da carteira dessa pessoa."
+                  ? "Já vem escolhido: este lead veio da carteira dessa pessoa antes de entrar na prospecção."
                   : undefined
               }
             >

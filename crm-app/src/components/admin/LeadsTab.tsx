@@ -86,15 +86,22 @@ export function LeadsTab({
     return m;
   }, [negociosAbertos]);
 
-  /** Dos selecionados, os que a prospeccao de fato vai aceitar. */
+  /** Dos selecionados no POOL, os que a prospecção de fato vai aceitar. */
   const prontosParaProspeccao = useMemo(
     () => Array.from(selecionados).filter((id) => !funilDoContato.has(id)),
     [selecionados, funilDoContato],
   );
+
   const [vendedorManual, setVendedorManual] = useState("");
   const [distribuindo, setDistribuindo] = useState(false);
   // reatribuicao de leads que ja tem dono
   const [selComDono, setSelComDono] = useState<Set<string>>(new Set());
+
+  /** O mesmo, para a lista de quem já tem vendedor. Mesma regra de elegibilidade. */
+  const prontosComDono = useMemo(
+    () => Array.from(selComDono).filter((id) => !funilDoContato.has(id)),
+    [selComDono, funilDoContato],
+  );
   const [filtroVendedor, setFiltroVendedor] = useState("all");
   const [buscaComDono, setBuscaComDono] = useState("");
   const [novoResp, setNovoResp] = useState("");
@@ -257,11 +264,15 @@ export function LeadsTab({
    * dono). Aqui cada lead vira card E entra numa cadência que vai escrever para
    * o cliente. Mandar a lista inteira por engano não se desfaz com um clique.
    */
-  const enviarParaProspeccao = async () => {
-    // Manda so quem a funcao aceita. Mandar os outros nao causaria dano (ela
-    // pula), mas faria o resumo falar de "pulados" que a tela ja sabia que
-    // seriam pulados — barulho no lugar de informacao.
-    const ids = prontosParaProspeccao;
+  /**
+   * Serve as DUAS listas — a do pool e a de quem já tem vendedor.
+   *
+   * O card sempre nasce sem dono, no pool do SDR; o que muda é que, vindo de
+   * uma carteira, `enviar_para_prospeccao` grava `vendedor_origem_id`, e a tela
+   * de "Entregar ao vendedor" pré-seleciona essa pessoa quando o SDR qualificar.
+   * Sem isso o lead sairia da carteira de alguém e voltaria para o rodízio.
+   */
+  const enviarParaProspeccao = async (ids: string[], limpar: () => void) => {
     if (ids.length === 0) return;
     setDistribuindo(true);
     setErro(null);
@@ -286,7 +297,7 @@ export function LeadsTab({
     // O TOM SEGUE O DESFECHO. "0 leads entraram" num alerta verde com ícone de
     // enviado é o que fez alguém procurar no Kanban um card que nunca existiu.
     setResumoProspeccao({ texto: partes.join(" · "), houve: (r.criados ?? 0) > 0 });
-    setSelecionados(new Set());
+    limpar();
   };
 
   const selecionarTodosPool = () => {
@@ -464,7 +475,7 @@ export function LeadsTab({
             <Botao
               variante="primario"
               tamanho="sm"
-              onClick={() => void enviarParaProspeccao()}
+              onClick={() => void enviarParaProspeccao(prontosParaProspeccao, () => setSelecionados(new Set()))}
               // Conta os ELEGÍVEIS, e não os selecionados: com todos já em
               // outro funil, o botão fica desligado em vez de prometer um
               // envio que a função vai recusar em silêncio.
@@ -596,8 +607,34 @@ export function LeadsTab({
             <Botao tamanho="sm" onClick={() => reatribuir(true)} disabled={reatribuindo || selComDono.size === 0}>
               Devolver ao pool
             </Botao>
+            {/* O card nasce no pool do SDR, mas guardando de quem era o lead:
+                quando o SDR qualificar e clicar em "Entregar ao vendedor",
+                esta pessoa já vem escolhida. Sem isso o lead sairia de uma
+                carteira e voltaria para o rodízio. */}
+            <Botao
+              tamanho="sm"
+              icone={distribuindo ? Loader2 : Send}
+              onClick={() => void enviarParaProspeccao(prontosComDono, () => setSelComDono(new Set()))}
+              disabled={distribuindo || prontosComDono.length === 0}
+              title={
+                selComDono.size > 0 && prontosComDono.length === 0
+                  ? "Todos os selecionados já têm negócio aberto — a prospecção não aceita lead que já está em um funil."
+                  : "O card vai para o pool do SDR e volta para o mesmo vendedor na entrega."
+              }
+            >
+              Enviar {prontosComDono.length > 0 ? prontosComDono.length : ""} para prospecção
+            </Botao>
           </div>
         </div>
+        {selComDono.size > 0 && prontosComDono.length === 0 && (
+          <div className="px-4 pb-3">
+            <Alerta tom="alerta" icone={AlertTriangle} titulo="Nenhum destes pode ir para a prospecção">
+              {selComDono.size === 1 ? "O lead selecionado já tem" : "Os leads selecionados já têm"} negócio
+              aberto. A prospecção é para lead frio: se o SDR abrisse um card aqui, ele mandaria a mensagem
+              de primeiro contato para alguém que já está sendo atendido.
+            </Alerta>
+          </div>
+        )}
         <div className="max-h-[420px] overflow-y-auto">
           <table className="w-full text-left text-rotulo">
             <thead className="sticky top-0 bg-superficie">
@@ -624,7 +661,16 @@ export function LeadsTab({
                   <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
-                  <td className="p-3 text-acento font-medium">{c.responsavel?.nome || "—"}</td>
+                  <td className="p-3 text-acento font-medium">
+                    <span className="flex items-center gap-2 flex-wrap">
+                      {c.responsavel?.nome || "—"}
+                      {/* Mesmo selo da outra lista, pelo mesmo motivo: dizer
+                          ANTES do clique por que este lead não vai entrar. */}
+                      {funilDoContato.has(c.id) && (
+                        <Selo tom="neutro">já em {funilDoContato.get(c.id)}</Selo>
+                      )}
+                    </span>
+                  </td>
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
