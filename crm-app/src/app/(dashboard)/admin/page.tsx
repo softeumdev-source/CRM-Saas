@@ -58,7 +58,7 @@ export default async function AdminPage({
     supabase.from("planos").select("*").order("valor_plataforma_base"),
     supabase
       .from("negocios")
-      .select("*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*)")
+      .select("*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*), etapa:etapas_pipeline(*)")
       .eq("pipeline_id", recorteDeFunil(pipeline?.id)),
     carregarEtapas(supabase, pipeline?.id),
     supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false }).limit(TETO_LEADS_SEM_DONO),

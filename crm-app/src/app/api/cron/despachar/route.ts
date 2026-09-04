@@ -99,7 +99,7 @@ export async function GET(request: Request) {
   let threads = new Map<string, ContextoDeThread>();
   if (idsDeNegocio.length > 0) {
     const [{ data: donos }, mapaDeThreads] = await Promise.all([
-      supabase.from("negocios").select("id, responsavel:usuarios(nome, email)").in("id", idsDeNegocio),
+      supabase.from("negocios").select("id, responsavel:usuarios!negocios_responsavel_id_fkey(nome, email)").in("id", idsDeNegocio),
       threadsDosNegocios(supabase, idsDeNegocio),
     ]);
     for (const d of donos || []) {

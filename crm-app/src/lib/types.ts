@@ -27,12 +27,30 @@ export type NegocioComRelacoes = Negocio & {
 /** Colunas de `atividades` que o card do pipeline precisa. */
 export const SELECT_ATIVIDADES_CARD = "atividades_pendentes:atividades(id, titulo, tipo, data_agendada, concluida)";
 
+/**
+ * O `!negocios_responsavel_id_fkey` NÃO é enfeite, e eu já paguei por esquecê-lo
+ * DUAS vezes nesta base.
+ *
+ * Existem duas chaves estrangeiras de `negocios` para `usuarios`:
+ * `responsavel_id` e `vendedor_origem_id` (esta acrescentada quando a nutrição
+ * passou a devolver o lead ao SDR). Com duas, o PostgREST RECUSA o embed por
+ * ambiguidade — PGRST201 — em vez de escolher uma.
+ *
+ * O estrago é mudo e total: a consulta falha, `data` vem nulo, e o Kanban do
+ * vendedor desenha ZERO cards. Nenhum erro no log do servidor, porque a recusa
+ * é do PostgREST e o cliente a engole. Os 25 negócios continuam intactos no
+ * banco o tempo todo — some só a tela.
+ *
+ * Foi exatamente assim que a Fase 3a derrubou o login (`tenants` ganhou uma FK
+ * para `usuarios` e o layout parou de achar o usuário). Nomear a chave prende a
+ * consulta ao caminho certo mesmo que apareça uma terceira FK amanhã.
+ */
 /** Select padrão de um negócio com tudo que o pipeline mostra. */
-export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usuarios(*), etapa:etapas_pipeline(*), ${SELECT_ATIVIDADES_CARD}`;
+export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*), etapa:etapas_pipeline(*), ${SELECT_ATIVIDADES_CARD}`;
 
 /** Select da agenda: a atividade com o negócio e o contato para ligar/mandar mensagem. */
 export const SELECT_AGENDA =
-  "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios(id, nome))";
+  "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios!negocios_responsavel_id_fkey(id, nome))";
 
 /**
  * Abas da tela de negócio. Fica aqui, e não no componente, porque a page
