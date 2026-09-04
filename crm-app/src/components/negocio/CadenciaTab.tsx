@@ -22,9 +22,11 @@ import {
   RotateCcw,
   CalendarPlus,
   CalendarCheck,
+  Check,
+  UserX,
 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
-import { Confirmar } from "@/components/ui";
+import { Botao, Confirmar } from "@/components/ui";
 import { comPrazo } from "@/lib/prazo";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes, TipoAtividade, Usuario } from "@/lib/types";
@@ -243,15 +245,27 @@ export function CadenciaTab({
   };
 
   const [respondendo, setRespondendo] = useState<string | null>(null);
+  /**
+   * "Não veio" PERGUNTA antes.
+   *
+   * Não é cerimônia: o clique devolve o lead para outro funil, tira o dono e
+   * te expulsa da página — a RLS deixa de te alcançar no instante seguinte.
+   * Uma ação que muda de dono, de funil e de tela não pode acontecer no
+   * primeiro clique, ainda mais colada num botão verde de sentido oposto.
+   *
+   * "Compareceu" não pergunta: ele só conclui a atividade, e é reversível.
+   */
+  const [confirmandoNoShow, setConfirmandoNoShow] = useState<AtividadeComUsuario | null>(null);
 
-  const responder = async (id: string, compareceu: boolean) => {
+  const responder = async (id: string, compareceu: boolean): Promise<string | void> => {
     if (!aoResponderComparecimento) return;
     setRespondendo(id);
     const erroResposta = await aoResponderComparecimento(id, compareceu);
     setRespondendo(null);
     if (erroResposta) {
+      // Devolvido para o diálogo quando veio dele; a faixa cobre o outro botão.
       setErro(`Não foi possível registrar a resposta: ${erroResposta}`);
-      return;
+      return erroResposta;
     }
     setAtividades((prev) =>
       prev.map((a) => (a.id === id ? { ...a, compareceu, concluida: true } : a)),
@@ -607,21 +621,30 @@ export function CadenciaTab({
                           <span className="text-rotulo font-medium text-tinta-suave">
                             O cliente compareceu?
                           </span>
-                          <button
+                          {/* Os dois eram `<button>` cru com `hover:bg-ok-fraco`
+                              sobre `bg-ok-fraco` — ou seja, o hover trocava a
+                              cor por ela mesma e o botão não reagia a nada. Aqui
+                              é o `Botao` do sistema, que já traz hover, foco
+                              visível, `active` e carregando. */}
+                          <Botao
+                            tamanho="sm"
+                            variante="secundario"
+                            icone={Check}
+                            carregando={respondendo === a.id}
+                            disabled={respondendo !== null}
                             onClick={() => void responder(a.id, true)}
-                            disabled={respondendo === a.id}
-                            className="px-2.5 py-1 text-rotulo font-medium text-ok bg-ok-fraco hover:bg-ok-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
                           >
                             Compareceu
-                          </button>
-                          <button
-                            onClick={() => void responder(a.id, false)}
-                            disabled={respondendo === a.id}
-                            className="px-2.5 py-1 text-rotulo font-medium text-risco bg-risco-fraco hover:bg-risco-fraco rounded-lg transition-colors duration-150 ease-out disabled:opacity-60"
+                          </Botao>
+                          <Botao
+                            tamanho="sm"
+                            variante="perigo"
+                            icone={UserX}
+                            disabled={respondendo !== null}
+                            onClick={() => setConfirmandoNoShow(a)}
                           >
                             Não veio
-                          </button>
-                          {respondendo === a.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-tinta-fraca" />}
+                          </Botao>
                           <span className="text-rotulo text-tinta-fraca">
                             &ldquo;Não veio&rdquo; devolve o lead para o SDR reagendar.
                           </span>
@@ -851,6 +874,38 @@ export function CadenciaTab({
           <>
             <strong className="font-medium text-tinta">{excluindo?.titulo}</strong>{" "}
             sai do histórico deste negócio. Não dá para desfazer.
+          </>
+        }
+      />
+
+      {/* O no-show, dito por inteiro ANTES de acontecer. Cada linha aqui é uma
+          consequência que a pessoa não veria de outro jeito — principalmente a
+          última, que explica por que a tela vai sumir. */}
+      <Confirmar
+        aberto={confirmandoNoShow !== null}
+        titulo="Marcar como no-show e devolver para o SDR?"
+        rotuloConfirmar="Sim, devolver para reagendar"
+        aoFechar={() => setConfirmandoNoShow(null)}
+        aoConfirmar={async () => {
+          const alvo = confirmandoNoShow;
+          if (!alvo) return;
+          const problema = await responder(alvo.id, false);
+          if (problema) return problema;
+          setConfirmandoNoShow(null);
+        }}
+        descricao={
+          <>
+            <strong className="font-medium text-tinta">{confirmandoNoShow?.titulo}</strong> fica
+            registrada como não realizada, e o negócio:
+            <ul className="mt-2 space-y-1 list-disc pl-4">
+              <li>volta para o funil de prospecção, na etapa de reagendamento;</li>
+              <li>fica <strong className="font-medium text-tinta">sem dono</strong>, para o próximo SDR livre pegar;</li>
+              <li>entra sozinho na cadência de remarcação — o primeiro e-mail já fica pronto.</li>
+            </ul>
+            <p className="mt-2">
+              Depois disso este card sai da sua lista e esta página fecha: ele passa a ser do time
+              de prospecção.
+            </p>
           </>
         }
       />
