@@ -15,13 +15,19 @@ import { DescontosTab } from "@/components/admin/DescontosTab";
 import { CadenciasTab } from "@/components/admin/CadenciasTab";
 import { IntegracoesTab } from "@/components/admin/IntegracoesTab";
 import { Abas, PainelDaAba, useAbaNaUrl, useIdDeAbas } from "@/components/ui";
+import { ehAbaAdmin, type AbaAdmin } from "@/components/admin/abas";
 
 /**
- * A lista e a fonte do tipo. Antes a uniao estava escrita a mao no `useState`
- * ao lado de um literal inline, e o `onClick` fazia `t.id as any` para os dois
- * conversarem — ou seja, acrescentar uma aba e esquecer da uniao compilava.
+ * A lista COM ÍCONES, para desenhar. As chaves e o validador vivem em
+ * `admin/abas.ts`, FORA da fronteira de cliente — a página do admin é server
+ * component e precisa validar o `?tab=` antes de renderizar. Chamar do servidor
+ * uma função exportada daqui derrubava a rota com 500.
+ *
+ * O `satisfies` amarra as duas listas: acrescentar uma aba aqui sem
+ * acrescentar em `abas.ts` deixa de compilar. Era a garantia que o arranjo
+ * anterior dava, e que eu não podia perder ao separar os arquivos.
  */
-const ABAS_ADMIN = [
+const ABAS_COM_ICONE = [
   { chave: "desempenho", rotulo: "Desempenho", icone: LineChart },
   { chave: "vendedores", rotulo: "Time", icone: Users },
   { chave: "funil", rotulo: "Funil do Vendedor", icone: BarChart3 },
@@ -30,13 +36,12 @@ const ABAS_ADMIN = [
   { chave: "descontos", rotulo: "Descontos", icone: BadgePercent },
   { chave: "cadencias", rotulo: "Cadências", icone: Send },
   { chave: "integracoes", rotulo: "Integrações", icone: Plug },
-] as const;
+] as const satisfies readonly { chave: AbaAdmin; rotulo: string; icone: typeof Users }[];
 
-export type AbaAdmin = (typeof ABAS_ADMIN)[number]["chave"];
-
-export function ehAbaAdmin(v: string | undefined): v is AbaAdmin {
-  return ABAS_ADMIN.some((a) => a.chave === v);
-}
+// Reexportados para quem já importava daqui continuar valendo. O valor vem de
+// `abas.ts`; não há uma segunda definição para divergir.
+export { ehAbaAdmin };
+export type { AbaAdmin };
 
 export function AdminClient({
   usuarios,
@@ -126,7 +131,7 @@ export function AdminClient({
 
       <div className="mb-6 border-b border-fio pb-px">
         <Abas
-          abas={ABAS_ADMIN.map((a) => ({
+          abas={ABAS_COM_ICONE.map((a) => ({
             ...a,
             contagem:
               a.chave === "vendedores" ? membrosAtivos.length

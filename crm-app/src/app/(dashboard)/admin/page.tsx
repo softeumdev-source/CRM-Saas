@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminClient, ehAbaAdmin } from "@/components/admin/AdminClient";
+import { AdminClient } from "@/components/admin/AdminClient";
+// De `abas.ts`, e NÃO de `AdminClient`: aquele é `"use client"`, e chamar do
+// servidor uma função que vive no cliente derruba a rota com 500.
+import { ehAbaAdmin } from "@/components/admin/abas";
 import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipelines";
 
 /**
