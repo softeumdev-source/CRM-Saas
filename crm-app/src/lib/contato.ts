@@ -42,9 +42,30 @@ export function numeroParaWhatsapp(valor: string | null | undefined): string | n
   return null;
 }
 
-export function linkDoWhatsapp(valor: string | null | undefined): string | null {
+/**
+ * O link que abre a conversa no WhatsApp Web (ou no app, no celular).
+ *
+ * Com `texto`, a caixa de mensagem ja abre PREENCHIDA — e e isso que torna o
+ * envio manual viavel: a pessoa escreve no CRM, clica uma vez e so aperta
+ * enviar do outro lado. Sem isso seria copiar, trocar de aba, colar.
+ *
+ * Nao ha limite documentado para `?text=`, mas navegador tem: URL muito longa
+ * e truncada em silencio, e a pessoa mandaria meia mensagem sem perceber. As
+ * nossas passam longe de 2000 caracteres; quem chamar com um texto gigante
+ * recebe `null` e a tela oferece copiar em vez de abrir.
+ */
+const TETO_DO_TEXTO = 1800;
+
+export function linkDoWhatsapp(
+  valor: string | null | undefined,
+  texto?: string | null,
+): string | null {
   const n = numeroParaWhatsapp(valor);
-  return n ? `https://wa.me/${n}` : null;
+  if (!n) return null;
+  const t = (texto || "").trim();
+  if (!t) return `https://wa.me/${n}`;
+  if (t.length > TETO_DO_TEXTO) return null;
+  return `https://wa.me/${n}?text=${encodeURIComponent(t)}`;
 }
 
 /** `mailto:` só quando existe algo que pareça um endereço. */

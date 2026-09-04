@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Ban, Clock, MessageCircle, Send, ShieldAlert } from "lucide-react";
+import { ArrowDownLeft, Check, Clock, ExternalLink, MessageCircle, Send, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { formatarDataHora } from "@/lib/atividades";
@@ -12,6 +12,8 @@ import type { NegocioComRelacoes } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/types";
 import { Alerta, AreaTexto, Botao, Selo, Vazio } from "@/components/ui";
 import { BotaoSugerirHorarios } from "@/components/agenda/BotaoSugerirHorarios";
+import { linkDoWhatsapp, numeroParaWhatsapp } from "@/lib/contato";
+import { registrarMensagemManual } from "@/lib/whatsapp/registroManual";
 import { ListaDeAnexos } from "@/components/negocio/ListaDeAnexos";
 import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
 
@@ -180,6 +182,7 @@ export function WhatsappTab({ negocio }: { negocio: NegocioComRelacoes }) {
       {/* `janela` é nula até a montagem — ver o comentário do relógio acima. */}
       {janela && (
         <Compositor
+          negocio={negocio}
           janela={janela}
           whatsapp={whatsapp}
           rascunho={rascunho}
@@ -197,6 +200,7 @@ export function WhatsappTab({ negocio }: { negocio: NegocioComRelacoes }) {
           enviando={enviando}
           erro={erro}
           aoEnviar={enviar}
+          aoRegistrado={carregar}
         />
       )}
     </div>
@@ -300,6 +304,7 @@ function Balao({ mensagem, anexos }: { mensagem: Mensagem; anexos: AnexoLinha[] 
 }
 
 function Compositor({
+  negocio,
   janela,
   whatsapp,
   rascunho,
@@ -307,7 +312,9 @@ function Compositor({
   enviando,
   erro,
   aoEnviar,
+  aoRegistrado,
 }: {
+  negocio: NegocioComRelacoes;
   janela: ReturnType<typeof janelaDeResposta>;
   whatsapp: { configurado: boolean; pausado: boolean; motivo: string | null } | null;
   rascunho: string;
@@ -315,87 +322,227 @@ function Compositor({
   enviando: boolean;
   erro: string | null;
   aoEnviar: () => void;
+  aoRegistrado: () => void;
 }) {
-  // Precedência deliberada: o canal desligado ganha da janela. Mostrar "janela
-  // aberta, escreva aqui" com o número pausado seria mentir.
-  if (whatsapp && !whatsapp.configurado) {
-    return (
-      <Alerta tom="neutro" icone={Ban} titulo="WhatsApp ainda não conectado">
-        Falta concluir a conta na Meta (número, verificação do negócio e templates aprovados).
-        Enquanto isso a conversa fica só de leitura.
-      </Alerta>
-    );
-  }
+  const [abriu, setAbriu] = useState(false);
+  const [modoRecebida, setModoRecebida] = useState(false);
+  const [recebida, setRecebida] = useState("");
+  const [registrando, setRegistrando] = useState(false);
+  const [erroManual, setErroManual] = useState<string | null>(null);
 
-  if (whatsapp?.pausado) {
-    return (
-      <Alerta tom="alerta" icone={ShieldAlert} titulo="Canal pausado">
-        {whatsapp.motivo || "O envio por WhatsApp está pausado."} Nada sai daqui enquanto isso.
-      </Alerta>
-    );
-  }
+  const numero = negocio.contato?.whatsapp || negocio.contato?.telefone || "";
+  const numeroOk = !!numeroParaWhatsapp(numero);
+  const link = linkDoWhatsapp(numero, rascunho);
+  // `link` nulo COM número válido só acontece por texto longo demais para uma
+  // URL. Separar os dois casos importa: um se resolve no cadastro, o outro
+  // encurtando a mensagem, e "não deu" não diz qual é.
+  const textoLongoDemais = numeroOk && !!rascunho.trim() && !link;
 
-  // Dois estados diferentes, e tratá-los como um só manda a pessoa esperar uma
-  // coisa que não vai acontecer. `expiraEm` nulo é o caso "nunca houve
-  // conversa": ninguém vai "responder de volta" porque ninguém escreveu ainda.
-  if (!janela.aberta) {
-    return janela.expiraEm === null ? (
-      <Alerta tom="neutro" icone={Clock} titulo="Este cliente ainda não escreveu">
-        A caixa de texto só abre depois que ele mandar a primeira mensagem — é a regra da Meta, e é
-        o que separa conversa de abordagem. Para dar o primeiro toque, use um modelo aprovado pela
-        cadência.
-      </Alerta>
-    ) : (
-      <Alerta tom="alerta" icone={Clock} titulo="A janela de 24 horas está fechada">
-        Fora dela a Meta só aceita um modelo aprovado — texto livre aqui derrubaria a nota de
-        qualidade do número. Assim que o cliente responder, a caixa de texto volta.
+  /**
+   * O envio pela API só aparece quando ele REALMENTE pode sair: canal
+   * configurado, não pausado, e dentro da janela de 24h. Fora disso o botão
+   * sumiria de qualquer jeito na rota — mostrá-lo seria oferecer um caminho
+   * que devolve erro.
+   */
+  const podeApi = !!whatsapp?.configurado && !whatsapp.pausado && janela.aberta;
+
+  const registrar = async (direcao: "saida" | "entrada", corpo: string) => {
+    setRegistrando(true);
+    setErroManual(null);
+    const r = await registrarMensagemManual({
+      tenantId: negocio.tenant_id,
+      negocioId: negocio.id,
+      contatoId: negocio.contato?.id ?? null,
+      destino: numero,
+      corpo,
+      direcao,
+    });
+    setRegistrando(false);
+    if (!r.ok) {
+      setErroManual(r.erro);
+      return;
+    }
+    if (direcao === "saida") {
+      aoMudar("");
+      setAbriu(false);
+    } else {
+      setRecebida("");
+      setModoRecebida(false);
+    }
+    aoRegistrado();
+  };
+
+  if (!numeroOk) {
+    return (
+      <Alerta tom="alerta" icone={ShieldAlert} titulo="Este contato não tem WhatsApp">
+        Sem número não há para onde escrever — e um número sem DDD abriria conversa com outra
+        pessoa. Preencha o WhatsApp na aba Geral.
       </Alerta>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <Selo tom={janela.acabando ? "alerta" : "ok"} icone={Clock}>
-          Janela aberta · faltam {descreverRestante(janela.restanteMs)}
-        </Selo>
-      </div>
+      {whatsapp?.pausado && (
+        <Alerta tom="alerta" icone={ShieldAlert} titulo="Envio automático pausado">
+          {whatsapp.motivo || "O envio por WhatsApp está pausado."} O envio pela mão continua
+          funcionando: ele sai do seu WhatsApp, não do sistema.
+        </Alerta>
+      )}
+
+      {podeApi && (
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <Selo tom={janela.acabando ? "alerta" : "ok"} icone={Clock}>
+            Janela aberta · faltam {descreverRestante(janela.restanteMs)}
+          </Selo>
+        </div>
+      )}
+
       <AreaTexto
         rows={3}
         value={rascunho}
         onChange={(e) => aoMudar(e.target.value)}
-        placeholder="Escreva a resposta…"
-        aria-label="Resposta por WhatsApp"
-        disabled={enviando}
+        placeholder="Escreva a mensagem…"
+        aria-label="Mensagem de WhatsApp"
+        disabled={enviando || registrando}
       />
+
       {/* O motivo da recusa fica NA TELA, e o rascunho continua no textarea.
-          Quase todo erro aqui é recuperável — a janela fechou, o canal pausou,
-          o teto da hora encheu — e apagar o texto junto seria punir a pessoa
-          por uma coisa que não foi ela que fez. */}
-      {erro && (
+          Quase todo erro aqui é recuperável, e apagar o texto junto seria punir
+          a pessoa por uma coisa que não foi ela que fez. */}
+      {(erro || erroManual) && (
         <Alerta tom="risco" icone={ShieldAlert} titulo="A mensagem não foi enviada">
-          {erro}
+          {erro || erroManual}
         </Alerta>
       )}
+
+      {textoLongoDemais && (
+        <Alerta tom="alerta" titulo="Texto longo demais para abrir já preenchido">
+          O WhatsApp recebe o texto pela URL, e esta ficou grande demais — o navegador cortaria a
+          mensagem no meio sem avisar. Encurte um pouco, ou abra a conversa e cole lá.
+        </Alerta>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Passa pelo MESMO `aoMudar` do textarea, e não por um setState
-            próprio: é esse handler que zera a chave de idempotência. Texto
-            diferente é outra mensagem, e a sugestão muda o texto. */}
-        <BotaoSugerirHorarios
-          desabilitado={enviando}
-          aoSugerir={(texto) =>
-            aoMudar(rascunho.trim() ? `${rascunho.trimEnd()}\n\n${texto}` : texto)
-          }
-        />
-        <Botao
-          variante="primario"
-          icone={Send}
-          disabled={!rascunho.trim() || enviando}
-          onClick={aoEnviar}
-        >
-          {enviando ? "Enviando…" : "Enviar"}
-        </Botao>
+        <div className="flex flex-wrap items-center gap-2">
+          <BotaoSugerirHorarios
+            desabilitado={enviando || registrando}
+            aoSugerir={(texto) =>
+              aoMudar(rascunho.trim() ? `${rascunho.trimEnd()}\n\n${texto}` : texto)
+            }
+          />
+          <Botao
+            tamanho="sm"
+            variante="secundario"
+            icone={ArrowDownLeft}
+            disabled={registrando}
+            onClick={() => setModoRecebida((v) => !v)}
+            aria-expanded={modoRecebida}
+          >
+            Registrar resposta dele
+          </Botao>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* O caminho PRINCIPAL, e de propósito: abrir o WhatsApp com o texto
+              pronto é grátis; a API cobra ~R$ 0,32 por mensagem fria. */}
+          <a
+            href={link || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-disabled={!link}
+            onClick={(e) => {
+              if (!link) {
+                e.preventDefault();
+                return;
+              }
+              setAbriu(true);
+            }}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-rotulo font-medium",
+              "transition-colors duration-150 ease-out",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento",
+              link
+                ? "bg-acento text-white hover:bg-acento/90"
+                : "bg-recuo text-tinta-fraca pointer-events-none",
+            ].join(" ")}
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Abrir no WhatsApp
+          </a>
+          {podeApi && (
+            <Botao
+              variante="secundario"
+              tamanho="sm"
+              icone={Send}
+              disabled={!rascunho.trim() || enviando || registrando}
+              onClick={aoEnviar}
+              title="Sai pela API da Meta — esta mensagem é cobrada."
+            >
+              {enviando ? "Enviando…" : "Enviar pela API"}
+            </Botao>
+          )}
+        </div>
       </div>
+
+      {/* PERGUNTA, não marca sozinho. Abrir o WhatsApp não é prova de que a
+          mensagem saiu: a pessoa pode fechar a aba, mudar de ideia, ou o número
+          pode estar errado. Um registro automático encheria o histórico de
+          mensagens que nunca existiram — e a cadência confiaria nele. */}
+      {abriu && (
+        <div className="rounded-2xl border border-acento/40 bg-acento-fraco p-3 flex flex-wrap items-center gap-2">
+          <p className="text-rotulo text-tinta flex-1 min-w-0">
+            Abri o WhatsApp com este texto. Você enviou?
+          </p>
+          <Botao
+            variante="primario"
+            tamanho="sm"
+            icone={Check}
+            carregando={registrando}
+            disabled={!rascunho.trim()}
+            onClick={() => void registrar("saida", rascunho)}
+          >
+            Registrar como enviada
+          </Botao>
+          <Botao tamanho="sm" variante="secundario" onClick={() => setAbriu(false)}>
+            Não enviei
+          </Botao>
+        </div>
+      )}
+
+      {/* O outro lado da conversa. É este registro que acende o selo azul no
+          Kanban e faz a cadência PARAR — sem ele, o robô continuaria mandando
+          e-mail para alguém que já está falando com você no WhatsApp. */}
+      {modoRecebida && (
+        <div className="rounded-2xl border border-fio bg-recuo p-3 flex flex-col gap-2">
+          <p className="text-rotulo text-tinta-suave">
+            Cole aqui o que o cliente respondeu. Isso marca o lead como respondido no Kanban e
+            interrompe a cadência de e-mails.
+          </p>
+          <AreaTexto
+            rows={2}
+            value={recebida}
+            onChange={(e) => setRecebida(e.target.value)}
+            placeholder="O que ele escreveu…"
+            aria-label="Resposta recebida do cliente"
+            disabled={registrando}
+          />
+          <div className="flex justify-end gap-2">
+            <Botao tamanho="sm" variante="secundario" onClick={() => setModoRecebida(false)}>
+              Cancelar
+            </Botao>
+            <Botao
+              variante="primario"
+              tamanho="sm"
+              icone={Check}
+              carregando={registrando}
+              disabled={!recebida.trim()}
+              onClick={() => void registrar("entrada", recebida)}
+            >
+              Registrar resposta
+            </Botao>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
