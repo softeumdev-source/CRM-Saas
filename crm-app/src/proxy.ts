@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/config";
+import { redirectComSessao } from "@/lib/redirectComSessao";
 
 // Caminhos que dispensam sessão. O do webhook está COMPLETO de propósito: o
 // prefixo curto `/api/whatsapp` liberaria junto `/api/whatsapp/responder`, que
@@ -59,13 +60,13 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);
-    return NextResponse.redirect(url);
+    return redirectComSessao(url, response);
   }
 
   if (user && path === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    return NextResponse.redirect(url);
+    return redirectComSessao(url, response);
   }
 
   return response;
