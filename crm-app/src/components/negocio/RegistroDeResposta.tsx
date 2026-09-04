@@ -57,13 +57,17 @@ export function RegistroDeResposta({ negocio }: { negocio: NegocioComRelacoes })
     setPronto(true);
 
     // Marcar como lida AQUI, e não ao abrir a aba: quem digitou o texto foi
-    // quem leu a mensagem no WhatsApp Web. Fazer isso na montagem apagaria o
-    // sinal de quem só passou pela aba — que é exatamente o erro que o hook
-    // `usarRespostasLidas` documenta e evita.
-    void createClient()
+    // quem leu a mensagem no WhatsApp Web.
+    //
+    // `await`, e não `void`: o builder do PostgREST é um thenable preguiçoso —
+    // sem `await` nem `.then()` a requisição nunca sai, sem erro nenhum. Foi
+    // exatamente esse `void` que deixou o selo de "Respondeu" aceso para
+    // sempre (ver o bloco no topo de `usarRespostasLidas.ts`).
+    const { error } = await createClient()
       .from("negocios")
       .update({ respostas_nao_lidas: 0, respostas_lidas_em: new Date().toISOString() })
       .eq("id", negocio.id);
+    if (error) console.error("Não foi possível marcar as respostas como lidas:", error.message);
   };
 
   return (
