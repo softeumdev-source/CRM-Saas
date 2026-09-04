@@ -16,6 +16,7 @@ import { paraBase64Url } from "@/lib/base64url";
 import { accessTokenDe } from "@/lib/google/calendar";
 
 const ENVIO = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const MENSAGENS = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 
 /** Limite de linha do RFC 2045 para corpo codificado. */
 const COLUNAS_BASE64 = 76;
@@ -219,5 +220,45 @@ export async function enviarPeloGmail(
   }
 
   const dados = (await resp.json()) as { id?: string; threadId?: string };
-  return { id: dados.id || "", threadId: dados.threadId || "", messageId };
+  return {
+    id: dados.id || "",
+    threadId: dados.threadId || "",
+    messageId: (await messageIdReal(token, dados.id)) || messageId,
+  };
+}
+
+/**
+ * O `Message-ID` que a mensagem REALMENTE ficou tendo.
+ *
+ * O Gmail DESCARTA o `Message-ID` que a gente escreve no MIME e põe um dele,
+ * `<...@mail.gmail.com>`. Medido na produção: o e-mail saiu com
+ * `<dc9fd0eb-…@softeum.com.br>` no nosso banco, e a resposta do cliente voltou
+ * com `In-Reply-To: <CANouC3PP…@mail.gmail.com>` — ou seja, o id que a gente
+ * guardava não existia em lugar nenhum do mundo.
+ *
+ * Isso não é cosmético. `montarThread` monta `In-Reply-To` e `References` a
+ * partir desta coluna: com um id fantasma, o cliente do outro lado (Outlook,
+ * Apple Mail, qualquer um que não seja o Gmail) não tem como pendurar a nossa
+ * resposta na conversa, e ela aparece como assunto novo. Dentro do Gmail
+ * passava despercebido porque lá quem agrupa é o `threadId`.
+ *
+ * Custa uma leitura de metadados por envio. O envio JÁ DEU CERTO quando esta
+ * função roda — por isso ela nunca lança: falhar aqui devolve `null` e quem
+ * chama fica com o id que gerou, que é exatamente o comportamento de antes.
+ */
+async function messageIdReal(token: string, id: string | undefined): Promise<string | null> {
+  if (!id) return null;
+  try {
+    const r = await fetch(
+      `${MENSAGENS}/${encodeURIComponent(id)}?format=metadata&metadataHeaders=Message-ID`,
+      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+    );
+    if (!r.ok) return null;
+    const m = (await r.json()) as { payload?: { headers?: { name?: string; value?: string }[] } };
+    const cab = (m.payload?.headers || []).find((h) => h.name?.toLowerCase() === "message-id");
+    const valor = (cab?.value || "").trim();
+    return valor || null;
+  } catch {
+    return null;
+  }
 }

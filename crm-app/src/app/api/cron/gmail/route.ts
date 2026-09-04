@@ -230,6 +230,30 @@ async function processar(
   const meta = await caixa.metadados(id);
   const lida = lerMensagem(meta, i.usuario_id, i.email_google);
 
+  // ESTA MENSAGEM FOMOS NÓS QUE MANDAMOS? Então ela já está no banco, e gravar
+  // de novo põe o mesmo e-mail duas vezes no card.
+  //
+  // A trava de `idempotency_key` não pega este caso: a linha do envio tem a
+  // chave da cadência (`inscricao:passo`) e esta teria `email:<Message-ID>` —
+  // chaves diferentes para a mesma mensagem. Casar por `Message-ID` também não
+  // resolveria, e foi o que eu tinha imaginado a princípio: o Gmail TROCA o
+  // `Message-ID` do MIME pelo dele, então o cabeçalho que volta aqui não é o
+  // que escrevemos.
+  //
+  // `provedor_id` é o id do Gmail devolvido pelo `messages.send`, e é o mesmo
+  // `id` que a sincronização usa para buscar a mensagem. É a única coisa que
+  // liga as duas pontas sem ambiguidade.
+  if (lida.direcao === "saida") {
+    const { data: nossa } = await admin
+      .from("mensagens")
+      .select("id")
+      .eq("tenant_id", i.tenant_id!)
+      .eq("provedor_id", id)
+      .limit(1)
+      .maybeSingle();
+    if (nossa) return "duplicada";
+  }
+
   // O OUTRO lado da conversa. Numa mensagem recebida é quem escreveu; numa
   // enviada é para quem escrevemos — e nunca a própria caixa, senão o contato
   // resolvido seria o vendedor.
