@@ -11,11 +11,14 @@ import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
 import {
   CARDS_POR_ETAPA,
+  buscarAprovacoesDoBoard,
   buscarCadenciaDoBoard,
   buscarNegociosDoBoard,
   contarPorEtapa,
+  mapaDeAprovacoes,
   mapaDeCadencias,
   type ResumoCadencia,
+  type ResumoDeAprovacao,
 } from "@/lib/board";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
@@ -45,6 +48,7 @@ export function KanbanPageClient({
   responsaveis,
   usuarioAtual,
   cadencias: cadenciasIniciais,
+  aprovacoes: aprovacoesIniciais,
 }: {
   /** O funil desta tela. É ele que decide o recorte, o título e as métricas. */
   pipeline: Pipeline | null;
@@ -57,6 +61,7 @@ export function KanbanPageClient({
   usuarioAtual: Usuario;
   /** Andamento da cadência por negócio. Vazio fora do board do SDR. */
   cadencias: Record<string, ResumoCadencia>;
+  aprovacoes: Record<string, ResumoDeAprovacao>;
 }) {
   const pipelineId = pipeline?.id ?? null;
   // O SDR nao vende: o que ele entrega e reuniao, nao receita. Por isso o
@@ -66,6 +71,7 @@ export function KanbanPageClient({
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
   const [totais, setTotais] = useEstadoDaProp(totaisPorEtapa);
   const [cadencias, setCadencias] = useEstadoDaProp(cadenciasIniciais);
+  const [aprovacoes, setAprovacoes] = useEstadoDaProp(aprovacoesIniciais);
   // Quantos cards por coluna estão carregados. Sobe quando o usuário pede mais;
   // o board inteiro recarrega com o teto novo, numa consulta só.
   const [porEtapa, setPorEtapa] = useState(porEtapaInicial);
@@ -88,17 +94,21 @@ export function KanbanPageClient({
   // `negocios`.
   const recarregar = useCallback(async () => {
     const supabase = createClient();
-    const [{ data }, { data: novosTotais }, inscricoes] = await Promise.all([
+    const [{ data }, { data: novosTotais }, inscricoes, pendentes] = await Promise.all([
       buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
       contarPorEtapa(supabase, pipelineId),
       ehSdr ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
+      // Nos dois boards: aprovar um e-mail tem que apagar o aviso do card sem
+      // F5, e é este refetch que faz isso.
+      buscarAprovacoesDoBoard(supabase),
     ]);
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
     if (novosTotais) {
       setTotais(Object.fromEntries(novosTotais.map((t) => [t.etapa_id, Number(t.total)])));
     }
     if (ehSdr) setCadencias(mapaDeCadencias(inscricoes.data));
-  }, [pipelineId, porEtapa, ehSdr, setNegocios, setTotais, setCadencias]);
+    setAprovacoes(mapaDeAprovacoes(pendentes.data));
+  }, [pipelineId, porEtapa, ehSdr, setNegocios, setTotais, setCadencias, setAprovacoes]);
 
   // Busca com o teto novo ANTES de mexer no estado: assim o board nunca fica
   // um render com o teto alto e os cards antigos.
@@ -415,6 +425,7 @@ export function KanbanPageClient({
         negocios={filtrados}
         variante={ehSdr ? "sdr" : "vendas"}
         cadencias={cadencias}
+        aprovacoes={aprovacoes}
         totaisPorEtapa={totais}
         carregadosPorEtapa={carregadosPorEtapa}
         carregandoMais={carregandoMais}

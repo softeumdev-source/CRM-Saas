@@ -6,13 +6,14 @@ import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 import { LeadCard, type VarianteDoCard } from "@/components/LeadCard";
-import type { ResumoCadencia } from "@/lib/board";
+import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
 
 export function KanbanBoard({
   etapas,
   negocios,
   variante = "vendas",
   cadencias,
+  aprovacoes,
   totaisPorEtapa,
   carregadosPorEtapa,
   carregandoMais,
@@ -26,6 +27,7 @@ export function KanbanBoard({
   variante?: VarianteDoCard;
   /** Andamento da cadencia por negocio. Vazio fora do board do SDR. */
   cadencias?: Record<string, ResumoCadencia>;
+  aprovacoes?: Record<string, ResumoDeAprovacao>;
   /** Quantos existem no banco por etapa — pode ser mais do que está carregado. */
   totaisPorEtapa: Record<string, number>;
   /** Quantos estão carregados por etapa, ANTES dos filtros de busca/foco. */
@@ -161,7 +163,12 @@ export function KanbanBoard({
                         arrastando === negocio.id ? "opacity-40" : ""
                       }`}
                     >
-                      <LeadCard negocio={negocio} variante={variante} cadencia={cadencias?.[negocio.id]} />
+                      <LeadCard
+                        negocio={negocio}
+                        variante={variante}
+                        cadencia={cadencias?.[negocio.id]}
+                        aprovacao={aprovacoes?.[negocio.id]}
+                      />
                     </div>
                   ))
                 )}

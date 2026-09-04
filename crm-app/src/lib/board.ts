@@ -31,6 +31,25 @@ export type ResumoCadencia = {
   status: string;
 };
 
+/**
+ * O que está parado esperando UMA PESSOA neste negócio.
+ *
+ * O card mostrava resposta do cliente, atraso e passo da cadência — e não
+ * mostrava a única coisa que depende de um clique agora: o e-mail escrito,
+ * pronto, esperando alguém aprovar. Ele ficava invisível até abrir o card, e
+ * um lead com toque vencido parecia idêntico a um lead em dia.
+ *
+ * Os dois números são separados porque pedem verbos diferentes: o e-mail se
+ * APROVA (o sistema manda em seguida) e o WhatsApp se MANDA (pelo Web, pela
+ * pessoa). Somar os dois num "2 pendências" esconderia justamente o que fazer.
+ */
+export type ResumoDeAprovacao = {
+  /** E-mails escritos, esperando "aprovar e enviar". */
+  email: number;
+  /** Toques de WhatsApp para a pessoa mandar pelo Web. */
+  whatsapp: number;
+};
+
 export type DadosDoBoard = {
   pipeline: Pipeline | null;
   etapas: EtapaPipeline[];
@@ -42,6 +61,8 @@ export type DadosDoBoard = {
   usuarioAtual: Usuario;
   /** Vazio no board do vendedor: lá a cadência não é buscada nem mostrada. */
   cadencias: Record<string, ResumoCadencia>;
+  /** O que espera um clique, nos DOIS boards — ver `buscarAprovacoesDoBoard`. */
+  aprovacoes: Record<string, ResumoDeAprovacao>;
 };
 
 /**
@@ -67,7 +88,15 @@ export async function carregarBoard(
   // round-trip por um dado que ele não desenha.
   const mostraCadencia = chave === "sdr";
 
-  const [etapas, { data: negocios }, { data: totais }, { data: responsaveis }, { data: usuarioAtual }, inscricoes] =
+  const [
+    etapas,
+    { data: negocios },
+    { data: totais },
+    { data: responsaveis },
+    { data: usuarioAtual },
+    inscricoes,
+    pendentes,
+  ] =
     await Promise.all([
       carregarEtapas(supabase, pipeline?.id),
       // `negocios_do_board` devolve as N primeiras de CADA etapa numa consulta
@@ -85,6 +114,10 @@ export async function carregarBoard(
         .eq("ativo", true),
       supabase.from("usuarios").select("*").eq("id", user!.id).single(),
       mostraCadencia ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
+      // Nos DOIS boards, diferente da cadência: um lead entregue ao vendedor
+      // pode chegar lá com um toque ainda na fila, e some-lo do card do
+      // vendedor seria escondê-lo de quem passou a ser dono dele.
+      buscarAprovacoesDoBoard(supabase),
     ]);
 
   return {
@@ -96,7 +129,44 @@ export async function carregarBoard(
     responsaveis: responsaveis || [],
     usuarioAtual: usuarioAtual!,
     cadencias: mapaDeCadencias(inscricoes.data),
+    aprovacoes: mapaDeAprovacoes(pendentes.data),
   };
+}
+
+/**
+ * As mensagens paradas esperando uma pessoa, de todos os negócios visíveis.
+ *
+ * PostgREST direto pelo mesmo motivo de `buscarCadenciaDoBoard`: a RLS de
+ * `mensagens` é `exists (select 1 from negocios n where n.id = negocio_id)`,
+ * ou seja, delega inteiramente para `negocios` — que é a autorização do board.
+ *
+ * O índice `mensagens_aprovacao_idx` é parcial em
+ * `status = 'aguardando_aprovacao'`, então esta consulta lê só as linhas que
+ * interessam, e não a tabela.
+ */
+export function buscarAprovacoesDoBoard(supabase: SupabaseClient<Database>) {
+  return supabase
+    .from("mensagens")
+    .select("negocio_id, canal, envio_manual")
+    .eq("status", "aguardando_aprovacao")
+    .not("negocio_id", "is", null);
+}
+
+type LinhaPendente = { negocio_id: string | null; canal: string; envio_manual: boolean };
+
+/** Conta por negócio, separando o que se aprova do que se manda na mão. */
+export function mapaDeAprovacoes(linhas: unknown): Record<string, ResumoDeAprovacao> {
+  const mapa: Record<string, ResumoDeAprovacao> = {};
+  for (const linha of (linhas as LinhaPendente[] | null) || []) {
+    if (!linha.negocio_id) continue;
+    const atual = (mapa[linha.negocio_id] ??= { email: 0, whatsapp: 0 });
+    // `envio_manual` manda mais que o canal: um WhatsApp com template aprovado
+    // na Meta sairia sozinho depois de aprovado, e aí ele se aprova como o
+    // e-mail. É o `envio_manual` que diz "esta aqui sai pela sua mão".
+    if (linha.envio_manual) atual.whatsapp += 1;
+    else atual.email += 1;
+  }
+  return mapa;
 }
 
 /**

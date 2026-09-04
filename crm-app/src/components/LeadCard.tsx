@@ -12,7 +12,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import type { NegocioComRelacoes } from "@/lib/types";
-import type { ResumoCadencia } from "@/lib/board";
+import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
 import { formatarMoeda, iniciais } from "@/lib/types";
 import { Ponto, Selo } from "@/components/ui";
 import {
@@ -50,11 +50,14 @@ export function LeadCard({
   negocio,
   variante = "vendas",
   cadencia,
+  aprovacao,
 }: {
   negocio: NegocioComRelacoes;
   variante?: VarianteDoCard;
   /** Andamento da cadencia deste negocio. So o board do SDR passa. */
   cadencia?: ResumoCadencia;
+  /** O que esta parado esperando um clique. Os dois boards passam. */
+  aprovacao?: ResumoDeAprovacao;
 }) {
   const comAtividadeHoje = temAtividadeHoje(negocio);
   const dias = diasSemContato(negocio);
@@ -65,6 +68,39 @@ export function LeadCard({
 
   const naoLidas = negocio.respostas_nao_lidas ?? 0;
   const respondeu = naoLidas > 0;
+
+  // O que espera uma pessoa AGORA. Dois verbos, e por isso duas contas: o
+  // e-mail se aprova, o WhatsApp se manda pelo Web.
+  const paraAprovar = aprovacao?.email ?? 0;
+  const paraMandar = aprovacao?.whatsapp ?? 0;
+  const pendentes = paraAprovar + paraMandar;
+  const IconePendente = paraAprovar > 0 ? Mail : MessageCircle;
+  const textoPendente =
+    paraAprovar > 0 && paraMandar > 0
+      ? `${pendentes} mensagens esperando você`
+      : paraAprovar > 0
+        ? paraAprovar === 1
+          ? "1 e-mail para aprovar"
+          : `${paraAprovar} e-mails para aprovar`
+        : paraMandar === 1
+          ? "1 WhatsApp para você mandar"
+          : `${paraMandar} WhatsApp para você mandar`;
+
+  /**
+   * Para onde o clique leva.
+   *
+   * O card sempre abria a Visão Geral — inclusive quando o motivo de ele estar
+   * chamando atenção era uma resposta por ler ou um e-mail parado esperando
+   * aprovação. A pessoa clicava no aviso e caía numa tela que não falava dele,
+   * e o aviso continuava aceso porque ler é o que o apaga.
+   *
+   * Resposta ganha da aprovação: cliente esperando vale mais que fila nossa.
+   */
+  const destino = respondeu
+    ? `/negocios/${negocio.id}?tab=email`
+    : pendentes > 0
+      ? `/negocios/${negocio.id}?tab=sequencia`
+      : `/negocios/${negocio.id}`;
   const IconeCanal = negocio.ultima_resposta_canal === "whatsapp" ? MessageCircle : Mail;
   const IconeCadencia = cadencia?.canalProximo === "whatsapp" ? MessageCircle : Mail;
 
@@ -83,15 +119,17 @@ export function LeadCard({
   // acontecer com um lead, e ganha do atraso e do "trabalhado hoje".
   const borda = respondeu
     ? "border-info hover:border-info"
-    : comAtividadeHoje
-      ? "border-ok/40 hover:border-ok"
-      : proximaAtrasada
-        ? "border-risco/40 hover:border-risco"
-        : "border-fio hover:border-fio-forte";
+    : pendentes > 0
+      ? "border-alerta hover:border-alerta"
+      : comAtividadeHoje
+        ? "border-ok/40 hover:border-ok"
+        : proximaAtrasada
+          ? "border-risco/40 hover:border-risco"
+          : "border-fio hover:border-fio-forte";
 
   return (
     <Link
-      href={`/negocios/${negocio.id}`}
+      href={destino}
       // `prefetch={false}` não é micro-otimização: MEDIDO nos logs de produção,
       // abrir o Kanban disparava 12 requisições a 8 páginas `/negocios/<id>`
       // no MESMO segundo (02:04:27). O Next prefetcha todo `<Link>` que entra
@@ -148,6 +186,16 @@ export function LeadCard({
             <IconeCanal className="h-3 w-3 shrink-0" aria-hidden />
             {naoLidas === 1 ? "Respondeu" : `${naoLidas} respostas`}
             {negocio.ultima_resposta_em ? ` · ${formatarDataHora(negocio.ultima_resposta_em)}` : ""}
+          </p>
+        )}
+
+        {/* Logo abaixo da resposta: é a segunda coisa mais urgente do card, e
+            a única que a pessoa resolve com um clique. Ficava invisível daqui —
+            só aparecia depois de abrir o negócio e ir até a aba certa. */}
+        {pendentes > 0 && (
+          <p className="flex items-center gap-1 text-rotulo font-medium text-alerta">
+            <IconePendente className="h-3 w-3 shrink-0" aria-hidden />
+            {textoPendente}
           </p>
         )}
 
