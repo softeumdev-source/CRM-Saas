@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, Users, Wallet } from "lucide-react";
+import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Users, Wallet } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -21,10 +21,16 @@ import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 
-type Foco = "todos" | "atencao" | "atrasados" | "sem_agenda";
+type Foco = "todos" | "respondeu" | "atencao" | "atrasados" | "sem_agenda";
 
+/**
+ * "Responderam" vem logo depois de "Todos" porque é o filtro mais urgente da
+ * lista: os outros três falam do que NÓS deixamos de fazer; este fala de gente
+ * esperando do outro lado.
+ */
 const FOCOS: { chave: Foco; label: string }[] = [
   { chave: "todos", label: "Todos" },
+  { chave: "respondeu", label: "Responderam" },
   { chave: "atencao", label: "Sem atividade hoje" },
   { chave: "atrasados", label: "Atrasados" },
   { chave: "sem_agenda", label: "Sem próximo passo" },
@@ -190,6 +196,7 @@ export function KanbanPageClient({
 
       if (foco !== "todos") {
         const proxima = proximaAtividade(n.atividades_pendentes);
+        if (foco === "respondeu" && (n.respostas_nao_lidas ?? 0) === 0) return false;
         if (foco === "atencao" && temAtividadeHoje(n)) return false;
         if (foco === "atrasados" && !estaAtrasada(proxima?.data_agendada)) return false;
         if (foco === "sem_agenda" && proxima) return false;
@@ -212,11 +219,25 @@ export function KanbanPageClient({
       abertos: abertos.length,
       valor: abertos.reduce((acc, n) => acc + (n.valor || 0), 0),
       ponderado: abertos.reduce((acc, n) => acc + (n.valor || 0) * ((n.probabilidade ?? 0) / 100), 0),
+      responderam: filtrados.filter((n) => (n.respostas_nao_lidas ?? 0) > 0).length,
       hoje: filtrados.filter((n) => temAtividadeHoje(n)).length,
       atrasados: filtrados.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length,
       semAgenda: abertos.filter((n) => !proximaAtividade(n.atividades_pendentes)).length,
     };
   }, [filtrados]);
+
+  /**
+   * Quantos responderam no board INTEIRO, e não dentro do recorte atual.
+   *
+   * Tem que ser calculado sobre `negocios`, não sobre `filtrados`: o número vive
+   * no próprio botão "Responderam", e um número tirado do recorte cairia para
+   * zero assim que alguém usasse um dos outros filtros — o aviso sumiria
+   * exatamente quando é mais útil.
+   */
+  const totalResponderam = useMemo(
+    () => negocios.filter((n) => (n.respostas_nao_lidas ?? 0) > 0).length,
+    [negocios],
+  );
 
   // Contagem por etapa do que está carregado, sem os filtros de tela — é o
   // outro lado da conta do "ver mais" no cabeçalho da coluna.
@@ -258,7 +279,27 @@ export function KanbanPageClient({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        {/* Cinco colunas só quando o card de respostas existe. As duas classes
+            estão escritas por extenso de propósito: o Tailwind varre o código
+            em busca de literais, e uma classe montada por interpolação
+            (`md:grid-cols-${n}`) simplesmente não seria gerada. */}
+        <div
+          className={`grid grid-cols-2 gap-2.5 ${
+            resumo.responderam > 0 ? "md:grid-cols-5" : "md:grid-cols-4"
+          }`}
+        >
+          {/* Primeiro cartão, e só quando há alguém esperando. Um layout que
+              muda quando acontece algo importante é sinal, não defeito — e um
+              "Responderam: 0" fixo seria mais um número morto na tela. */}
+          {resumo.responderam > 0 && (
+            <ResumoCard
+              icone={<MessageCircle className="h-3.5 w-3.5" />}
+              rotulo="Responderam"
+              valor={String(resumo.responderam)}
+              cor="text-info"
+              detalhe="esperando você"
+            />
+          )}
           {ehSdr ? (
             <ResumoCard
               icone={<Users className="h-3.5 w-3.5" />}
@@ -305,18 +346,31 @@ export function KanbanPageClient({
             />
           </div>
 
-          <div className="flex items-center bg-recuo p-1 rounded-xl gap-1">
+          {/* `overflow-x-auto` + `min-w-0`: com o quinto filtro, esta fileira
+              media 575px num viewport de 390 e empurrava a PAGINA inteira para
+              o lado (medido). Rolar dentro do proprio controle preserva a forma
+              de segmento unico — quebrar em duas linhas empilharia tres fileiras
+              em cima do board no celular. */}
+          <div className="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-recuo p-1">
             {FOCOS.map((f) => (
               <button
                 key={f.chave}
                 onClick={() => setFoco(f.chave)}
-                className={`px-3 py-1.5 text-rotulo font-semibold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-semibold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap pointer-coarse:min-h-11 ${
                   foco === f.chave
                     ? "bg-superficie text-acento shadow-xs"
                     : "text-tinta-suave hover:text-tinta"
                 }`}
               >
                 {f.label}
+                {/* O contador só existe em "Responderam", e só quando há alguém
+                    esperando: um "(0)" permanente seria ruído, e o zero é
+                    justamente o estado em que não há nada a fazer. */}
+                {f.chave === "respondeu" && totalResponderam > 0 && (
+                  <span className="rounded-full bg-info px-1.5 text-[0.625rem] font-bold text-white tabular">
+                    {totalResponderam}
+                  </span>
+                )}
               </button>
             ))}
           </div>
