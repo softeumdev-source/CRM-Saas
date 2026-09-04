@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRightLeft, Building2, CalendarPlus, Mail, MessageCircle, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, CalendarPlus, Mail, MessageCircle, Phone, RotateCcw, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -351,6 +351,22 @@ export function NegocioDetailClient({
                   {negocio.ganho ? "Ganho" : "Perdido"}
                 </span>
               )}
+              {/* Este lead NAO e frio: um vendedor ja falou com essa pessoa e a
+                  parqueou para depois. Sem este selo, quem pega o card no board
+                  do SDR abre uma cadencia de primeiro contato com alguem que ja
+                  conhece a empresa — e o cliente percebe.
+
+                  So aparece enquanto o lead esta em reaquecimento (ou seja, no
+                  funil de prospeccao). Depois de entregue, a informacao vira
+                  historico e sai da frente. */}
+              {negocio.vendedor_origem_id && entrega && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-info-fraco px-2.5 py-1 text-rotulo font-medium text-info"
+                  title="Voltou da nutricao para o SDR reaquecer. Ja teve contato com um vendedor."
+                >
+                  <RotateCcw className="h-3 w-3" aria-hidden /> Em reaquecimento
+                </span>
+              )}
             </div>
             <p className="text-rotulo text-tinta-suave mt-1">{negocio.titulo}</p>
             {/* Os dados do contato deixam de ser texto e viram AÇÃO. Antes
@@ -430,7 +446,21 @@ export function NegocioDetailClient({
                 esta, e "Ganhei" nem chega a existir lá. */}
             {entrega && (
               <button
-                onClick={() => { setDestinatario(''); setEntregando(true); }}
+                onClick={() => {
+                  // Pre-seleciona quem era o dono ANTES do reaquecimento. O
+                  // lead so tem `vendedor_origem_id` se voltou da nutricao para
+                  // o SDR; nesse caso devolver ao rodizio jogaria fora o
+                  // relacionamento que aquele vendedor construiu.
+                  //
+                  // So se ele ainda estiver entre os que podem receber: um
+                  // vendedor desativado nao pode ser pre-selecionado, ou a
+                  // entrega falharia com o campo parecendo preenchido.
+                  const origem = negocio.vendedor_origem_id;
+                  setDestinatario(
+                    origem && entrega?.responsaveis.some((v) => v.id === origem) ? origem : '',
+                  );
+                  setEntregando(true);
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <ArrowRightLeft className="h-3.5 w-3.5" /> Entregar ao vendedor
@@ -640,7 +670,14 @@ export function NegocioDetailClient({
               sai da prospecção e entra em <strong>{entrega.funil.nome}</strong>, na etapa{" "}
               <strong>{entrega.etapa.nome}</strong>. O histórico e a cadência vão junto.
             </p>
-            <Campo rotulo="Quem assume">
+            <Campo
+              rotulo="Quem assume"
+              dica={
+                negocio.vendedor_origem_id && destinatario === negocio.vendedor_origem_id
+                  ? "Já vem escolhido: este lead foi para reaquecimento vindo da carteira dessa pessoa."
+                  : undefined
+              }
+            >
               {(props) => (
                 <Selecao {...props} value={destinatario} onChange={(e) => setDestinatario(e.target.value)}>
                   <option value="">Deixar no pool (qualquer vendedor pega)</option>

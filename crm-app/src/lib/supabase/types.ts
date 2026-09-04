@@ -948,6 +948,7 @@ export type Database = {
           retomar_em: string | null
           tenant_id: string | null
           titulo: string
+          vendedor_origem_id: string | null
           ultima_atividade_em: string | null
           ultima_resposta_canal: string | null
           ultima_resposta_em: string | null
@@ -973,6 +974,7 @@ export type Database = {
           retomar_em?: string | null
           tenant_id?: string | null
           titulo: string
+          vendedor_origem_id?: string | null
           ultima_atividade_em?: string | null
           ultima_resposta_canal?: string | null
           ultima_resposta_em?: string | null
@@ -998,6 +1000,7 @@ export type Database = {
           retomar_em?: string | null
           tenant_id?: string | null
           titulo?: string
+          vendedor_origem_id?: string | null
           ultima_atividade_em?: string | null
           ultima_resposta_canal?: string | null
           ultima_resposta_em?: string | null
