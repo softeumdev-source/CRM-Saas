@@ -116,13 +116,45 @@ export async function cancelarMensagem(mensagemId: string): Promise<Resultado> {
 /** Edição do texto antes de aprovar — revisar sem poder corrigir não é revisão. */
 export async function salvarTextoDaMensagem(
   mensagemId: string,
-  assunto: string,
+  assunto: string | null,
   corpo: string,
 ): Promise<Resultado> {
   const { error } = await createClient()
     .from("mensagens")
+    // `assunto` aceita null porque WhatsApp não tem assunto: gravar "" ali
+    // deixaria uma string vazia onde o resto do sistema espera ausência.
     .update({ assunto, corpo, gerado_por: "humano" })
     .eq("id", mensagemId)
     .eq("status", "aguardando_aprovacao");
+  return error ? { ok: false, erro: error.message } : { ok: true };
+}
+
+/**
+ * A tarefa de WhatsApp foi feita: a pessoa abriu a conversa, mandou o texto, e
+ * está dizendo isso ao sistema.
+ *
+ * O caminho é `aguardando_aprovacao` → `enviada`, PULANDO `aprovada`. Não é
+ * economia de um passo: `aprovada` é o estado que o despachante pesca
+ * (`reservar_mensagens`), e passar por ele — mesmo por um instante — daria uma
+ * janela em que o cron poderia tentar mandar a mesma mensagem pela API da Meta.
+ * O cliente receberia duas vezes, e a segunda seria cobrada.
+ *
+ * O `.eq("status", "aguardando_aprovacao")` no fim é o que torna o duplo clique
+ * inofensivo: o segundo update não encontra linha e não faz nada.
+ */
+export async function registrarTarefaEnviada(mensagemId: string, usuarioId: string): Promise<Resultado> {
+  const { error } = await createClient()
+    .from("mensagens")
+    .update({
+      status: "enviada",
+      enviada_em: new Date().toISOString(),
+      // Quem clicou é quem mandou. `aprovada_por` é o campo que o histórico já
+      // lê para "quem liberou isto", e aqui liberar e enviar são o mesmo ato.
+      aprovada_por: usuarioId,
+      aprovada_em: new Date().toISOString(),
+    })
+    .eq("id", mensagemId)
+    .eq("status", "aguardando_aprovacao")
+    .eq("envio_manual", true);
   return error ? { ok: false, erro: error.message } : { ok: true };
 }

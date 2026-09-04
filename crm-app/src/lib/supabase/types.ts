@@ -680,6 +680,7 @@ export type Database = {
           destino: string | null
           direcao: string
           enviada_em: string | null
+          envio_manual: boolean
           erro_codigo: string | null
           gerado_por: string
           id: string
@@ -715,6 +716,7 @@ export type Database = {
           destino?: string | null
           direcao?: string
           enviada_em?: string | null
+          envio_manual?: boolean
           erro_codigo?: string | null
           gerado_por?: string
           id?: string
@@ -750,6 +752,7 @@ export type Database = {
           destino?: string | null
           direcao?: string
           enviada_em?: string | null
+          envio_manual?: boolean
           erro_codigo?: string | null
           gerado_por?: string
           id?: string
@@ -1930,6 +1933,7 @@ export type Database = {
           destino: string | null
           direcao: string
           enviada_em: string | null
+          envio_manual: boolean
           erro_codigo: string | null
           gerado_por: string
           id: string

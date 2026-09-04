@@ -6,8 +6,10 @@ import {
   Bot,
   Check,
   Clock,
+  ExternalLink,
   Loader2,
   Mail,
+  MessageCircle,
   Pause,
   Play,
   Send,
@@ -17,6 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { formatarDataHora } from "@/lib/atividades";
 import { comPrazo } from "@/lib/prazo";
+import { linkDoWhatsapp } from "@/lib/contato";
 import type { NegocioComRelacoes, Usuario } from "@/lib/types";
 import {
   ROTULO_STATUS_INSCRICAO,
@@ -25,6 +28,7 @@ import {
   inscrever,
   mudarStatusDaInscricao,
   planoDaCadencia,
+  registrarTarefaEnviada,
   salvarTextoDaMensagem,
   type CadenciaComPassos,
   type Inscricao,
@@ -57,6 +61,15 @@ export function MensagensTab({
   const [escolhida, setEscolhida] = useState("");
   const [inscrevendo, setInscrevendo] = useState(false);
   const [agindo, setAgindo] = useState<string | null>(null);
+
+  /**
+   * Quais tarefas já tiveram a conversa aberta nesta sessão.
+   *
+   * Abrir o WhatsApp NÃO é prova de que a mensagem saiu — a pessoa pode fechar
+   * a aba, mudar de ideia, ou o número pode estar errado. Este conjunto só
+   * decide quando PERGUNTAR "você mandou?"; quem responde é ela.
+   */
+  const [abriu, setAbriu] = useState<Set<string>>(new Set());
 
   const [reescrevendo, setReescrevendo] = useState<string | null>(null);
   const [editando, setEditando] = useState<Mensagem | null>(null);
@@ -143,19 +156,27 @@ export function MensagensTab({
   const ativa = inscricoes.find((i) => i.status === "ativa" || i.status === "pausada");
   const cadenciaEscolhida = cadencias.find((c) => c.id === escolhida) || cadencias[0];
   const plano = cadenciaEscolhida ? planoDaCadencia(cadenciaEscolhida.passos || []) : [];
-  const aguardando = mensagens.filter((m) => m.status === "aguardando_aprovacao");
+  const pendentes = mensagens.filter((m) => m.status === "aguardando_aprovacao");
+  // Duas filas, porque são dois verbos. "Aprovar" delega ao sistema; a tarefa
+  // manual é trabalho que só a pessoa faz — e oferecer "Aprovar e enviar" numa
+  // delas mandaria a mensagem pela API da Meta, cobrada, que é exatamente a
+  // decisão que este caminho existe para evitar.
+  const tarefas = pendentes.filter((m) => m.envio_manual);
+  const aguardando = pendentes.filter((m) => !m.envio_manual);
 
   /**
-   * O toque de WhatsApp que o motor vai PULAR por falta de template aprovado
-   * na Meta.
+   * O toque que vira TAREFA em vez de sair sozinho: WhatsApp sem template
+   * aprovado na Meta.
    *
-   * Sem isto o "O que vai acontecer" prometeria dez mensagens e entregaria
-   * cinco — e a lista existe justamente para que ninguém clique em "inscrever"
-   * sem saber o que assinou.
+   * Antes esse toque era PULADO, e a lista dizia "não sai". Hoje ele sai — pela
+   * sua mão, no WhatsApp Web, de graça. A lista continua existindo pelo mesmo
+   * motivo: ninguém deveria clicar em "inscrever" sem saber o que assinou, e
+   * catorze toques dos quais sete são trabalho seu é um compromisso diferente
+   * de catorze automáticos.
    */
-  const naoVaiSair = (passo: { canal: string; template_id: string | null }) =>
+  const ehTarefaManual = (passo: { canal: string; template_id: string | null }) =>
     passo.canal === "whatsapp" && !(passo.template_id && aprovadosNaMeta.has(passo.template_id));
-  const vaoSair = plano.filter(({ passo }) => !naoVaiSair(passo)).length;
+  const quantasManuais = plano.filter(({ passo }) => ehTarefaManual(passo)).length;
 
   /**
    * Pede à IA um texto melhor para uma mensagem que ainda espera aprovação.
@@ -231,6 +252,151 @@ export function MensagensTab({
         <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2">
           {erro}
         </p>
+      )}
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Tarefas de WhatsApp — o que VOCÊ manda, pelo Web, de graça        */}
+      {/* ---------------------------------------------------------------- */}
+      {/* Vem ANTES da fila de aprovação de propósito: aprovar é delegar (o
+          sistema manda em seguida), e isto aqui é trabalho que só existe se
+          alguém fizer. Trabalho que ninguém mais vai fazer fica em cima. */}
+      {tarefas.length > 0 && (
+        <div className="bg-acento-fraco rounded-2xl border border-acento/40 p-5 space-y-3">
+          <h3 className="font-medium text-corpo text-acento flex items-center gap-2">
+            <MessageCircle className="h-4 w-4" />
+            {tarefas.length === 1
+              ? "1 mensagem de WhatsApp para você mandar"
+              : `${tarefas.length} mensagens de WhatsApp para você mandar`}
+          </h3>
+          <p className="text-rotulo text-acento">
+            O texto já está pronto, com o nome e a empresa preenchidos. Abrir leva você à conversa
+            com a mensagem escrita — falta apertar enviar lá. Depois marque aqui, senão o histórico
+            do lead fica sem ela e a cadência continua como se você não tivesse falado com ele.
+          </p>
+
+          {tarefas.map((m) => {
+            const link = linkDoWhatsapp(m.destino, m.corpo);
+            return (
+              <div
+                key={m.id}
+                className="bg-superficie rounded-2xl border border-acento/40 p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-corpo font-medium text-tinta">Toque de WhatsApp</p>
+                    <p className="text-rotulo text-tinta-suave flex items-center gap-1.5 mt-0.5">
+                      <MessageCircle className="h-3 w-3" /> {m.destino || "sem número"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Botao
+                      tamanho="sm"
+                      variante="sutil"
+                      onClick={() => {
+                        setEditando(m);
+                        setAssuntoEdit(m.assunto || "");
+                        setCorpoEdit(m.corpo);
+                      }}
+                    >
+                      Editar
+                    </Botao>
+                    <Botao
+                      tamanho="sm"
+                      variante="perigo"
+                      disabled={agindo === m.id}
+                      onClick={() => void executar(m.id, () => cancelarMensagem(m.id))}
+                    >
+                      <X className="h-3.5 w-3.5" /> Descartar
+                    </Botao>
+                    {/* Âncora de verdade, e não um botão com `window.open`: o
+                        WhatsApp Web abre em aba nova, e um popup programático
+                        é o que o navegador bloqueia. */}
+                    <a
+                      href={link || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={!link}
+                      title={
+                        link
+                          ? "Abre a conversa no WhatsApp com este texto já escrito"
+                          : "Sem número válido no cadastro do contato — não dá para abrir a conversa"
+                      }
+                      onClick={(e) => {
+                        if (!link) {
+                          e.preventDefault();
+                          return;
+                        }
+                        setAbriu((v) => new Set(v).add(m.id));
+                      }}
+                      className={[
+                        "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-rotulo font-semibold",
+                        "transition-colors duration-150 ease-out",
+                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento",
+                        link
+                          ? "bg-acento text-white hover:bg-acento/90"
+                          : "bg-recuo text-tinta-fraca pointer-events-none",
+                      ].join(" ")}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Abrir no WhatsApp
+                    </a>
+                  </div>
+                </div>
+
+                {/* Texto puro, e não `dangerouslySetInnerHTML` como o e-mail
+                    ao lado: o que vai para o WhatsApp é exatamente isto, e uma
+                    tag renderizada aqui esconderia um `<b>` que o cliente
+                    receberia cru. */}
+                <p className="text-rotulo text-tinta-suave bg-recuo rounded-xl p-3 max-h-52 overflow-y-auto whitespace-pre-wrap">
+                  {m.corpo}
+                </p>
+
+                {!link && (
+                  <p className="text-rotulo font-medium text-alerta flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    O contato não tem um número de WhatsApp que dê para usar. Corrija o cadastro na
+                    aba Geral e a conversa abre daqui.
+                  </p>
+                )}
+
+                {/* PERGUNTA, não marca sozinho. Abrir o WhatsApp não prova que
+                    a mensagem saiu — e um registro automático encheria o
+                    histórico de mensagens que nunca existiram, com a cadência
+                    confiando nele para decidir o toque seguinte. */}
+                {abriu.has(m.id) && (
+                  <div className="rounded-xl border border-acento/40 bg-acento-fraco p-3 flex flex-wrap items-center gap-2">
+                    <p className="text-rotulo text-tinta flex-1 min-w-0">
+                      Abri o WhatsApp com este texto. Você enviou?
+                    </p>
+                    <Botao
+                      variante="primario"
+                      tamanho="sm"
+                      icone={Check}
+                      carregando={agindo === m.id}
+                      onClick={() =>
+                        void executar(m.id, () => registrarTarefaEnviada(m.id, usuarioAtual.id))
+                      }
+                    >
+                      Registrar como enviada
+                    </Botao>
+                    <Botao
+                      tamanho="sm"
+                      variante="secundario"
+                      onClick={() =>
+                        setAbriu((v) => {
+                          const n = new Set(v);
+                          n.delete(m.id);
+                          return n;
+                        })
+                      }
+                    >
+                      Não enviei
+                    </Botao>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* ---------------------------------------------------------------- */}
@@ -426,7 +592,7 @@ export function MensagensTab({
                 </p>
                 <ol className="space-y-1.5">
                   {plano.map(({ passo, quando }) => {
-                    const pulado = naoVaiSair(passo);
+                    const manual = ehTarefaManual(passo);
                     return (
                       <li
                         key={passo.id}
@@ -436,27 +602,30 @@ export function MensagensTab({
                           {passo.ordem}
                         </span>
                         <Clock className="h-3 w-3 text-tinta-fraca shrink-0" />
-                        <span className={pulado ? "line-through" : undefined}>
+                        <span>
                           {formatarDataHora(quando.toISOString())} · {passo.canal}
                         </span>
-                        {pulado ? (
-                          <span className="text-alerta">— não sai: falta aprovação da Meta</span>
-                        ) : (
-                          passo.parar_se_respondeu && (
-                            <span className="text-tinta-fraca">
-                              — não sai se o lead já tiver respondido
-                            </span>
-                          )
+                        {manual && (
+                          <span className="text-acento font-medium">
+                            — vira tarefa: você manda pelo WhatsApp Web
+                          </span>
+                        )}
+                        {passo.parar_se_respondeu && (
+                          <span className="text-tinta-fraca">
+                            — não sai se o lead já tiver respondido
+                          </span>
                         )}
                       </li>
                     );
                   })}
                 </ol>
                 <p className="text-rotulo text-tinta-suave mt-2">
-                  {vaoSair < plano.length && (
+                  {quantasManuais > 0 && (
                     <>
-                      Dos {plano.length} toques, {vaoSair} vão sair hoje: o WhatsApp só entrega por
-                      template aprovado pela Meta, e os que faltam são pulados sem parar o resto.{" "}
+                      Dos {plano.length} toques, {plano.length - quantasManuais} saem sozinhos e{" "}
+                      {quantasManuais} viram tarefa sua. O WhatsApp só sai sozinho por template
+                      aprovado pela Meta, que é cobrado por mensagem — aqui o sistema escreve o
+                      texto na data certa e você manda pelo Web, de graça.{" "}
                     </>
                   )}
                   {cadenciaEscolhida?.autonoma
@@ -472,7 +641,7 @@ export function MensagensTab({
       <Modal
         aberto={editando !== null}
         aoFechar={() => setEditando(null)}
-        titulo="Revisar antes de aprovar"
+        titulo={editando?.canal === "whatsapp" ? "Ajustar antes de mandar" : "Revisar antes de aprovar"}
         rodape={
           <>
             <Botao variante="secundario" onClick={() => setEditando(null)}>
@@ -484,7 +653,13 @@ export function MensagensTab({
                 if (!editando) return;
                 const alvo = editando;
                 setEditando(null);
-                await executar(alvo.id, () => salvarTextoDaMensagem(alvo.id, assuntoEdit, corpoEdit));
+                await executar(alvo.id, () =>
+                  salvarTextoDaMensagem(
+                    alvo.id,
+                    alvo.canal === "whatsapp" ? null : assuntoEdit,
+                    corpoEdit,
+                  ),
+                );
               }}
             >
               Salvar texto
@@ -493,13 +668,18 @@ export function MensagensTab({
         }
       >
         <div className="space-y-3">
-          <div>
-            <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Assunto</label>
-            <Entrada value={assuntoEdit} onChange={(e) => setAssuntoEdit(e.target.value)} />
-          </div>
+          {/* WhatsApp não tem assunto, e o corpo é texto puro. Mostrar "Corpo
+              (HTML)" aqui convidaria a escrever uma tag que o cliente receberia
+              literal, com os sinais de maior e menor à vista. */}
+          {editando?.canal !== "whatsapp" && (
+            <div>
+              <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Assunto</label>
+              <Entrada value={assuntoEdit} onChange={(e) => setAssuntoEdit(e.target.value)} />
+            </div>
+          )}
           <div>
             <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
-              Corpo (HTML)
+              {editando?.canal === "whatsapp" ? "Mensagem" : "Corpo (HTML)"}
             </label>
             <AreaTexto rows={12} value={corpoEdit} onChange={(e) => setCorpoEdit(e.target.value)} />
           </div>

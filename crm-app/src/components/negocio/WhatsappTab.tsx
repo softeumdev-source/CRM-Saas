@@ -294,8 +294,17 @@ function Balao({ mensagem, anexos }: { mensagem: Mensagem; anexos: AnexoLinha[] 
           </span>
           {mensagem.automatica ? <Selo tom="neutro">automática</Selo> : null}
           {mensagem.status === "falhou" ? <Selo tom="risco">falhou</Selo> : null}
+          {/* "aguardando aprovação" seria mentira numa tarefa manual: ninguém
+              vai aprová-la, e o sistema nunca vai mandá-la. O que falta é
+              alguém abrir o WhatsApp — e isso o selo tem que dizer, senão a
+              mensagem parece estar na fila de alguma coisa. O botão de abrir
+              mora na aba Cadência, junto com o "registrar como enviada". */}
           {mensagem.status === "aguardando_aprovacao" ? (
-            <Selo tom="alerta">aguardando aprovação</Selo>
+            mensagem.envio_manual ? (
+              <Selo tom="acento">para você mandar — veja em Cadência</Selo>
+            ) : (
+              <Selo tom="alerta">aguardando aprovação</Selo>
+            )
           ) : null}
         </div>
       </div>
