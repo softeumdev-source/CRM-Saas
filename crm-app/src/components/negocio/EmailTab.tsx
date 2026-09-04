@@ -11,7 +11,6 @@ import type { NegocioComRelacoes } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/types";
 import { Alerta, Botao, Ponto, Selo, Vazio } from "@/components/ui";
 import { ListaDeAnexos } from "@/components/negocio/ListaDeAnexos";
-import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
 import { CompositorDeEmail } from "@/components/negocio/CompositorDeEmail";
 
 /**
@@ -38,10 +37,6 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
   const [temMais, setTemMais] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-
-  // Abrir a conversa é o que conta como ler a resposta — não abrir a
-  // Cadência, que é onde este efeito morava antes de as abas se separarem.
-  usarRespostasLidas(negocio.id, negocio.respostas_nao_lidas);
 
   const carregar = useCallback(async () => {
     const supabase = createClient();

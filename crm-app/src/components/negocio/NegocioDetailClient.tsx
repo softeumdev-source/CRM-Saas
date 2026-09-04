@@ -22,6 +22,7 @@ import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
+import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
 import { EmailTab } from "@/components/negocio/EmailTab";
 import { RegistroDeResposta } from "@/components/negocio/RegistroDeResposta";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
@@ -90,6 +91,28 @@ export function NegocioDetailClient({
 }) {
   const router = useRouter();
   const [negocio, setNegocio] = useState(negocioInicial);
+
+  /**
+   * ABRIR O NEGÓCIO conta como ler a resposta. Aqui, e não dentro da aba de
+   * e-mail.
+   *
+   * O critério anterior era mais estrito — só a aba de e-mail apagava o sinal —
+   * e na prática ele nunca apagava nada: medido na produção, um negócio com
+   * duas respostas estava com `respostas_lidas_em` NULO. A pessoa clicava no
+   * card, caía na Visão Geral, olhava o lead e voltava; o aviso continuava
+   * aceso e ela reportava "eu olhei e continua dizendo que tem mensagem nova".
+   * Duas vezes.
+   *
+   * Quem estava errado era o critério. Abrir o card É o reconhecimento: a
+   * resposta está a uma aba de distância, com a contagem no próprio rótulo
+   * dela. Um aviso que não some depois de a pessoa fazer a única coisa que
+   * podia fazer deixa de ser aviso e vira ruído — e o próximo, que importa,
+   * também é ignorado.
+   *
+   * A trava contra apagar sem ninguém ver continua, e é a certa: a aba do
+   * navegador precisa estar VISÍVEL (ver `usarRespostasLidas`).
+   */
+  usarRespostasLidas(negocioInicial.id, negocio.respostas_nao_lidas);
   const [atividades, setAtividades] = useState(atividadesIniciais);
   const [propostas, setPropostas] = useState(propostasIniciais);
   // A troca de aba agora vai para a URL: F5 e link compartilhado caem na mesma
