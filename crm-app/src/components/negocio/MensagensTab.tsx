@@ -48,6 +48,8 @@ export function MensagensTab({
   const [cadencias, setCadencias] = useState<CadenciaComPassos[]>([]);
   const [inscricoes, setInscricoes] = useState<(Inscricao & { cadencia: { nome: string } | null })[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  /** Modelos que já têm id aprovado na Meta — os únicos que o WhatsApp entrega. */
+  const [aprovadosNaMeta, setAprovadosNaMeta] = useState<Set<string>>(new Set());
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export function MensagensTab({
     try {
       // Com prazo: rede pendurada não rejeita, e sem isto a aba ficaria em
       // "carregando…" para sempre, sem erro e sem saída.
-      const [cad, insc, msg] = await comPrazo(Promise.all([
+      const [cad, insc, msg, tpl] = await comPrazo(Promise.all([
       supabase
         .from("cadencias")
         .select("*, passos:cadencia_passos(*)")
@@ -83,6 +85,12 @@ export function MensagensTab({
         .eq("negocio_id", negocio.id)
         .order("criado_em", { ascending: false })
         .limit(100),
+      // Só o id da Meta interessa aqui, e é o que decide se um toque de
+      // WhatsApp vai mesmo sair. Consulta separada, e não `embed` dentro dos
+      // passos, porque embed em tabela com mais de um caminho de FK é a
+      // armadilha que já derrubou o Kanban duas vezes neste projeto — não
+      // vale o risco por uma coluna.
+      supabase.from("templates_mensagem").select("id, template_externo_id"),
       ]));
 
       // O supabase-js NÃO lança em falha de rede: devolve { data: null, error }.
@@ -105,6 +113,13 @@ export function MensagensTab({
       setCadencias((cad.data || []) as unknown as CadenciaComPassos[]);
       setInscricoes((insc.data || []) as never);
       setMensagens(msg.data || []);
+      // `tpl.error` fica DE FORA do `falha` acima de propósito: o plano é um
+      // detalhe da tela de inscrição, e não pode transformar a aba inteira em
+      // erro. Sem os modelos, nenhum toque é marcado como aprovado — que é o
+      // estado real de hoje, e o lado seguro do engano.
+      setAprovadosNaMeta(
+        new Set((tpl.data || []).filter((t) => t.template_externo_id).map((t) => t.id)),
+      );
 
     } catch (e) {
       setErroCarga(e instanceof Error ? e.message : "Não foi possível carregar as mensagens.");
@@ -129,6 +144,18 @@ export function MensagensTab({
   const cadenciaEscolhida = cadencias.find((c) => c.id === escolhida) || cadencias[0];
   const plano = cadenciaEscolhida ? planoDaCadencia(cadenciaEscolhida.passos || []) : [];
   const aguardando = mensagens.filter((m) => m.status === "aguardando_aprovacao");
+
+  /**
+   * O toque de WhatsApp que o motor vai PULAR por falta de template aprovado
+   * na Meta.
+   *
+   * Sem isto o "O que vai acontecer" prometeria dez mensagens e entregaria
+   * cinco — e a lista existe justamente para que ninguém clique em "inscrever"
+   * sem saber o que assinou.
+   */
+  const naoVaiSair = (passo: { canal: string; template_id: string | null }) =>
+    passo.canal === "whatsapp" && !(passo.template_id && aprovadosNaMeta.has(passo.template_id));
+  const vaoSair = plano.filter(({ passo }) => !naoVaiSair(passo)).length;
 
   /**
    * Pede à IA um texto melhor para uma mensagem que ainda espera aprovação.
@@ -398,20 +425,40 @@ export function MensagensTab({
                   O que vai acontecer
                 </p>
                 <ol className="space-y-1.5">
-                  {plano.map(({ passo, quando }) => (
-                    <li key={passo.id} className="text-rotulo text-tinta-suave flex items-center gap-2">
-                      <span className="h-5 w-5 shrink-0 rounded-full bg-superficie border border-fio flex items-center justify-center text-rotulo font-medium">
-                        {passo.ordem}
-                      </span>
-                      <Clock className="h-3 w-3 text-tinta-fraca shrink-0" />
-                      {formatarDataHora(quando.toISOString())} · {passo.canal}
-                      {passo.parar_se_respondeu && (
-                        <span className="text-tinta-fraca">— não sai se o lead já tiver respondido</span>
-                      )}
-                    </li>
-                  ))}
+                  {plano.map(({ passo, quando }) => {
+                    const pulado = naoVaiSair(passo);
+                    return (
+                      <li
+                        key={passo.id}
+                        className="text-rotulo text-tinta-suave flex items-center gap-2 flex-wrap"
+                      >
+                        <span className="h-5 w-5 shrink-0 rounded-full bg-superficie border border-fio flex items-center justify-center text-rotulo font-medium">
+                          {passo.ordem}
+                        </span>
+                        <Clock className="h-3 w-3 text-tinta-fraca shrink-0" />
+                        <span className={pulado ? "line-through" : undefined}>
+                          {formatarDataHora(quando.toISOString())} · {passo.canal}
+                        </span>
+                        {pulado ? (
+                          <span className="text-alerta">— não sai: falta aprovação da Meta</span>
+                        ) : (
+                          passo.parar_se_respondeu && (
+                            <span className="text-tinta-fraca">
+                              — não sai se o lead já tiver respondido
+                            </span>
+                          )
+                        )}
+                      </li>
+                    );
+                  })}
                 </ol>
                 <p className="text-rotulo text-tinta-suave mt-2">
+                  {vaoSair < plano.length && (
+                    <>
+                      Dos {plano.length} toques, {vaoSair} vão sair hoje: o WhatsApp só entrega por
+                      template aprovado pela Meta, e os que faltam são pulados sem parar o resto.{" "}
+                    </>
+                  )}
                   {cadenciaEscolhida?.autonoma
                     ? "Esta cadência está autônoma: as mensagens saem sem passar por aprovação."
                     : "Cada mensagem vai esperar sua aprovação antes de sair."}

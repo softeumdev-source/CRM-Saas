@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, RotateCcw, Send, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Bot, Check, FileText, Loader2, Mail, MessageCircle, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
 import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo, Selo } from "@/components/ui";
@@ -11,6 +11,43 @@ import { formatarDataHora } from "@/lib/atividades";
 
 type Template = Tables<"templates_mensagem">;
 type ConfigWhats = Tables<"whatsapp_config">;
+type Passo = CadenciaComPassos["passos"][number];
+
+/**
+ * O dia em que cada toque cai, contado da inscrição.
+ *
+ * `atraso_horas` é o intervalo desde o toque ANTERIOR, não desde o começo —
+ * é assim que `processar_cadencias` agenda. Numa cadência de dez toques a
+ * soma acumulada é a única leitura útil, e é o que separa "dia 3" de "dia 5".
+ */
+function comDia(passos: Passo[]): (Passo & { dia: number })[] {
+  let horas = 0;
+  return [...passos]
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((p) => {
+      horas += p.atraso_horas;
+      return { ...p, dia: Math.round(horas / 24) };
+    });
+}
+
+/**
+ * O motor PULA um toque de WhatsApp cujo modelo não tem id aprovado na Meta —
+ * em vez de pausar a inscrição inteira, que levaria junto os e-mails do mesmo
+ * lead. Pular, porém, não deixa rastro no card do negócio: esta é a tela que
+ * precisa contar.
+ */
+function seraPulado(passo: Passo, modelo: Template | undefined): boolean {
+  return passo.canal === "whatsapp" && !modelo?.template_externo_id;
+}
+
+function resumoDeCanais(passos: Passo[]): string {
+  const emails = passos.filter((p) => p.canal === "email").length;
+  const zaps = passos.length - emails;
+  const partes: string[] = [];
+  if (emails) partes.push(`${emails} ${emails === 1 ? "e-mail" : "e-mails"}`);
+  if (zaps) partes.push(`${zaps} WhatsApp`);
+  return partes.length ? `${passos.length} toques (${partes.join(" + ")})` : "sem toques";
+}
 
 export function CadenciasTab() {
   const [cadencias, setCadencias] = useState<CadenciaComPassos[]>([]);
@@ -175,7 +212,7 @@ export function CadenciasTab() {
                       )}
                     </div>
                     <p className="text-rotulo text-tinta-suave mt-0.5">
-                      {c.tipo} · {(c.passos || []).length} toques
+                      {c.tipo} · {resumoDeCanais(c.passos || [])}
                       {c.proposito === "reaquecimento"
                         ? " · usada quando um lead volta da nutrição"
                         : " · usada em lead novo"}
@@ -210,20 +247,70 @@ export function CadenciasTab() {
                   </p>
                 )}
 
-                <ol className="space-y-1">
-                  {[...(c.passos || [])]
-                    .sort((a, b) => a.ordem - b.ordem)
-                    .map((p) => (
-                      <li key={p.id} className="text-rotulo text-tinta-suave flex items-center gap-2">
-                        <span className="h-5 w-5 shrink-0 rounded-full bg-recuo flex items-center justify-center text-rotulo font-medium">
-                          {p.ordem}
-                        </span>
-                        {p.atraso_horas === 0 ? "na hora" : `+${p.atraso_horas}h`} · {p.canal}
-                        {" · "}
-                        {templates.find((t) => t.id === p.template_id)?.nome || "sem modelo"}
-                      </li>
-                    ))}
-                </ol>
+                {(() => {
+                  const passos = comDia(c.passos || []);
+                  const pulados = passos.filter((p) =>
+                    seraPulado(p, templates.find((t) => t.id === p.template_id)),
+                  );
+                  return (
+                    <>
+                      <ol className="space-y-1">
+                        {passos.map((p) => {
+                          const modelo = templates.find((t) => t.id === p.template_id);
+                          const pulado = seraPulado(p, modelo);
+                          return (
+                            <li
+                              key={p.id}
+                              className="text-rotulo text-tinta-suave flex items-center gap-2 flex-wrap"
+                            >
+                              <span className="h-5 w-5 shrink-0 rounded-full bg-recuo flex items-center justify-center text-rotulo font-medium">
+                                {p.ordem}
+                              </span>
+                              {/* O DIA, e não o `+48h` do banco. O atraso é
+                                  contado do toque anterior, então numa
+                                  sequência de dez ninguém consegue somar de
+                                  cabeça — e a separação por dia é justamente o
+                                  que se quer conferir aqui. */}
+                              <span className="tabular shrink-0">
+                                {p.dia === 0 ? "na hora" : `dia ${p.dia}`}
+                              </span>
+                              <span className="shrink-0">·</span>
+                              {p.canal === "whatsapp" ? (
+                                <MessageCircle className="h-3.5 w-3.5 shrink-0 text-ok" />
+                              ) : (
+                                <Mail className="h-3.5 w-3.5 shrink-0 text-acento" />
+                              )}
+                              <span className={pulado ? "line-through" : undefined}>
+                                {modelo?.nome || "sem modelo"}
+                              </span>
+                              {pulado && <Selo tom="alerta">pulado</Selo>}
+                            </li>
+                          );
+                        })}
+                      </ol>
+
+                      {/* A ÚNICA tela onde este estado aparece. O motor deixou
+                          de pausar a inscrição por causa disto — pular é o
+                          certo, porque senão um passo de WhatsApp sem conta na
+                          Meta mataria também os e-mails do mesmo lead. Mas
+                          pular é silencioso no card do negócio, então tem que
+                          ser barulhento aqui. */}
+                      {pulados.length > 0 && (
+                        <p className="text-rotulo text-tinta-suave bg-recuo rounded-lg px-3 py-2 flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px text-alerta" />
+                          <span>
+                            {pulados.length === 1
+                              ? "1 toque de WhatsApp não vai sair"
+                              : `${pulados.length} toques de WhatsApp não vão sair`}
+                            : falta o id do template aprovado na Meta. O lead recebe normalmente os
+                            de e-mail, e estes voltam sozinhos assim que você colar o id no modelo,
+                            aqui embaixo.
+                          </span>
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
