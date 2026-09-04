@@ -162,6 +162,12 @@ create policy negocios_delete_admin on public.negocios for delete
 --
 -- Fica transcrito como está porque esta migration descreve o banco que existe.
 -- Alargar política é mudança de segurança, e é decisão separada.
+--
+-- >>> CONSERTADO DEPOIS, em
+-- >>> `20260904020000_pool_do_sdr_nas_politicas_que_pendem_do_negocio.sql`.
+-- >>> Este arquivo continua com o texto antigo de propósito: ele é a
+-- >>> transcrição do estado daquele momento, e reescrevê-lo faria a migration
+-- >>> seguinte virar um no-op num ambiente novo.
 drop policy if exists atividades_select on public.atividades;
 create policy atividades_select on public.atividades for select
   using ((EXISTS ( SELECT 1
