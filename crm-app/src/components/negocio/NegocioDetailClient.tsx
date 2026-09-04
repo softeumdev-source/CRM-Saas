@@ -356,7 +356,16 @@ export function NegocioDetailClient({
 
   return (
     <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-acento">
+      {/* `voltarPara`, e nao "/". Este link estava fixo no board do vendedor
+          enquanto as CINCO outras saidas desta tela (fechar, entregar, no-show,
+          mover de funil) ja usavam `voltarPara` — calculado tres linhas acima.
+          Um SDR abria um lead de prospeccao, clicava aqui e caia no board de
+          Vendas, que a RLS mostra vazio para ele: parecia que os leads tinham
+          sumido. */}
+      <Link
+        href={voltarPara}
+        className="inline-flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-acento"
+      >
         <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao pipeline
       </Link>
 
