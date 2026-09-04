@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ChevronDown, Mail, Paperclip } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -12,6 +12,7 @@ import type { Tables } from "@/lib/supabase/types";
 import { Alerta, Botao, Ponto, Selo, Vazio } from "@/components/ui";
 import { ListaDeAnexos } from "@/components/negocio/ListaDeAnexos";
 import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
+import { CompositorDeEmail } from "@/components/negocio/CompositorDeEmail";
 
 /**
  * A caixa de e-mail do cliente, dentro do card.
@@ -111,6 +112,7 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
       carregando={carregando}
       temMais={temMais}
       aoCarregarMais={() => setTeto((t) => t + POR_PAGINA)}
+      compositor={<CompositorDeEmail negocio={negocio} aoEnviado={carregar} />}
     />
   );
 }
@@ -132,6 +134,7 @@ export function VistaDeEmail({
   carregando = false,
   temMais = false,
   aoCarregarMais,
+  compositor,
 }: {
   threads: Thread[];
   anexosPorMensagem: Map<string, AnexoLinha[]>;
@@ -140,6 +143,8 @@ export function VistaDeEmail({
   carregando?: boolean;
   temMais?: boolean;
   aoCarregarMais?: () => void;
+  /** Entra por prop para a vista continuar pura — e provável com fixtures. */
+  compositor?: ReactNode;
 }) {
   const [aberta, setAberta] = useState<string | null>(null);
 
@@ -147,13 +152,20 @@ export function VistaDeEmail({
   // primeira em vez de mostrar uma coluna direita vazia sem explicação.
   const selecionada = threads.find((t) => t.id === aberta) ?? threads[0] ?? null;
 
+  // Zero e-mail NÃO é motivo para esconder o compositor: é justamente quando
+  // alguém precisa escrever o primeiro. Antes o estado vazio devolvia só o
+  // aviso, e a conversa não tinha como começar de dentro do card.
   if (!carregando && threads.length === 0) {
     return (
-      <Vazio icone={Mail} titulo="Nenhum e-mail com este cliente">
-        Os e-mails trocados aparecem aqui assim que a caixa comercial estiver conectada em
-        Admin → Integrações. O histórico segue o negócio: passar do SDR para o vendedor não perde
-        nada.
-      </Vazio>
+      <div className="overflow-hidden rounded-2xl border border-fio bg-superficie">
+        <div className="px-5 py-6">
+          <Vazio icone={Mail} titulo="Nenhum e-mail com este cliente">
+            Escreva abaixo para começar. Os e-mails trocados aparecem aqui, agrupados por conversa,
+            e o histórico segue o negócio: passar do SDR para o vendedor não perde nada.
+          </Vazio>
+        </div>
+        {compositor}
+      </div>
     );
   }
 
@@ -227,6 +239,10 @@ export function VistaDeEmail({
               />
             ))}
           </div>
+
+          {/* Fora da área que rola: responder não deve exigir chegar ao fim de
+              uma thread de trinta mensagens. */}
+          {compositor}
         </div>
       )}
     </div>

@@ -60,6 +60,14 @@ export function caminhoDoAnexo(tenantId: string, negocioId: string, anexoId: str
   return `${tenantId}/${negocioId}/anexos/${anexoId}-${/\w/.test(limpo) ? limpo : "arquivo"}`;
 }
 
+/** `1,4 MB`, `312 KB`. Usada pela lista e pelo compositor — uma so. */
+export function tamanhoLegivel(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export type ResultadoDoAnexo = "guardado" | "duplicado" | "grande_demais" | "falhou";
 
 export async function guardarAnexo(

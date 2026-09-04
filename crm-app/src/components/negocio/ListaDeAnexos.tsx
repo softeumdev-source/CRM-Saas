@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Download, FileText, Image as Icone, Loader2, Music, Video } from "lucide-react";
+import { tamanhoLegivel } from "@/lib/anexos";
 import { urlAssinada } from "@/lib/storage";
 import type { Tables } from "@/lib/supabase/types";
 
@@ -34,13 +35,6 @@ function iconeDoTipo(mime: string | null, className: string) {
   if (m.startsWith("audio/")) return <Music className={className} aria-hidden />;
   if (m.startsWith("video/")) return <Video className={className} aria-hidden />;
   return <FileText className={className} aria-hidden />;
-}
-
-function tamanhoLegivel(bytes: number | null): string {
-  if (!bytes || bytes <= 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export function ListaDeAnexos({ anexos, className = "" }: { anexos: Anexo[]; className?: string }) {
