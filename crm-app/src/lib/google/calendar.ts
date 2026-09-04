@@ -1,4 +1,13 @@
 import { renovarAccessToken } from "@/lib/google/oauth";
+import {
+  AgendaIndisponivel,
+  RESPOSTA_DO_GOOGLE,
+  TIPOS_UTEIS,
+  normalizarEventos,
+  type EventoBruto,
+  type EventoDaAgenda,
+  type RespostaDoConvidado,
+} from "@/lib/google/agenda";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const EVENTOS = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
@@ -96,15 +105,6 @@ export async function criarEvento(params: {
   };
 }
 
-export type RespostaDoConvidado = "aceito" | "recusado" | "talvez" | "sem_resposta";
-
-const MAPA: Record<string, RespostaDoConvidado> = {
-  accepted: "aceito",
-  declined: "recusado",
-  tentative: "talvez",
-  needsAction: "sem_resposta",
-};
-
 /**
  * Lê como o convidado respondeu ao convite.
  *
@@ -130,5 +130,59 @@ export async function respostaDoConvidado(
     (a: { email?: string }) => (a.email || "").toLowerCase() === emailConvidado.toLowerCase(),
   );
   if (!alvo) return null;
-  return MAPA[alvo.responseStatus] || "sem_resposta";
+  return RESPOSTA_DO_GOOGLE[alvo.responseStatus] || "sem_resposta";
+}
+
+/**
+ * Reexportado para quem já importava daqui. O tipo VIVE em `agenda.ts`, que não
+ * puxa segredo nenhum — ver o cabeçalho de lá.
+ */
+export type { EventoDaAgenda, RespostaDoConvidado };
+export { AgendaIndisponivel };
+
+/**
+ * Os eventos da agenda principal de UMA pessoa, num período.
+ *
+ * O escopo é o `calendar.events` que a conexão já pede desde o início —
+ * conferido no discovery document da própria Google, que lista
+ * `.../auth/calendar.events` entre os aceitos por `events.list`. Ou seja:
+ * ninguém precisa reconectar nada para a agenda aparecer.
+ *
+ * `singleEvents=true` expande a série: sem ele, uma reunião semanal voltaria
+ * como UMA linha com a regra de recorrência e a tela teria que interpretar
+ * RRULE. Com ele a Google devolve as ocorrências do período já resolvidas.
+ *
+ * Toda a normalização mora em `agenda.ts` e é pura — aqui fica só a rede.
+ */
+export async function eventosDoPeriodo(
+  usuarioId: string,
+  de: Date,
+  ate: Date,
+  limite = 250,
+): Promise<EventoDaAgenda[]> {
+  let token: string;
+  try {
+    token = await accessTokenDe(usuarioId);
+  } catch (e) {
+    throw new AgendaIndisponivel(e instanceof Error ? e.message : "Agenda indisponível.", true);
+  }
+
+  const url = new URL(EVENTOS);
+  url.searchParams.set("timeMin", de.toISOString());
+  url.searchParams.set("timeMax", ate.toISOString());
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("maxResults", String(limite));
+  for (const tipo of TIPOS_UTEIS) url.searchParams.append("eventTypes", tipo);
+
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const dados = await resp.json().catch(() => null);
+  if (!resp.ok) {
+    const motivo = dados?.error?.message || `A Google respondeu ${resp.status}.`;
+    // 401/403 é permissão, e reconectar resolve. Qualquer outro código é a
+    // Google indisponível — mandar a pessoa reconectar ali seria mentira.
+    throw new AgendaIndisponivel(motivo, resp.status === 401 || resp.status === 403);
+  }
+
+  return normalizarEventos((dados?.items || []) as EventoBruto[]);
 }

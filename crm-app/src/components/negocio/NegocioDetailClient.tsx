@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRightLeft, Building2, Mail, MessageCircle, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, CalendarPlus, Mail, MessageCircle, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -38,6 +38,7 @@ import {
   type Aba as ItemDeAba,
 } from "@/components/ui";
 import { MoverDeFunil } from "@/components/negocio/MoverDeFunil";
+import { AgendarReuniao } from "@/components/agenda/AgendarReuniao";
 
 type PropostaComRelacoes = Record<string, unknown>;
 const ABAS: readonly ItemDeAba<Aba>[] = [
@@ -216,6 +217,7 @@ export function NegocioDetailClient({
   // A descrição não fala mais em "reunião aceita": este caminho não confere
   // reunião nenhuma, e dizer que houve uma era mentira registrada no
   // histórico do negócio.
+  const [agendando, setAgendando] = useState(false);
   const [entregando, setEntregando] = useState(false);
   const [destinatario, setDestinatario] = useState("");
   const [entregandoAgora, setEntregandoAgora] = useState(false);
@@ -385,6 +387,25 @@ export function NegocioDetailClient({
                     titulo="Ligar"
                   />
                 )}
+              {/* A terceira forma de alcançar o cliente, ao lado das outras
+                  duas. Antes, marcar uma reunião custava seis passos dentro da
+                  aba Cadência — registrar uma atividade, marcar "agendar
+                  próximo", escolher tipo e data, salvar, achar a linha na lista
+                  e só então pedir o convite. Ninguém agenda assim, e era por
+                  isso que o Google Agenda parecia não existir aqui.
+
+                  Este é um BOTÃO no meio de links: agendar muda o estado do
+                  mundo (cria evento e manda e-mail ao cliente), enquanto os
+                  outros três só abrem um aplicativo. */}
+              <button
+                type="button"
+                onClick={() => setAgendando(true)}
+                title="Agendar reunião com Meet e convite"
+                className="foco inline-flex max-w-full items-center gap-1.5 rounded-lg border border-fio bg-recuo px-2.5 py-1.5 text-rotulo text-tinta transition-colors duration-150 ease-out hover:border-fio-forte hover:text-acento pointer-coarse:min-h-11"
+              >
+                <CalendarPlus className="h-3.5 w-3.5 shrink-0 text-tinta-suave" aria-hidden />
+                <span className="truncate">Agendar reunião</span>
+              </button>
             </div>
           </div>
 
@@ -679,6 +700,34 @@ export function NegocioDetailClient({
           )}
         </div>
       </Modal>
+
+      {/* A reunião nasce inteira daqui: atividade no CRM e convite com Meet na
+          mesma chamada. `recarregar` traz a atividade nova para a aba Cadência
+          sem recarregar a página; o aviso só aparece quando o convite falhou e
+          a reunião ficou só no CRM — caso em que a própria aba Cadência tem o
+          botão de retomada. */}
+      {agendando && (
+        <AgendarReuniao
+          aoFechar={() => setAgendando(false)}
+          negocios={[
+            {
+              id: negocio.id,
+              titulo: negocio.titulo,
+              contato: negocio.contato
+                ? {
+                    nome: negocio.contato.nome,
+                    empresa: negocio.contato.empresa,
+                    email: negocio.contato.email,
+                  }
+                : null,
+            },
+          ]}
+          aoAgendado={(r) => {
+            if (r.aviso) setErro(r.aviso);
+            void recarregar();
+          }}
+        />
+      )}
     </div>
   );
 }
