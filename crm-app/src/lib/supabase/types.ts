@@ -951,12 +951,12 @@ export type Database = {
           retomar_em: string | null
           tenant_id: string | null
           titulo: string
-          vendedor_origem_id: string | null
           ultima_atividade_em: string | null
           ultima_resposta_canal: string | null
           ultima_resposta_em: string | null
           ultima_resposta_whatsapp_em: string | null
           valor: number | null
+          vendedor_origem_id: string | null
         }
         Insert: {
           atualizado_em?: string | null
@@ -977,12 +977,12 @@ export type Database = {
           retomar_em?: string | null
           tenant_id?: string | null
           titulo: string
-          vendedor_origem_id?: string | null
           ultima_atividade_em?: string | null
           ultima_resposta_canal?: string | null
           ultima_resposta_em?: string | null
           ultima_resposta_whatsapp_em?: string | null
           valor?: number | null
+          vendedor_origem_id?: string | null
         }
         Update: {
           atualizado_em?: string | null
@@ -1003,12 +1003,12 @@ export type Database = {
           retomar_em?: string | null
           tenant_id?: string | null
           titulo?: string
-          vendedor_origem_id?: string | null
           ultima_atividade_em?: string | null
           ultima_resposta_canal?: string | null
           ultima_resposta_em?: string | null
           ultima_resposta_whatsapp_em?: string | null
           valor?: number | null
+          vendedor_origem_id?: string | null
         }
         Relationships: [
           {
@@ -1044,6 +1044,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negocios_vendedor_origem_id_fkey"
+            columns: ["vendedor_origem_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -1185,6 +1192,62 @@ export type Database = {
             foreignKeyName: "planos_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      preferencias_agenda: {
+        Row: {
+          almoco_fim: string | null
+          almoco_inicio: string | null
+          antecedencia_horas: number
+          atualizado_em: string | null
+          criado_em: string | null
+          dias_semana: number[]
+          duracao_minutos: number
+          fuso: string
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          intervalo_minutos: number
+          tenant_id: string
+        }
+        Insert: {
+          almoco_fim?: string | null
+          almoco_inicio?: string | null
+          antecedencia_horas?: number
+          atualizado_em?: string | null
+          criado_em?: string | null
+          dias_semana?: number[]
+          duracao_minutos?: number
+          fuso?: string
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          intervalo_minutos?: number
+          tenant_id: string
+        }
+        Update: {
+          almoco_fim?: string | null
+          almoco_inicio?: string | null
+          antecedencia_horas?: number
+          atualizado_em?: string | null
+          criado_em?: string | null
+          dias_semana?: number[]
+          duracao_minutos?: number
+          fuso?: string
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          intervalo_minutos?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preferencias_agenda_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -1780,7 +1843,10 @@ export type Database = {
       disparar_despacho: { Args: never; Returns: string }
       disparar_sync_gmail: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
-      enviar_para_prospeccao: { Args: { p_contato_ids: string[] }; Returns: Json }
+      enviar_para_prospeccao: {
+        Args: { p_contato_ids: string[] }
+        Returns: Json
+      }
       google_guardar_refresh_token: {
         Args: {
           p_email: string
@@ -1824,6 +1890,7 @@ export type Database = {
           ultima_resposta_em: string | null
           ultima_resposta_whatsapp_em: string | null
           valor: number | null
+          vendedor_origem_id: string | null
         }[]
         SetofOptions: {
           from: "*"

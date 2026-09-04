@@ -6,6 +6,7 @@ import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent, Send, 
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
 import { ehDoTime, operaNegocios } from "@/lib/types";
+import type { Tables } from "@/lib/supabase/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
 import { FunilTab } from "@/components/admin/FunilTab";
 import { PlanosTab } from "@/components/admin/PlanosTab";
@@ -54,6 +55,7 @@ export function AdminClient({
   contatosComDono,
   historicoEtapas,
   solicitacoesDesconto,
+  preferenciasAgenda,
   usuarioAtual,
   abaInicial = "desempenho",
 }: {
@@ -69,6 +71,7 @@ export function AdminClient({
   solicitacoesDesconto?: any[];
   /** Vem de `?tab=`, validado no servidor. */
   abaInicial?: AbaAdmin;
+  preferenciasAgenda: Tables<"preferencias_agenda"> | null;
   usuarioAtual: Usuario;
 }) {
   // Estado da aba na URL: F5 e link compartilhado caem na mesma aba. Antes o
@@ -166,7 +169,7 @@ export function AdminClient({
         <CadenciasTab />
       </PainelDaAba>
       <PainelDaAba idBase={idDasAbas} chave="integracoes" ativa={aba === "integracoes"}>
-        <IntegracoesTab usuarioAtual={usuarioAtual} />
+        <IntegracoesTab usuarioAtual={usuarioAtual} preferenciasAgenda={preferenciasAgenda} />
       </PainelDaAba>
       <PainelDaAba idBase={idDasAbas} chave="leads" ativa={aba === "leads"}>
         <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />

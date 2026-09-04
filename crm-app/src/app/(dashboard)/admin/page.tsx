@@ -52,7 +52,7 @@ export default async function AdminPage({
   // toda taxa de conversão do vendedor sem ninguém pedir.
   const pipeline = await carregarPipeline(supabase);
 
-  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, etapas, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }] = await Promise.all([
+  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, etapas, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }, { data: preferenciasAgenda }] = await Promise.all([
     supabase.from("usuarios").select("*").order("criado_em"),
     supabase.from("convites").select("*").order("entrou_em", { ascending: false }),
     supabase.from("planos").select("*").order("valor_plataforma_base"),
@@ -72,6 +72,11 @@ export default async function AdminPage({
       .from("solicitacoes_desconto")
       .select("*, negocio:negocios(id, titulo, contato:contatos(nome, empresa)), vendedor:usuarios!solicitacoes_desconto_vendedor_id_fkey(nome), plano:planos(nome)")
       .order("criado_em", { ascending: false }),
+    // Uma linha por tenant, e a RLS ja recorta. Vem daqui, e nao de um efeito
+    // no cliente, porque o servidor ja esta buscando nove coisas nesta mesma
+    // rodada: mais uma nao custa viagem nenhuma, e a tela abre preenchida em
+    // vez de piscar um "carregando".
+    supabase.from("preferencias_agenda").select("*").maybeSingle(),
   ]);
 
   return (
@@ -86,6 +91,7 @@ export default async function AdminPage({
       contatosComDono={(contatosComDono as any) || []}
       historicoEtapas={historicoEtapas || []}
       solicitacoesDesconto={(solicitacoesDesconto as any) || []}
+      preferenciasAgenda={preferenciasAgenda}
       usuarioAtual={usuarioAtual}
       abaInicial={ehAbaAdmin(tab) ? tab : "desempenho"}
     />

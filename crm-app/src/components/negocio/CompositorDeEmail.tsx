@@ -7,6 +7,7 @@ import { ANEXOS_POR_MENSAGEM } from "@/lib/anexos";
 import { descartarAnexo, subirAnexo, tamanhoLegivel, type Anexo } from "@/lib/anexosUpload";
 import type { NegocioComRelacoes } from "@/lib/types";
 import { Alerta, AreaTexto, Botao, Selo } from "@/components/ui";
+import { BotaoSugerirHorarios } from "@/components/agenda/BotaoSugerirHorarios";
 
 /**
  * Responder o cliente sem sair do card.
@@ -55,6 +56,22 @@ export function CompositorDeEmail({
   // recebe uma vez só; editar o texto zera a chave, porque texto diferente é
   // outra mensagem e a rota devolveria "já enviada" para o texto antigo.
   const chave = useRef<string | null>(null);
+
+  /**
+   * A sugestão de horários entra NO FIM do que já está escrito, com uma linha
+   * em branco separando. Trocar o rascunho da pessoa por um texto gerado é o
+   * jeito mais rápido de fazer alguém nunca mais clicar no botão.
+   *
+   * E zera a `chave` pelo mesmo motivo que o `onChange` do textarea: texto
+   * diferente é outra mensagem. Sem isto, quem tentasse enviar, falhasse, e
+   * então acrescentasse os horários, mandaria o texto NOVO com a chave do
+   * texto VELHO — e a rota responderia "já enviada" sem enviar nada.
+   */
+  const acrescentarAoRascunho = (texto: string) => {
+    setRascunho((atual) => (atual.trim() ? `${atual.trimEnd()}\n\n${texto}` : texto));
+    setErro(null);
+    chave.current = null;
+  };
 
   useEffect(() => {
     let vivo = true;
@@ -247,6 +264,8 @@ export function CompositorDeEmail({
               Anexar proposta
             </Botao>
           )}
+
+          <BotaoSugerirHorarios desabilitado={enviando} aoSugerir={acrescentarAoRascunho} />
         </div>
 
         <Botao variante="primario" icone={Send} disabled={nada} carregando={enviando} onClick={enviar}>

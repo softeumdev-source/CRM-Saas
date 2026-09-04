@@ -6,13 +6,20 @@ import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
 import { Alerta, Botao, Campo, Cartao, Confirmar, Rotulo, Selecao, Selo } from "@/components/ui";
 import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
+import { HorarioDeAtendimento } from "@/components/admin/HorarioDeAtendimento";
 import { formatarDataHora } from "@/lib/atividades";
 import { temEnvioGmail, temGmail } from "@/lib/google/escopos";
 import type { Tables } from "@/lib/supabase/types";
 
 type Integracao = Tables<"integracoes_google"> & { usuario: { nome: string } | null };
 
-export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuarios"> }) {
+export function IntegracoesTab({
+  usuarioAtual,
+  preferenciasAgenda,
+}: {
+  usuarioAtual: Tables<"usuarios">;
+  preferenciasAgenda: Tables<"preferencias_agenda"> | null;
+}) {
   const [conexoes, setConexoes] = useState<Integracao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -236,6 +243,12 @@ export function IntegracoesTab({ usuarioAtual }: { usuarioAtual: Tables<"usuario
           sistema, para você conseguir convidar alguém mesmo se a conta Google cair.
         </p>
       </Cartao>
+
+      {/* Logo abaixo do cartão da agenda, e não numa aba nova: é a MESMA
+          conexão do Google que alimenta as duas coisas, e quem acabou de
+          conectar a agenda é exatamente quem precisa dizer qual é o
+          expediente. */}
+      <HorarioDeAtendimento inicial={preferenciasAgenda} />
 
       <Confirmar
         aberto={desconectando !== null}

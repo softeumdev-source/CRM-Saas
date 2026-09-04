@@ -11,6 +11,7 @@ import type { Mensagem } from "@/lib/cadencia";
 import type { NegocioComRelacoes } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/types";
 import { Alerta, AreaTexto, Botao, Selo, Vazio } from "@/components/ui";
+import { BotaoSugerirHorarios } from "@/components/agenda/BotaoSugerirHorarios";
 import { ListaDeAnexos } from "@/components/negocio/ListaDeAnexos";
 import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
 
@@ -376,7 +377,16 @@ function Compositor({
           {erro}
         </Alerta>
       )}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Passa pelo MESMO `aoMudar` do textarea, e não por um setState
+            próprio: é esse handler que zera a chave de idempotência. Texto
+            diferente é outra mensagem, e a sugestão muda o texto. */}
+        <BotaoSugerirHorarios
+          desabilitado={enviando}
+          aoSugerir={(texto) =>
+            aoMudar(rascunho.trim() ? `${rascunho.trimEnd()}\n\n${texto}` : texto)
+          }
+        />
         <Botao
           variante="primario"
           icone={Send}
