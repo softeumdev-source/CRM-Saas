@@ -20,6 +20,7 @@ import {
   Trash2,
   CalendarClock,
   Radar,
+  Inbox,
 } from "lucide-react";
 
 type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string | null } | null };
@@ -49,6 +50,26 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   });
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
+
+  // A quarentena precisa de um NÚMERO na barra, e não só de uma página: uma
+  // mensagem que cai lá é invisível até alguém ir olhar, e ninguém vai olhar
+  // uma tela que nunca pede nada. `head: true` traz só a contagem — a barra do
+  // topo está em toda página e não pode puxar 200 linhas para mostrar "3".
+  const [semNegocio, setSemNegocio] = useState(0);
+  const carregarQuarentena = useCallback(async () => {
+    const { count } = await createClient()
+      .from("mensagens_sem_negocio")
+      .select("id", { count: "exact", head: true })
+      .is("resolvido_negocio_id", null);
+    setSemNegocio(count ?? 0);
+  }, []);
+
+  useSincronizacao(carregarQuarentena, {
+    canal: "quarentena-contador",
+    tabelas: [{ tabela: "mensagens_sem_negocio" }],
+    intervaloMs: 60_000,
+    carregarAoMontar: true,
+  });
 
   const marcarLidas = async () => {
     setShowNotifs((v) => !v);
@@ -80,7 +101,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
     router.refresh();
   };
 
-  const links = [
+  const links: { href: string; label: string; icon: typeof Kanban; contador?: number }[] = [
     { href: "/", label: "Pipeline Kanban", icon: Kanban },
   ];
   // O board do SDR so aparece para quem opera ele. Um vendedor que abrisse
@@ -90,6 +111,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   }
   links.push(
     { href: "/agenda", label: "Agenda", icon: CalendarClock },
+    { href: "/nao-identificadas", label: "Não identificadas", icon: Inbox, contador: semNegocio },
     { href: "/lista", label: "Lista de Leads", icon: ListFilter },
     { href: "/assinaturas", label: "Assinaturas", icon: FileSignature },
   );
@@ -130,6 +152,13 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span>{l.label}</span>
+                {/* Só aparece quando há o que decidir. Um "0" permanente vira
+                    ruído e a pessoa para de ver o número quando ele importa. */}
+                {l.contador ? (
+                  <span className="h-4 min-w-4 px-1 rounded-full bg-acento-solido text-acento-tinta text-[9px] font-semibold flex items-center justify-center tabular">
+                    {l.contador}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -222,6 +251,15 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             >
               <Icon className="h-3.5 w-3.5" />
               <span>{l.label}</span>
+              {l.contador ? (
+                <span
+                  className={`h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center tabular ${
+                    active ? "bg-superficie text-acento" : "bg-acento-solido text-acento-tinta"
+                  }`}
+                >
+                  {l.contador}
+                </span>
+              ) : null}
             </Link>
           );
         })}

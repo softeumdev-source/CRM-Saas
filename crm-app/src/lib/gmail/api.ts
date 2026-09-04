@@ -97,6 +97,18 @@ export type Caixa = {
    * pessoal de ninguém.
    */
   completa(id: string): Promise<MensagemGmail>;
+  /**
+   * O id do Gmail a partir do `Message-ID` do cabeçalho.
+   *
+   * Existe para a quarentena. A tabela `mensagens_sem_negocio` guarda
+   * metadados e **não guarda o id do Gmail** — guarda o `externo_id`, que para
+   * e-mail é `email:<Message-ID>`. Quando alguém finalmente diz a qual negócio
+   * a mensagem pertence, é por este operador que o corpo é reencontrado.
+   *
+   * `rfc822msgid:` é operador de BUSCA do Gmail, então cabe no `gmail.readonly`
+   * que já temos — não precisa de escopo novo.
+   */
+  porMessageId(messageId: string): Promise<string | null>;
 };
 
 export async function abrirCaixa(usuarioId: string): Promise<Caixa> {
@@ -147,6 +159,19 @@ export async function abrirCaixa(usuarioId: string): Promise<Caixa> {
 
     completa(id) {
       return pedir<MensagemGmail>(token, `/messages/${encodeURIComponent(id)}?format=full`);
+    },
+
+    async porMessageId(messageId) {
+      // Os `<>` saem: o `rfc822msgid:` os trata como delimitador de operador e
+      // devolve zero resultado com eles. É o tipo de detalhe que faria a
+      // quarentena "funcionar" e nunca achar corpo nenhum.
+      const mid = messageId.replace(/^<|>$/g, "").trim();
+      if (!mid) return null;
+      const r = await pedir<{ messages?: { id?: string }[] }>(
+        token,
+        `/messages?maxResults=1&q=${encodeURIComponent(`rfc822msgid:${mid}`)}`,
+      );
+      return r.messages?.[0]?.id || null;
     },
 
     async anexo(mensagemId, attachmentId) {
