@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, Send, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Bot, Check, FileText, Loader2, MessageCircle, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo } from "@/components/ui";
+import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo, Selo } from "@/components/ui";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
 import { formatarDataHora } from "@/lib/atividades";
@@ -161,9 +161,24 @@ export function CadenciasTab() {
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
-                    <p className="font-medium text-corpo text-tinta">{c.nome}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-corpo text-tinta">{c.nome}</p>
+                      {/* O selo importa porque a automação ESCOLHE por aqui: o
+                          lead que volta da nutrição entra na de reaquecimento,
+                          e a de primeiro contato fica para lead novo. Sem o
+                          selo, duas linhas com nomes parecidos e ninguém sabe
+                          qual o robô vai usar. */}
+                      {c.proposito === "reaquecimento" && (
+                        <Selo tom="info" icone={RotateCcw}>
+                          Reaquecimento
+                        </Selo>
+                      )}
+                    </div>
                     <p className="text-rotulo text-tinta-suave mt-0.5">
                       {c.tipo} · {(c.passos || []).length} toques
+                      {c.proposito === "reaquecimento"
+                        ? " · usada quando um lead volta da nutrição"
+                        : " · usada em lead novo"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

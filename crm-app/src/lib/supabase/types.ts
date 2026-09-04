@@ -277,6 +277,7 @@ export type Database = {
           id: string
           nome: string
           pipeline_id: string | null
+          proposito: string
           tenant_id: string | null
           tipo: string
         }
@@ -287,6 +288,7 @@ export type Database = {
           id?: string
           nome: string
           pipeline_id?: string | null
+          proposito?: string
           tenant_id?: string | null
           tipo?: string
         }
@@ -297,6 +299,7 @@ export type Database = {
           id?: string
           nome?: string
           pipeline_id?: string | null
+          proposito?: string
           tenant_id?: string | null
           tipo?: string
         }
