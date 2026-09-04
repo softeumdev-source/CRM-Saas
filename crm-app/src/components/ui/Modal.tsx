@@ -17,6 +17,11 @@ const FOCAVEL =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
   'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Os controles em que se DIGITA ou se escolhe — o alvo do foco de abertura. */
+const CAMPO =
+  'input:not([disabled]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), ' +
+  'select:not([disabled]), textarea:not([disabled])';
+
 export function Modal({
   aberto,
   aoFechar,
@@ -61,27 +66,68 @@ export function Modal({
     [aoFechar],
   );
 
+  /**
+   * O handler mora numa ref, e o efeito depende SO de `aberto`.
+   *
+   * Isto conserta um bug que tornava impossivel digitar em qualquer modal:
+   *
+   * `aoTeclar` depende de `aoFechar`, e os 14 chamadores passam `aoFechar` como
+   * arrow inline (`aoFechar={() => setEncerrando(null)}`) — funcao NOVA a cada
+   * render. Quando o componente que abre o modal tambem guarda o estado do
+   * campo (o caso de "Perdi", em `NegocioDetailClient`), cada TECLA digitada
+   * re-renderizava o pai, criava um `aoFechar` novo, invalidava as dependencias
+   * e fazia este efeito rodar de novo — inclusive a linha que foca o primeiro
+   * controle.
+   *
+   * Medido no navegador, digitando "Preço acima" no motivo da perda:
+   *
+   *   "P"→Fechar  "r"→Fechar  "e"→Fechar  "ç"→Fechar  "o"→Fechar  " "→FECHOU
+   *
+   * O foco pulava para o botao "X" na primeira tecla, as seguintes caiam no
+   * vazio, o estado terminava como "Pç", e o ESPACO — que num botao focado vale
+   * como clique — fechava o modal e jogava fora o que a pessoa tinha escrito.
+   *
+   * A ref e o mesmo padrao que `useSincronizacao` (`lib/supabase/realtime.ts`)
+   * ja usa neste projeto pelo mesmo motivo: o handler pode mudar a cada render
+   * sem que a assinatura precise ser refeita.
+   */
+  const aoTeclarRef = useRef(aoTeclar);
+  useEffect(() => {
+    aoTeclarRef.current = aoTeclar;
+  });
+
   useEffect(() => {
     if (!aberto) return;
 
     focoAnterior.current = document.activeElement as HTMLElement | null;
     const rolagem = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", aoTeclar);
 
-    // Foca o primeiro controle; se nao houver nenhum, o proprio painel, para o
-    // leitor de tela anunciar o dialogo. (?? nao serve aqui: focus() devolve
+    const ouvinte = (e: KeyboardEvent) => aoTeclarRef.current(e);
+    document.addEventListener("keydown", ouvinte);
+
+    // Foco de abertura: o primeiro CAMPO, e nao o primeiro focavel.
+    //
+    // Em ordem de DOM o primeiro focavel e sempre o "X" do cabecalho, entao
+    // abrir "Perdi" deixava o cursor no botao de fechar e exigia um Tab para
+    // comecar a escrever o motivo — atrito exatamente no fluxo reclamado.
+    // Num dialogo de formulario, o lugar do cursor e o formulario.
+    //
+    // Sem campo nenhum (os modais de confirmar), cai no primeiro focavel, que
+    // e o comportamento de antes. Sem nada focavel, foca o painel, para o
+    // leitor de tela anunciar o dialogo. (`??` nao serve aqui: focus() devolve
     // undefined, entao o lado direito rodaria sempre e roubaria o foco.)
-    const primeiroFocavel = painel.current?.querySelector<HTMLElement>(FOCAVEL);
+    const primeiroCampo = painel.current?.querySelector<HTMLElement>(CAMPO);
+    const primeiroFocavel = primeiroCampo || painel.current?.querySelector<HTMLElement>(FOCAVEL);
     if (primeiroFocavel) primeiroFocavel.focus();
     else painel.current?.focus();
 
     return () => {
-      document.removeEventListener("keydown", aoTeclar);
+      document.removeEventListener("keydown", ouvinte);
       document.body.style.overflow = rolagem;
       focoAnterior.current?.focus();
     };
-  }, [aberto, aoTeclar]);
+  }, [aberto]);
 
   if (!aberto || typeof document === "undefined") return null;
 
