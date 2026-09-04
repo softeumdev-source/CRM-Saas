@@ -60,22 +60,26 @@ export const SELECT_AGENDA =
  * componente se chamava `CopilotoTab`, e não havia IA nenhuma dentro. Agora a
  * aba é a conversa com o cliente, e o nome diz isso.
  */
-export type Aba = "geral" | "cadencia" | "proposta" | "email" | "whatsapp";
+export type Aba = "geral" | "cadencia" | "proposta" | "email" | "sequencia";
 
-const ABAS_VALIDAS: readonly string[] = ["geral", "cadencia", "proposta", "email", "whatsapp"];
+const ABAS_VALIDAS: readonly string[] = ["geral", "cadencia", "proposta", "email", "sequencia"];
 
 /**
  * Apelidos de abas que já existiram.
  *
  * `ia` foi o nome original da aba de mensagens. `conversa` foi o seguinte, e
- * empilhava os dois canais no mesmo lugar — agora e-mail e WhatsApp são abas
- * separadas, porque um inbox e um chat não têm a mesma forma.
+ * empilhava os dois canais no mesmo lugar — depois e-mail e WhatsApp viraram
+ * abas separadas, porque um inbox e um chat não têm a mesma forma.
  *
- * Os dois continuam aceitos: existem em notificações já enviadas e em
- * favoritos, e quebrá-los levaria a pessoa para a aba errada sem explicação.
- * `email` é o destino porque era ele que a aba antiga abria por último.
+ * `whatsapp` era uma aba própria enquanto o envio saía pela API da Meta. Com o
+ * envio passando a ser manual, pelo WhatsApp Web, ela deixou de ser um canal
+ * com vida própria e virou parte da sequência — que é quem diz QUANDO mandar e
+ * QUAL texto. O apelido continua valendo: a conversa está lá dentro.
+ *
+ * Todos continuam aceitos: existem em notificações já enviadas e em favoritos,
+ * e quebrá-los levaria a pessoa para a aba errada sem explicação.
  */
-const APELIDOS: Record<string, Aba> = { ia: "email", conversa: "email" };
+const APELIDOS: Record<string, Aba> = { ia: "email", conversa: "email", whatsapp: "sequencia" };
 
 export function normalizarAba(valor: string | undefined): Aba | undefined {
   if (valor && APELIDOS[valor]) return APELIDOS[valor];

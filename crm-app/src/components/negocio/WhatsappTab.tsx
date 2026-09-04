@@ -172,6 +172,22 @@ export function WhatsappTab({ negocio }: { negocio: NegocioComRelacoes }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Título de seção, e não de aba: desde que o envio virou manual isto
+          deixou de ser um canal com vida própria e passou a ser a metade de
+          baixo da Cadência — o registro do que foi trocado pelo WhatsApp Web.
+          Sem o título, as bolhas apareceriam soltas embaixo da fila de
+          aprovação, sem dizer de onde vieram. */}
+      <div>
+        <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
+          <MessageCircle className="h-4 w-4 text-acento" /> Conversa no WhatsApp
+        </h3>
+        <p className="text-rotulo text-tinta-suave mt-1">
+          O que foi trocado pelo WhatsApp Web, registrado aqui. É o registro da{" "}
+          <strong className="font-medium text-tinta">resposta dele</strong> que acende o selo azul
+          no Kanban e faz a cadência parar — sem ele, o robô continua mandando e-mail para quem já
+          está falando com você.
+        </p>
+      </div>
       {erroCarga && <Alerta tom="risco" titulo="Erro ao carregar">{erroCarga}</Alerta>}
       <VistaDoWhatsapp
         mensagens={mensagens}
@@ -235,8 +251,13 @@ export function VistaDoWhatsapp({
 
         {mensagens.length === 0 ? (
           <Vazio icone={MessageCircle} titulo="Nenhuma mensagem de WhatsApp">
-            As mensagens trocadas com este contato aparecem aqui assim que o WhatsApp estiver
-            conectado. O histórico segue o negócio: passar do SDR para o vendedor não perde nada.
+            {/* O texto antigo dizia "assim que o WhatsApp estiver conectado", e
+                isso deixou de ser verdade: não vamos conectar a API da Meta. O
+                que enche esta lista agora é a pessoa registrando o que mandou e
+                o que recebeu. */}
+            Nada trocado por aqui ainda. Use o campo abaixo para mandar pelo WhatsApp Web e
+            registrar — e para anotar o que o cliente responder. O histórico segue o negócio:
+            passar do SDR para o vendedor não perde nada.
           </Vazio>
         ) : (
           mensagens.map((m, i) => {

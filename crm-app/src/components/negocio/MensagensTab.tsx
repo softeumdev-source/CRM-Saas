@@ -154,7 +154,18 @@ export function MensagensTab({
   });
 
   const ativa = inscricoes.find((i) => i.status === "ativa" || i.status === "pausada");
-  const cadenciaEscolhida = cadencias.find((c) => c.id === escolhida) || cadencias[0];
+  /**
+   * A cadência já vem escolhida — e a escolhida é a de PRIMEIRO CONTATO.
+   *
+   * Antes era `cadencias[0]`, a primeira que o banco devolvesse. Com três
+   * cadências ativas no funil (primeiro contato, reaquecimento e no-show), isso
+   * é sorteio: dá para clicar "Inscrever" achando que começou a prospecção e
+   * ter começado a sequência de remarcação de uma reunião que nunca existiu.
+   */
+  const cadenciaEscolhida =
+    cadencias.find((c) => c.id === escolhida) ||
+    cadencias.find((c) => c.proposito === "primeiro_contato") ||
+    cadencias[0];
   const plano = cadenciaEscolhida ? planoDaCadencia(cadenciaEscolhida.passos || []) : [];
   const pendentes = mensagens.filter((m) => m.status === "aguardando_aprovacao");
   // Duas filas, porque são dois verbos. "Aprovar" delega ao sistema; a tarefa

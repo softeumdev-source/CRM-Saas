@@ -43,13 +43,18 @@ import { AgendarReuniao } from "@/components/agenda/AgendarReuniao";
 type PropostaComRelacoes = Record<string, unknown>;
 const ABAS: readonly ItemDeAba<Aba>[] = [
   { chave: "geral", rotulo: "Visão Geral" },
-  { chave: "cadencia", rotulo: "Cadência" },
+  // "Atividades", e não mais "Cadência": esta aba é a agenda do lead — próximo
+  // passo, histórico, o no-show. A CADÊNCIA (inscrever, aprovar, mandar) ficava
+  // empilhada aqui embaixo dela, e ativar exigia rolar a página inteira. Saiu.
+  { chave: "cadencia", rotulo: "Atividades" },
   { chave: "proposta", rotulo: "Proposta & Assinatura" },
-  // Duas abas, não uma. Um inbox de e-mail e um chat de WhatsApp não têm a
-  // mesma forma, e empilhá-los no mesmo lugar era o que fazia os dois parecerem
-  // a mesma coisa.
   { chave: "email", rotulo: "E-mail" },
-  { chave: "whatsapp", rotulo: "WhatsApp" },
+  // Era "WhatsApp", uma aba de canal, de quando o envio saía pela API da Meta.
+  // Sem a API o WhatsApp deixou de ser um canal com vida própria: ele é um
+  // TOQUE da sequência, que a pessoa manda pelo Web. Então o lugar dele é
+  // dentro dela — e o botão de ativar a cadência ganha o topo da aba, que é o
+  // que faltava.
+  { chave: "sequencia", rotulo: "Cadência" },
 ];
 
 /** Para onde este negócio pode ser entregue (SDR → vendedor). */
@@ -636,16 +641,25 @@ export function NegocioDetailClient({
           }}
         />
       )}
-      {/* A fila da cadência automática mora junto da cadência manual: as duas
-          respondem à mesma pergunta ("qual é o próximo toque neste lead?"), e
-          antes ela estava escondida atrás da aba de conversa, que é outra
-          coisa. */}
-      {aba === "cadencia" && <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />}
       {aba === "proposta" && (
         <PropostaTab negocio={negocio} planos={planos} propostasIniciais={propostas} usuarioAtual={usuarioAtual} />
       )}
       {aba === "email" && <EmailTab negocio={negocio} />}
-      {aba === "whatsapp" && <WhatsappTab negocio={negocio} />}
+
+      {/* A CADÊNCIA, com o ativar em primeiro lugar.
+          `MensagensTab` em cima porque é ela que responde "e agora?": inscrever
+          o lead, ver o plano com as datas, aprovar o e-mail da vez e mandar o
+          toque de WhatsApp. A conversa de WhatsApp vem LOGO ABAIXO, e não em
+          aba separada, por dois motivos: sem a API da Meta ela não é um canal
+          que funciona sozinho, e é ali que se registra a resposta do cliente —
+          que é o que PARA a cadência. Separar as duas coisas era pedir para
+          alguém aprovar o toque 4 de quem respondeu na aba do lado. */}
+      {aba === "sequencia" && (
+        <div className="space-y-5">
+          <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />
+          <WhatsappTab negocio={negocio} />
+        </div>
+      )}
 
       {entrega && (
         <Modal
