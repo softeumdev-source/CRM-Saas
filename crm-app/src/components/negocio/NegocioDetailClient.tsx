@@ -2,12 +2,13 @@
 
 import { useCallback, useId, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRightLeft, Building2, Mail, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, Building2, Mail, MessageCircle, Phone, Trophy, XCircle, CheckCircle2, Clock, CalendarClock, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa, type Aba } from "@/lib/types";
+import { linkDeEmail, linkDeTelefone, linkDoWhatsapp } from "@/lib/contato";
 import {
   descreverPrazo,
   diasSemContato,
@@ -350,13 +351,40 @@ export function NegocioDetailClient({
               )}
             </div>
             <p className="text-rotulo text-tinta-suave mt-1">{negocio.titulo}</p>
-            <div className="flex items-center gap-3 mt-2 text-rotulo text-tinta-suave flex-wrap">
-              {negocio.contato?.email && (
-                <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{negocio.contato.email}</span>
-              )}
-              {negocio.contato?.telefone && (
-                <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{negocio.contato.telefone}</span>
-              )}
+            {/* Os dados do contato deixam de ser texto e viram AÇÃO. Antes
+                eram três spans: para falar com o cliente era preciso
+                selecionar, copiar e trocar de aplicativo.
+
+                O número do WhatsApp é normalizado (`lib/contato.ts`): o cadastro
+                guarda "(11) 99999-8888" e o `wa.me` exige dígitos com código do
+                país. Quando não dá para ter certeza — número sem DDD, por
+                exemplo — o botão SOME em vez de abrir conversa com o número de
+                outra pessoa. */}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <ContatoAcao
+                href={linkDoWhatsapp(negocio.contato?.whatsapp || negocio.contato?.telefone)}
+                icone={MessageCircle}
+                rotulo={negocio.contato?.whatsapp || negocio.contato?.telefone || ""}
+                titulo="Abrir conversa no WhatsApp"
+                externo
+              />
+              <ContatoAcao
+                href={linkDeEmail(negocio.contato?.email)}
+                icone={Mail}
+                rotulo={negocio.contato?.email || ""}
+                titulo="Escrever para este e-mail"
+              />
+              {/* Só quando o telefone é DIFERENTE do WhatsApp: repetir o mesmo
+                  número em dois chips é ruído, não opção. */}
+              {negocio.contato?.telefone &&
+                negocio.contato.telefone !== negocio.contato?.whatsapp && (
+                  <ContatoAcao
+                    href={linkDeTelefone(negocio.contato.telefone)}
+                    icone={Phone}
+                    rotulo={negocio.contato.telefone}
+                    titulo="Ligar"
+                  />
+                )}
             </div>
           </div>
 
@@ -652,5 +680,39 @@ export function NegocioDetailClient({
         </div>
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Um dado do contato que se pode clicar.
+ *
+ * Devolve `null` quando não há link possível — e isso é deliberado: um chip
+ * apagado que não faz nada seria pior do que a ausência dele, porque ensina a
+ * pessoa a clicar num lugar que não responde.
+ */
+function ContatoAcao({
+  href,
+  icone: Icone,
+  rotulo,
+  titulo,
+  externo = false,
+}: {
+  href: string | null;
+  icone: typeof Mail;
+  rotulo: string;
+  titulo: string;
+  externo?: boolean;
+}) {
+  if (!href || !rotulo) return null;
+  return (
+    <a
+      href={href}
+      title={titulo}
+      {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className="foco inline-flex max-w-full items-center gap-1.5 rounded-lg border border-fio bg-recuo px-2.5 py-1.5 text-rotulo text-tinta transition-colors duration-150 ease-out hover:border-fio-forte hover:text-acento pointer-coarse:min-h-11"
+    >
+      <Icone className="h-3.5 w-3.5 shrink-0 text-tinta-suave" aria-hidden />
+      <span className="truncate">{rotulo}</span>
+    </a>
   );
 }
