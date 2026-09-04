@@ -56,6 +56,7 @@ export function AdminClient({
   historicoEtapas,
   solicitacoesDesconto,
   preferenciasAgenda,
+  negociosAbertos,
   usuarioAtual,
   abaInicial = "desempenho",
 }: {
@@ -72,6 +73,7 @@ export function AdminClient({
   /** Vem de `?tab=`, validado no servidor. */
   abaInicial?: AbaAdmin;
   preferenciasAgenda: Tables<"preferencias_agenda"> | null;
+  negociosAbertos: { contato_id: string | null; pipeline: { chave: string; nome: string } | null }[];
   usuarioAtual: Usuario;
 }) {
   // Estado da aba na URL: F5 e link compartilhado caem na mesma aba. Antes o
@@ -172,7 +174,7 @@ export function AdminClient({
         <IntegracoesTab usuarioAtual={usuarioAtual} preferenciasAgenda={preferenciasAgenda} />
       </PainelDaAba>
       <PainelDaAba idBase={idDasAbas} chave="leads" ativa={aba === "leads"}>
-        <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} />
+        <LeadsTab vendedores={vendedoresAtivos} contatosSemDonoIniciais={contatosSemDono} teto={tetoLeadsSemDono} contatosComDonoIniciais={contatosComDono || []} usuarioAtual={usuarioAtual} negociosAbertos={negociosAbertos} />
       </PainelDaAba>
       <PainelDaAba idBase={idDasAbas} chave="descontos" ativa={aba === "descontos"}>
         <DescontosTab solicitacoesIniciais={solicitacoesDesconto || []} />

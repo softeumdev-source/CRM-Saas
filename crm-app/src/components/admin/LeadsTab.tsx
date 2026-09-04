@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle } from "lucide-react";
@@ -17,7 +17,7 @@ import {
   type ResumoImportacao,
   type StatusLinha,
 } from "@/lib/importarLeads";
-import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Vazio } from "@/components/ui";
+import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
 
 type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | null };
 
@@ -41,6 +41,7 @@ export function LeadsTab({
   teto,
   contatosComDonoIniciais = [],
   usuarioAtual,
+  negociosAbertos = [],
 }: {
   vendedores: Usuario[];
   contatosSemDonoIniciais: Contato[];
@@ -48,6 +49,16 @@ export function LeadsTab({
   teto?: number;
   contatosComDonoIniciais?: ContatoComDono[];
   usuarioAtual: Usuario;
+  /**
+   * Contatos que JA TEM negocio aberto, e em qual funil.
+   *
+   * `enviar_para_prospeccao` recusa esses contatos de proposito: sem a guarda,
+   * um clique duplicado criaria dois cards e o cliente receberia a cadencia em
+   * dobro. Mas ate agora a tela nao sabia disso — deixava selecionar, chamava a
+   * funcao, a funcao pulava todos, e o resumo anunciava "0 leads entraram" num
+   * alerta VERDE. Parecia que tinha funcionado.
+   */
+  negociosAbertos?: { contato_id: string | null; pipeline: { chave: string; nome: string } | null }[];
 }) {
   const [contatosSemDono, setContatosSemDono] = useState(contatosSemDonoIniciais);
   const [contatosComDono, setContatosComDono] = useState<ContatoComDono[]>(contatosComDonoIniciais);
@@ -62,6 +73,24 @@ export function LeadsTab({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+
+  // Mesma pergunta que a funcao faz no banco ("existe negocio aberto deste
+  // contato?"), respondida aqui para a tela poder avisar ANTES do clique. Se as
+  // duas divergirem, a tela volta a prometer o que a funcao recusa — entao a
+  // condicao e deliberadamente a mesma: negocio com `fechado_em` nulo.
+  const funilDoContato = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of negociosAbertos) {
+      if (n.contato_id) m.set(n.contato_id, n.pipeline?.nome || "outro funil");
+    }
+    return m;
+  }, [negociosAbertos]);
+
+  /** Dos selecionados, os que a prospeccao de fato vai aceitar. */
+  const prontosParaProspeccao = useMemo(
+    () => Array.from(selecionados).filter((id) => !funilDoContato.has(id)),
+    [selecionados, funilDoContato],
+  );
   const [vendedorManual, setVendedorManual] = useState("");
   const [distribuindo, setDistribuindo] = useState(false);
   // reatribuicao de leads que ja tem dono
@@ -214,7 +243,7 @@ export function LeadsTab({
     setSelecionados(new Set());
   };
 
-  const [resumoProspeccao, setResumoProspeccao] = useState<string | null>(null);
+  const [resumoProspeccao, setResumoProspeccao] = useState<{ texto: string; houve: boolean } | null>(null);
 
   /**
    * O elo que faltava entre a planilha e o Kanban de prospecção.
@@ -229,7 +258,10 @@ export function LeadsTab({
    * o cliente. Mandar a lista inteira por engano não se desfaz com um clique.
    */
   const enviarParaProspeccao = async () => {
-    const ids = Array.from(selecionados);
+    // Manda so quem a funcao aceita. Mandar os outros nao causaria dano (ela
+    // pula), mas faria o resumo falar de "pulados" que a tela ja sabia que
+    // seriam pulados — barulho no lugar de informacao.
+    const ids = prontosParaProspeccao;
     if (ids.length === 0) return;
     setDistribuindo(true);
     setErro(null);
@@ -251,7 +283,9 @@ export function LeadsTab({
     if (!r.tem_cadencia) partes.push("sem cadência ativa no funil — ninguém foi inscrito");
     if ((r.sem_email ?? 0) > 0) partes.push(`${r.sem_email} sem e-mail (card criado, fora da cadência)`);
     if ((r.pulados ?? 0) > 0) partes.push(`${r.pulados} já tinha negócio aberto`);
-    setResumoProspeccao(partes.join(" · "));
+    // O TOM SEGUE O DESFECHO. "0 leads entraram" num alerta verde com ícone de
+    // enviado é o que fez alguém procurar no Kanban um card que nunca existiu.
+    setResumoProspeccao({ texto: partes.join(" · "), houve: (r.criados ?? 0) > 0 });
     setSelecionados(new Set());
   };
 
@@ -431,17 +465,40 @@ export function LeadsTab({
               variante="primario"
               tamanho="sm"
               onClick={() => void enviarParaProspeccao()}
-              disabled={distribuindo || selecionados.size === 0}
+              // Conta os ELEGÍVEIS, e não os selecionados: com todos já em
+              // outro funil, o botão fica desligado em vez de prometer um
+              // envio que a função vai recusar em silêncio.
+              disabled={distribuindo || prontosParaProspeccao.length === 0}
               icone={distribuindo ? Loader2 : Send}
+              title={
+                selecionados.size > 0 && prontosParaProspeccao.length === 0
+                  ? "Todos os selecionados já têm negócio aberto — a prospecção não aceita lead que já está em um funil."
+                  : undefined
+              }
             >
-              Enviar {selecionados.size > 0 ? selecionados.size : ""} para prospecção
+              Enviar {prontosParaProspeccao.length > 0 ? prontosParaProspeccao.length : ""} para prospecção
             </Botao>
           </div>
         </div>
+        {/* Um aviso ANTES do clique, quando a seleção inteira é inelegível.
+            É o caso que mandou alguém procurar no Kanban um card que a função
+            nunca chegou a criar. */}
+        {selecionados.size > 0 && prontosParaProspeccao.length === 0 && (
+          <div className="px-4 pb-3">
+            <Alerta tom="alerta" icone={AlertTriangle} titulo="Nenhum destes pode ir para a prospecção">
+              {selecionados.size === 1 ? "O lead selecionado já tem" : "Os leads selecionados já têm"} negócio
+              aberto em outro funil. A prospecção é para lead frio: se o SDR abrisse um card aqui, ele mandaria
+              a mensagem de primeiro contato para alguém que um vendedor já está atendendo.
+            </Alerta>
+          </div>
+        )}
         {resumoProspeccao && (
           <div className="px-4 pb-3">
-            <Alerta tom="ok" icone={Send}>
-              {resumoProspeccao}
+            <Alerta
+              tom={resumoProspeccao.houve ? "ok" : "alerta"}
+              icone={resumoProspeccao.houve ? Send : AlertTriangle}
+            >
+              {resumoProspeccao.texto}
             </Alerta>
           </div>
         )}
@@ -470,7 +527,13 @@ export function LeadsTab({
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
-                  <td className="p-3 text-tinta-fraca capitalize">{c.origem}</td>
+                  <td className="p-3 text-tinta-fraca capitalize">
+                    {funilDoContato.has(c.id) ? (
+                      <Selo tom="neutro">já em {funilDoContato.get(c.id)}</Selo>
+                    ) : (
+                      c.origem
+                    )}
+                  </td>
                 </tr>
               ))}
               {contatosSemDono.length === 0 && (

@@ -30,6 +30,13 @@ const TETO_LEADS_SEM_DONO = 500;
  */
 const TETO_HISTORICO = 5000;
 
+/**
+ * Teto da lista de negocios abertos, usada so para marcar quais contatos NAO
+ * podem ir para a prospeccao. Um teto explicito porque esta pagina ja foi
+ * derrubada uma vez por uma consulta sem limite.
+ */
+const TETO_NEGOCIOS_ABERTOS = 5000;
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -52,7 +59,7 @@ export default async function AdminPage({
   // toda taxa de conversão do vendedor sem ninguém pedir.
   const pipeline = await carregarPipeline(supabase);
 
-  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, etapas, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }, { data: preferenciasAgenda }] = await Promise.all([
+  const [{ data: usuarios }, { data: convites }, { data: planos }, { data: negocios }, etapas, { data: contatosSemDono }, { data: contatosComDono }, { data: historicoEtapas }, { data: solicitacoesDesconto }, { data: preferenciasAgenda }, { data: negociosAbertos }] = await Promise.all([
     supabase.from("usuarios").select("*").order("criado_em"),
     supabase.from("convites").select("*").order("entrou_em", { ascending: false }),
     supabase.from("planos").select("*").order("valor_plataforma_base"),
@@ -77,6 +84,21 @@ export default async function AdminPage({
     // rodada: mais uma nao custa viagem nenhuma, e a tela abre preenchida em
     // vez de piscar um "carregando".
     supabase.from("preferencias_agenda").select("*").maybeSingle(),
+    // Quem JA TEM negocio aberto. `enviar_para_prospeccao` recusa esses
+    // contatos (senao um clique duplicado criaria dois cards e mandaria a
+    // cadencia em dobro), e sem esta lista a tela deixaria voce selecionar
+    // gente que a funcao vai pular — que foi exatamente o que aconteceu.
+    //
+    // FK explicito no embed: `negocios` tem MAIS DE UM caminho de FK para
+    // outras tabelas, e embed ambiguo ja derrubou o Kanban duas vezes neste
+    // projeto. Aqui so ha um caminho para `pipelines`, mas nomear e barato e
+    // o tipo gerado valida o nome.
+    supabase
+      .from("negocios")
+      .select("contato_id, pipeline:pipelines!negocios_pipeline_id_fkey(chave, nome)")
+      .is("fechado_em", null)
+      .not("contato_id", "is", null)
+      .limit(TETO_NEGOCIOS_ABERTOS),
   ]);
 
   return (
@@ -92,6 +114,7 @@ export default async function AdminPage({
       historicoEtapas={historicoEtapas || []}
       solicitacoesDesconto={(solicitacoesDesconto as any) || []}
       preferenciasAgenda={preferenciasAgenda}
+      negociosAbertos={negociosAbertos || []}
       usuarioAtual={usuarioAtual}
       abaInicial={ehAbaAdmin(tab) ? tab : "desempenho"}
     />
