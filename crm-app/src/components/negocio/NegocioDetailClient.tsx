@@ -23,7 +23,7 @@ import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
 import { EmailTab } from "@/components/negocio/EmailTab";
-import { WhatsappTab } from "@/components/negocio/WhatsappTab";
+import { RegistroDeResposta } from "@/components/negocio/RegistroDeResposta";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
 import type { Pipeline } from "@/lib/pipelines";
 import {
@@ -649,15 +649,18 @@ export function NegocioDetailClient({
       {/* A CADÊNCIA, com o ativar em primeiro lugar.
           `MensagensTab` em cima porque é ela que responde "e agora?": inscrever
           o lead, ver o plano com as datas, aprovar o e-mail da vez e mandar o
-          toque de WhatsApp. A conversa de WhatsApp vem LOGO ABAIXO, e não em
-          aba separada, por dois motivos: sem a API da Meta ela não é um canal
-          que funciona sozinho, e é ali que se registra a resposta do cliente —
-          que é o que PARA a cadência. Separar as duas coisas era pedir para
-          alguém aprovar o toque 4 de quem respondeu na aba do lado. */}
+          toque de WhatsApp.
+
+          Embaixo, só o registro da resposta. O fluxo de bolhas saiu junto com a
+          aba de WhatsApp: sem a API da Meta ele era um histórico quase sempre
+          vazio. O que sobrou é a única parte que MUDA alguma coisa — registrar
+          a resposta para a cadência e acende o selo no Kanban —, e ela fica
+          aqui, colada na fila de aprovação, porque separá-las era pedir para
+          alguém aprovar o toque 4 de quem respondeu na tela do lado. */}
       {aba === "sequencia" && (
         <div className="space-y-5">
           <MensagensTab negocio={negocio} usuarioAtual={usuarioAtual} />
-          <WhatsappTab negocio={negocio} />
+          <RegistroDeResposta negocio={negocio} />
         </div>
       )}
 
