@@ -9,6 +9,16 @@ import { abrirPdf } from "@/lib/storage";
 import type { EnvelopeComRelacoes } from "@/lib/types";
 import { atrasoDaCascata } from "@/components/ui";
 
+/**
+ * `signatarios.papel` guarda o enum do banco — medido: só "cliente" e
+ * "softeum" existem nas linhas. Nenhum dos dois é palavra que alguém usaria
+ * numa frase, e a tela mostrava o valor cru.
+ */
+const ROTULO_PAPEL: Record<string, string> = {
+  cliente: "Cliente",
+  softeum: "Softeum",
+};
+
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: EnvelopeComRelacoes[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
   const [busca, setBusca] = useState("");
@@ -135,12 +145,12 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                   >
                     {env.status === "concluido" ? <CheckCircle2 className="h-3.5 w-3.5" /> : env.status === "cancelado" ? <XCircle className="h-3.5 w-3.5" /> : env.status === "aguardando" ? <Eye className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
                     {env.status === "concluido"
-                      ? "concluído"
+                      ? "Concluído"
                       : env.status === "cancelado"
-                        ? "cancelado"
+                        ? "Cancelado"
                         : env.status === "aguardando"
-                          ? "cliente visualizou"
-                          : "enviado"}
+                          ? "Cliente visualizou"
+                          : "Enviado"}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -165,7 +175,21 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                         }`}
                       >
                         {s.status === "visualizado" && <Eye className="h-3 w-3" />}
-                        {s.nome} ({s.papel}): {s.status === "assinado" ? "assinado" : s.status === "visualizado" ? "visualizou" : "aguardando"}
+                        {/* Era `{nome} ({papel}): {status}`. Com dado real do
+                            banco isso saía como "Admin Softeum (softeum):
+                            assinado" — o parêntese repetindo o que o nome já
+                            diz, e o `papel` cru em minúscula, que é enum de
+                            banco, não palavra de gente.
+
+                            As DUAS informações ficam (regra 14): o papel vira o
+                            rótulo à frente, capitalizado, e o nome vem depois.
+                            "Cliente · William Machado — assinado" diz o mesmo
+                            em ordem de leitura: que categoria, quem, e o quê. */}
+                        <span className="font-semibold">{ROTULO_PAPEL[s.papel ?? ""] ?? "Signatário"}</span>
+                        {" · "}
+                        {s.nome}
+                        {" — "}
+                        {s.status === "assinado" ? "assinado" : s.status === "visualizado" ? "visualizou" : "aguardando"}
                       </span>
                     ))}
                 </div>
