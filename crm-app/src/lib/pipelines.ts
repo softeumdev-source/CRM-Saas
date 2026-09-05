@@ -88,6 +88,42 @@ export async function carregarEtapas(
  */
 export type FuncaoEtapa = "entrada" | "retorno" | "nutricao" | "entrega";
 
+/**
+ * As etapas que se OFERECE a alguém escolher — no seletor do card, no filtro da
+ * lista. Diferente das que o board desenha.
+ *
+ * O funil de Vendas tem "Novo Lead" (ordem 1) e "Qualificação" (ordem 2) que
+ * ninguém do time comercial usa: o negócio ENTRA nele em "Demonstração
+ * Agendada", pela entrega do SDR. As duas existem só para as ordens dos dois
+ * funis casarem — é assim que `etapaDaEntrega` acha o destino —, e por isso
+ * estão marcadas `oculta_quando_vazia`. O board já as esconde
+ * (`board.ts`); o seletor do card continuava oferecendo, e era ali que elas
+ * apareciam para o vendedor.
+ *
+ * DUAS EXCEÇÕES, e as duas são necessárias:
+ *
+ * 1. **Nutrição fica.** Ela também é `oculta_quando_vazia` — como coluna, vazia,
+ *    é ruído —, mas como DESTINO é legítima: é o estacionamento de quem some, e
+ *    tirá-la daqui deixaria o vendedor sem nenhuma forma manual de parar um
+ *    lead, já que a coluna vazia também não aceita arrasto.
+ *
+ * 2. **A etapa ATUAL fica, sempre.** Um `<select>` cujo `value` não está entre
+ *    as `option` mostra a primeira — o card passaria a afirmar que o negócio
+ *    está numa etapa em que ele não está. É o pior desfecho possível aqui.
+ *
+ * E isto NÃO entra em `carregarEtapas`: aquela é a leitura única, e
+ * `etapaDaEntrega`, `etapaComFuncao("retorno")` e o "pode fechar" do card
+ * dependem da lista COMPLETA. Filtrar lá derrubaria a entrega SDR → vendedor.
+ */
+export function etapasParaEscolher(
+  etapas: EtapaPipeline[],
+  etapaAtualId?: string | null,
+): EtapaPipeline[] {
+  return etapas.filter(
+    (e) => !e.oculta_quando_vazia || e.funcao === "nutricao" || e.id === etapaAtualId,
+  );
+}
+
 export function etapaComFuncao(
   etapas: EtapaPipeline[],
   funcao: FuncaoEtapa,

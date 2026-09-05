@@ -4,7 +4,31 @@ import { useState } from "react";
 import { Check, Loader2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes } from "@/lib/types";
+import { formatarMoeda } from "@/lib/types";
 import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Recuo, Rotulo, Selecao, Selo } from "@/components/ui";
+
+/**
+ * `AAAA-MM-DD` (ou um ISO completo) como `04/09/2026`, sem passar por `Date`.
+ *
+ * Fatiar a string é DE PROPÓSITO. `new Date("2026-09-06")` é meia-noite em UTC:
+ * formatado no fuso de quem olha, vira dia 5 à noite no Brasil — a previsão de
+ * fechamento apareceria um dia antes da que está gravada. Data sem hora não tem
+ * fuso, e tratá-la como instante é inventar um.
+ */
+function dataCurta(iso: string | null | undefined): string | null {
+  const [ano, mes, dia] = (iso || "").slice(0, 10).split("-");
+  return ano && mes && dia ? `${dia}/${mes}/${ano}` : null;
+}
+
+/** Uma linha de metadado do resumo: rótulo à esquerda, valor à direita. */
+function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="text-rotulo text-tinta-suave shrink-0">{rotulo}</dt>
+      <dd className="text-corpo text-tinta text-right min-w-0 truncate">{children}</dd>
+    </div>
+  );
+}
 
 type CamposDoContato = {
   nome: string;
@@ -91,7 +115,10 @@ export function VisaoGeralTab({
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    // `items-start`: sem ele o grid usa `stretch` e o cartão da direita — que
+    // tem um terço do conteúdo do formulário ao lado — era esticado até a
+    // altura dele, deixando ~350px de branco no rodapé.
+    <div className="grid gap-4 md:grid-cols-2 md:items-start">
       <Cartao className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -181,21 +208,47 @@ export function VisaoGeralTab({
           <Apoio>{negocio.titulo}</Apoio>
         </div>
 
+        {/* Saiu "Etapa": ela já é um `<select>` no cabeçalho da página, e repetir
+            aqui gastava metade da linha para dizer o que está três centímetros
+            acima. Entrou o VALOR, que é o número que define o negócio e só
+            aparecia no topo quando maior que zero. */}
         <div className="grid grid-cols-2 gap-3">
+          <Recuo>
+            <p className="text-rotulo text-tinta-suave">Valor</p>
+            <p className="text-titulo font-medium text-tinta tabular">
+              {negocio.valor ? formatarMoeda(negocio.valor) : "—"}
+            </p>
+          </Recuo>
           <Recuo>
             <p className="text-rotulo text-tinta-suave">Probabilidade</p>
             <p className="text-titulo font-medium text-tinta tabular">{negocio.probabilidade ?? 0}%</p>
           </Recuo>
-          <Recuo>
-            <p className="text-rotulo text-tinta-suave">Etapa</p>
-            <p className="text-corpo font-medium text-tinta">{negocio.etapa?.nome ?? "—"}</p>
-          </Recuo>
         </div>
 
-        <div>
-          <p className="text-rotulo text-tinta-suave">Origem</p>
-          <p className="text-corpo capitalize text-tinta">{negocio.contato?.origem || "manual"}</p>
-        </div>
+        {/* Tudo aqui já vinha no `SELECT_NEGOCIO_COMPLETO` e não era mostrado em
+            lugar nenhum da tela — a previsão de fechamento, inclusive. */}
+        <dl className="flex flex-col gap-2.5">
+          <Linha rotulo="Dono">
+            {negocio.responsavel?.nome ?? <span className="text-tinta-fraca">Sem dono</span>}
+          </Linha>
+          <Linha rotulo="Previsão de fechamento">
+            {dataCurta(negocio.data_fechamento_prevista) ?? (
+              <span className="text-tinta-fraca">Sem data</span>
+            )}
+          </Linha>
+          <Linha rotulo="Criado em">
+            {dataCurta(negocio.criado_em) ?? <span className="text-tinta-fraca">—</span>}
+          </Linha>
+          <Linha rotulo="Origem">
+            <span className="capitalize">{negocio.contato?.origem || "manual"}</span>
+          </Linha>
+        </dl>
+
+        {negocio.motivo_perda ? (
+          <Alerta tom="risco" titulo="Motivo da perda">
+            {negocio.motivo_perda}
+          </Alerta>
+        ) : null}
 
         {negocio.contato?.tags && negocio.contato.tags.length > 0 ? (
           <div>

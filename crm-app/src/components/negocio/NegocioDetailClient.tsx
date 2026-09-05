@@ -20,6 +20,7 @@ import {
 } from "@/lib/atividades";
 import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
+import { etapasParaEscolher } from "@/lib/pipelines";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
 import { useRespostasLidas } from "@/components/negocio/useRespostasLidas";
@@ -587,7 +588,7 @@ export function NegocioDetailClient({
               onChange={(e) => mudarEtapa(e.target.value)}
               className="w-full mt-1 text-corpo font-medium bg-transparent focus:outline-hidden"
             >
-              {etapas.map((et) => (
+              {etapasParaEscolher(etapas, negocio.etapa_id).map((et) => (
                 <option key={et.id} value={et.id}>{et.nome}</option>
               ))}
             </select>

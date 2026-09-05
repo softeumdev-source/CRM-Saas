@@ -6,7 +6,7 @@ import { Search, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
-import { recorteDeFunil } from "@/lib/pipelines";
+import { etapasParaEscolher, recorteDeFunil } from "@/lib/pipelines";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda } from "@/lib/types";
 import {
@@ -143,7 +143,7 @@ export function ListaClient({
             className="px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="all">Todas as etapas</option>
-            {etapas.map((et) => (
+            {etapasParaEscolher(etapas).map((et) => (
               <option key={et.id} value={et.id}>{et.nome}</option>
             ))}
           </select>

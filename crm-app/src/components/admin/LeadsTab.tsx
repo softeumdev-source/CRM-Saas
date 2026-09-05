@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle } from "lucide-react";
+import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
 import {
@@ -17,7 +17,7 @@ import {
   type ResumoImportacao,
   type StatusLinha,
 } from "@/lib/importarLeads";
-import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
+import { Alerta, Botao, Cartao, Confirmar, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
 type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | null };
@@ -321,6 +321,44 @@ export function LeadsTab({
     });
   };
 
+  /**
+   * Excluir um lead — e tudo que pende dele.
+   *
+   * Não existia botão nenhum: das sete exclusões do projeto, nenhuma era sobre
+   * `contatos` ou `negocios`. Não era permissão — `contatos_delete_admin` já
+   * existe no banco e nenhuma chave estrangeira trava.
+   *
+   * O QUE A CASCATA LEVA, medido em transação revertida antes de escrever isto:
+   * apagar o contato apaga os negócios dele, e com eles atividades, propostas,
+   * mensagens, anexos, histórico de etapas e solicitações de desconto — zero
+   * órfãos, mas também zero volta. Por isso o diálogo abaixo diz isso em vez de
+   * um "não dá para desfazer" genérico.
+   *
+   * O erro volta como STRING para dentro do `Confirmar` — é o contrato dele, e
+   * o motivo já está escrito no `PlanosTab`: com `alert()` a falha chegava
+   * depois de o diálogo ter fechado.
+   */
+  const [excluindo, setExcluindo] = useState<{ id: string; nome: string } | null>(null);
+
+  const excluirLead = async (): Promise<string | void> => {
+    if (!excluindo) return;
+    const id = excluindo.id;
+    const { error } = await createClient().from("contatos").delete().eq("id", id);
+    if (error) return `Falha ao excluir: ${error.message}`;
+    setContatosSemDono((prev) => prev.filter((c) => c.id !== id));
+    setContatosComDono((prev) => prev.filter((c) => c.id !== id));
+    setSelecionados((prev) => {
+      const novo = new Set(prev);
+      novo.delete(id);
+      return novo;
+    });
+    setSelComDono((prev) => {
+      const novo = new Set(prev);
+      novo.delete(id);
+      return novo;
+    });
+  };
+
   const reatribuir = async (paraPool: boolean) => {
     if (selComDono.size === 0) return;
     if (!paraPool && !novoResp) return;
@@ -532,6 +570,7 @@ export function LeadsTab({
                 <th className="p-3">Empresa</th>
                 <th className="p-3">E-mail</th>
                 <th className="p-3">Origem</th>
+                <th className="p-3 w-10"><span className="sr-only">Excluir</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-fio">
@@ -548,11 +587,20 @@ export function LeadsTab({
                       c.origem
                     )}
                   </td>
+                  <td className="p-3">
+                    <Botao
+                      variante="sutil"
+                      tamanho="sm"
+                      onClick={() => setExcluindo({ id: c.id, nome: c.nome })}
+                      aria-label={`Excluir o lead ${c.nome}`}
+                      icone={Trash2}
+                    />
+                  </td>
                 </tr>
               ))}
               {contatosSemDono.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <Vazio icone={Users2} titulo="Nenhum lead sem dono">
                       Importe uma base acima ou aguarde novos leads — eles caem aqui antes de ir para um vendedor.
                     </Vazio>
@@ -674,11 +722,20 @@ export function LeadsTab({
                       )}
                     </span>
                   </td>
+                  <td className="p-3">
+                    <Botao
+                      variante="sutil"
+                      tamanho="sm"
+                      onClick={() => setExcluindo({ id: c.id, nome: c.nome })}
+                      aria-label={`Excluir o lead ${c.nome}`}
+                      icone={Trash2}
+                    />
+                  </td>
                 </tr>
               ))}
               {comDonoFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={5}>
                     <Vazio icone={Search} titulo="Nenhum lead neste filtro">
                       Tente outro vendedor ou limpe a busca.
                     </Vazio>
@@ -689,6 +746,21 @@ export function LeadsTab({
           </table>
         </div>
       </Cartao>
+
+      <Confirmar
+        aberto={!!excluindo}
+        titulo="Excluir lead"
+        rotuloConfirmar="Excluir lead"
+        aoFechar={() => setExcluindo(null)}
+        aoConfirmar={excluirLead}
+        descricao={
+          <>
+            <strong className="font-medium text-tinta">{excluindo?.nome}</strong> sai da base, e
+            junto vão os negócios dele — com as atividades, propostas, mensagens, anexos e o
+            histórico de etapas de cada um. Não dá para desfazer.
+          </>
+        }
+      />
     </div>
   );
 }
