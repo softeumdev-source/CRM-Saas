@@ -72,6 +72,34 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+/**
+ * Onde o proxy roda — e, principalmente, onde ele NÃO roda.
+ *
+ * ARQUIVO ESTÁTICO PRECISA SAIR DAQUI, e a razão é concreta: o `public/` do
+ * Next NÃO é público de graça. O proxy é o passo 3 do pipeline e as rotas de
+ * sistema de arquivos são o passo 5 — ou seja, ele roda ANTES de o arquivo ser
+ * servido. Sem exclusão, `/logo-softeum.png` casa com o matcher, o cliente de
+ * e-mail não manda cookie de sessão, e a resposta é um 307 para `/login`.
+ *
+ * Isso não é hipótese: é o que ia acontecer com a logo da assinatura. O proxy
+ * de imagens do Gmail seguiria o redirect, receberia o HTML da tela de login
+ * no lugar de `image/png`, e o cliente veria um quadrado vazio no rodapé.
+ *
+ * A exclusão é por EXTENSÃO, e não pelo nome do arquivo, porque o problema é
+ * da classe inteira: a próxima imagem de Open Graph, o próximo ícone, o
+ * próximo asset em e-mail cairiam na mesma armadilha. `.mjs` entra na lista
+ * por causa de `public/pdf.worker.min.mjs` — hoje ele só é carregado por
+ * usuário logado, então o defeito não aparece, mas não há motivo para deixá-lo
+ * dependendo disso.
+ *
+ * As extensões vão em minúsculas E em maiúsculas porque a regex do matcher é
+ * sensível à caixa e o Next não aceita a flag `i` num matcher de string.
+ * `FOTO.JPG` escaparia da exclusão e voltaria a levar 307 — silenciosamente,
+ * que é o pior jeito de falhar. Escrever as duas formas é feio e é a opção
+ * honesta; a alternativa (`[pP][nN][gG]`) ninguém consegue ler.
+ */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/cron).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:png|PNG|jpg|JPG|jpeg|JPEG|gif|GIF|svg|SVG|webp|WEBP|ico|ICO|mjs|MJS)$).*)",
+  ],
 };
