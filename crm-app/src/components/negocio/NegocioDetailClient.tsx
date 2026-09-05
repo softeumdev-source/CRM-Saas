@@ -553,23 +553,16 @@ export function NegocioDetailClient({
           </div>
         </div>
 
-        {/* Termômetro de cadência: o mesmo sinal da bolinha do card */}
-        <div className="flex items-center gap-2 mt-4 flex-wrap">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg ${
-              comAtividadeHoje
-                ? "bg-ok-fraco text-ok"
-                : "bg-alerta-fraco text-alerta"
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${comAtividadeHoje ? "bg-ok" : "bg-alerta"}`} />
-            {comAtividadeHoje
-              ? "Atividade registrada hoje"
-              : dias === null
-                ? "Nenhuma atividade registrada"
-                : `${dias} ${dias === 1 ? "dia" : "dias"} sem contato`}
-          </span>
+        {/* Eram TRÊS pílulas tingidas do mesmo tamanho e do mesmo peso, e duas
+            delas contavam o MESMO fato: "Atividade registrada hoje" e "Último
+            contato: 05/09 10:25" são o mesmo evento, escrito duas vezes. Para
+            saber qual das três pedia alguma coisa era preciso ler as três.
 
+            Agora só o PRÓXIMO PASSO fica tingido, porque é o único que pede
+            ação — e quando não existe, ele é um botão que leva direto para
+            agendar. O histórico de contato vira uma linha quieta ao lado, com
+            os dois fatos fundidos num só. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
           {proxima ? (
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg ${
@@ -584,52 +577,85 @@ export function NegocioDetailClient({
           ) : (
             <button
               onClick={() => setAba("cadencia")}
-              className="foco inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-alerta-fraco text-alerta hover:bg-alerta-fraco"
+              className="foco inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-alerta-fraco text-alerta transition-colors duration-150 ease-out hover:bg-alerta-fraco hover:text-tinta"
             >
-              <Clock className="h-3 w-3" /> Sem próximo passo — agendar
+              <Clock className="h-3 w-3" aria-hidden /> Sem próximo passo — agendar
             </button>
           )}
 
-          {negocio.ultima_atividade_em && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-recuo text-tinta-suave">
-              <CheckCircle2 className="h-3 w-3" /> Último contato: {formatarDataHora(negocio.ultima_atividade_em)}
+          <span aria-hidden className="hidden h-4 w-px bg-fio sm:block" />
+
+          <span
+            className={`flex items-center gap-1.5 text-rotulo ${
+              comAtividadeHoje ? "text-ok" : dias === null || dias >= 7 ? "text-alerta" : "text-tinta-suave"
+            }`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className={comAtividadeHoje || dias === null || dias >= 7 ? "text-tinta-suave" : undefined}>
+              {comAtividadeHoje
+                ? "Atividade registrada hoje"
+                : dias === null
+                  ? "Nenhuma atividade registrada"
+                  : `${dias} ${dias === 1 ? "dia" : "dias"} sem contato`}
+              {negocio.ultima_atividade_em && !comAtividadeHoje
+                ? ` · último em ${formatarDataHora(negocio.ultima_atividade_em)}`
+                : ""}
             </span>
-          )}
+          </span>
         </div>
 
         {erro && (
           <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2 mt-3">{erro}</p>
         )}
 
+        {/* Estes dois eram DUAS CAIXAS TINGIDAS com um `<select>` sem borda e
+            fundo transparente dentro. Duas coisas erradas, e as duas o próprio
+            `DESIGN.md` já nomeia:
+
+            1. "Sem `<select>` sem borda que grava no `change` — era a troca de
+               etapa acidental mais fácil do app." Item 6 do "O que não fazer".
+               Mover um negócio de etapa é a ação mais consequente desta tela e
+               ela não parecia um controle: parecia um cartão de métrica com o
+               texto dentro.
+            2. `Campo` + `Selecao` existem exatamente para isto, e trazem
+               borda, `foco`, e o `<label for>` ligado por `useId()`. O rótulo
+               solto num `<p>` não estava ligado a nada — clicar nele não
+               abria o campo, e um leitor de tela anunciava o select sem nome.
+
+            Sem caixa tingida também: o cabeçalho já é um cartão, e um bloco
+            recuado dentro dele para segurar dois campos era moldura sobre
+            moldura. */}
         <div className="grid sm:grid-cols-2 gap-3 mt-4">
-          <div className="bg-recuo rounded-xl p-3">
-            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Etapa</p>
-            <select
-              value={negocio.etapa_id || ""}
-              onChange={(e) => mudarEtapa(e.target.value)}
-              className="foco w-full mt-1 rounded-lg text-corpo font-medium bg-transparent"
-            >
-              {etapasParaEscolher(etapas, negocio.etapa_id).map((et) => (
-                <option key={et.id} value={et.id}>{et.nome}</option>
-              ))}
-            </select>
-          </div>
-          <div className="bg-recuo rounded-xl p-3">
-            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Responsável</p>
-            <select
-              value={negocio.responsavel_id || ""}
-              onChange={(e) => {
-                const resp = responsaveis.find((v) => v.id === e.target.value) || null;
-                atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
-              }}
-              className="foco w-full mt-1 rounded-lg text-corpo font-medium bg-transparent"
-            >
-              <option value="">Sem dono (pool)</option>
-              {responsaveis.map((v) => (
-                <option key={v.id} value={v.id}>{v.nome}</option>
-              ))}
-            </select>
-          </div>
+          <Campo rotulo="Etapa">
+            {(p) => (
+              <Selecao
+                {...p}
+                value={negocio.etapa_id || ""}
+                onChange={(e) => mudarEtapa(e.target.value)}
+              >
+                {etapasParaEscolher(etapas, negocio.etapa_id).map((et) => (
+                  <option key={et.id} value={et.id}>{et.nome}</option>
+                ))}
+              </Selecao>
+            )}
+          </Campo>
+          <Campo rotulo="Responsável">
+            {(p) => (
+              <Selecao
+                {...p}
+                value={negocio.responsavel_id || ""}
+                onChange={(e) => {
+                  const resp = responsaveis.find((v) => v.id === e.target.value) || null;
+                  atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
+                }}
+              >
+                <option value="">Sem dono (pool)</option>
+                {responsaveis.map((v) => (
+                  <option key={v.id} value={v.id}>{v.nome}</option>
+                ))}
+              </Selecao>
+            )}
+          </Campo>
           {/* Etapa de nutrição: o lead está parado esperando uma data. Sem a
               data ele fica parado para sempre — é por isso que o campo avisa
               quando está vazio, em vez de só existir. */}

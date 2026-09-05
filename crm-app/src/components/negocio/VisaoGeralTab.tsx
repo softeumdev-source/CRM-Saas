@@ -4,8 +4,7 @@ import { useState } from "react";
 import { Check, Loader2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes } from "@/lib/types";
-import { formatarMoeda } from "@/lib/types";
-import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Recuo, Rotulo, Selecao, Selo } from "@/components/ui";
+import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Rotulo, Selecao, Selo } from "@/components/ui";
 
 /**
  * `AAAA-MM-DD` (ou um ISO completo) como `04/09/2026`, sem passar por `Date`.
@@ -208,26 +207,22 @@ export function VisaoGeralTab({
           <Apoio>{negocio.titulo}</Apoio>
         </div>
 
-        {/* Saiu "Etapa": ela já é um `<select>` no cabeçalho da página, e repetir
-            aqui gastava metade da linha para dizer o que está três centímetros
-            acima. Entrou o VALOR, que é o número que define o negócio e só
-            aparecia no topo quando maior que zero. */}
-        <div className="grid grid-cols-2 gap-3">
-          <Recuo>
-            <p className="text-rotulo text-tinta-suave">Valor</p>
-            <p className="text-titulo font-medium text-tinta tabular">
-              {negocio.valor ? formatarMoeda(negocio.valor) : "—"}
-            </p>
-          </Recuo>
-          <Recuo>
-            <p className="text-rotulo text-tinta-suave">Probabilidade</p>
-            <p className="text-titulo font-medium text-tinta tabular">{negocio.probabilidade ?? 0}%</p>
-          </Recuo>
-        </div>
+        {/* Saíram "Etapa" e "Valor", pelo MESMO motivo: os dois já estão no
+            cabeçalho da página, a etapa como campo e o valor como o número de
+            28px. Repetir aqui era dizer três vezes, na mesma tela, o que já
+            está três centímetros acima — e cada repetição custa uma leitura
+            antes de ser descartada.
 
+            A probabilidade desce para a lista junto com o resto. Sem a caixa
+            recuada: ela existia para fazer par com o valor, e sozinha era uma
+            moldura em volta de um dado que não pesa mais que os outros
+            quatro. */}
         {/* Tudo aqui já vinha no `SELECT_NEGOCIO_COMPLETO` e não era mostrado em
             lugar nenhum da tela — a previsão de fechamento, inclusive. */}
         <dl className="flex flex-col gap-2.5">
+          <Linha rotulo="Probabilidade">
+            <span className="tabular">{negocio.probabilidade ?? 0}%</span>
+          </Linha>
           <Linha rotulo="Dono">
             {negocio.responsavel?.nome ?? <span className="text-tinta-fraca">Sem dono</span>}
           </Linha>

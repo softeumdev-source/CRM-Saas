@@ -458,34 +458,51 @@ export function KanbanPageClient({
 
             E o bloco inteiro continua sumindo ao maximizar: é o pedaço do
             cabeçalho que ninguém CLICA. */}
-        {!maximizado && (
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-1">
-          <div className="min-w-0">
-            <p className="text-display font-semibold text-tinta tabular leading-none">
-              {ehSdr ? resumo.abertos : formatarMoeda(resumo.valor)}
-            </p>
-            <p className="text-rotulo text-tinta-suave mt-1.5">
-              {ehSdr ? (
-                <>
-                  {resumo.abertos === 1 ? "lead em prospecção" : "leads em prospecção"}
-                  {" · "}
-                  {filtrados.length} no board
-                </>
-              ) : (
-                <>
-                  pipeline aberto · {resumo.abertos}{" "}
-                  {resumo.abertos === 1 ? "negócio" : "negócios"} · ponderado{" "}
-                  <span className="tabular">{formatarMoeda(resumo.ponderado)}</span>
-                </>
-              )}
-            </p>
-          </div>
+        {/* SEM `justify-between` aqui, e essa é a correção do buraco.
 
-          {/* A faixa de apoio. Um estado em zero não é notícia: fica em tinta
-              fraca e some no fundo; passou de zero, ganha a cor do estado. É a
-              mesma ideia do cartão "Responderam", que já só existia quando
-              havia alguém esperando. */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            Medido no print de 1790px: o valor terminava em ~420px e o primeiro
+            estado só começava em ~1320px. Novecentos pixels de nada no meio da
+            linha — a maior região vazia da tela, e o "espaço branco" que se via
+            de cara. `justify-between` num contêiner de 1700px não distribui:
+            ele joga as duas pontas para longe e cava um vão no meio.
+
+            Agora a linha corre da esquerda para a direita e termina onde o
+            conteúdo termina. `items-baseline` alinha o número de 28px com os
+            textos de 12px pela LINHA DE BASE, e não pelo fundo da caixa: é o
+            que faz os três blocos lerem como uma frase só em vez de três
+            elementos empilhados por acaso.
+
+            O bloco inteiro continua sumindo ao maximizar: é o pedaço do
+            cabeçalho que ninguém CLICA. */}
+        {!maximizado && (
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+          <p className="text-display font-semibold text-tinta tabular leading-none">
+            {ehSdr ? resumo.abertos : formatarMoeda(resumo.valor)}
+          </p>
+          <p className="text-rotulo text-tinta-suave">
+            {ehSdr ? (
+              <>
+                {resumo.abertos === 1 ? "lead em prospecção" : "leads em prospecção"}
+                {" · "}
+                {filtrados.length} no board
+              </>
+            ) : (
+              <>
+                pipeline aberto · {resumo.abertos}{" "}
+                {resumo.abertos === 1 ? "negócio" : "negócios"} · ponderado{" "}
+                <span className="tabular">{formatarMoeda(resumo.ponderado)}</span>
+              </>
+            )}
+          </p>
+
+          {/* Os estados entram na MESMA linha, logo depois — não a 900px de
+              distância. O fio vertical antes deles separa "o que o funil é" de
+              "o que está pegando", sem precisar de outra linha para isso.
+
+              Um estado em zero não é notícia: fica em tinta fraca e some no
+              fundo; passou de zero, ganha a cor do estado. */}
+          <span aria-hidden className="hidden h-4 w-px self-center bg-fio sm:block" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
             <Estado
               icone={<CheckCircle2 className="h-3.5 w-3.5" />}
               valor={resumo.hoje}
