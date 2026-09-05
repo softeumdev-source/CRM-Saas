@@ -99,7 +99,7 @@ const WHATSAPP_E164 = "5547996592551";
 const WHATSAPP_LEGIVEL = "(47) 99659-2551";
 
 /**
- * A logo, ou nada.
+ * Um arquivo de `public/`, ou nada.
  *
  * Devolve `null` quando não dá para montar uma URL ABSOLUTA e https. Um `src`
  * relativo num e-mail não resolve contra nada — o cliente mostra o ícone de
@@ -110,9 +110,9 @@ const WHATSAPP_LEGIVEL = "(47) 99659-2551";
  * proxy passou a excluir estático por extensão. Sem aquela linha isto aqui é um
  * 307 para `/login`, e o proxy de imagens do Gmail recebe HTML.
  */
-function urlDaLogo(): string | null {
+function urlPublica(arquivo: string): string | null {
   const base = (process.env.NEXT_PUBLIC_APP_URL || "").trim().replace(/\/+$/, "");
-  return base.startsWith("https://") ? `${base}/logo-softeum.png` : null;
+  return base.startsWith("https://") ? `${base}/${arquivo}` : null;
 }
 
 /**
@@ -123,6 +123,10 @@ function urlDaLogo(): string | null {
  * não inclui essa. Com a entidade, quem lê em texto puro recebia
  * "Executivo de vendas &middot; Softeum" — medido, não suposto.
  *
+ * UM azul só, e ele é o do site. As duas linhas saíam em `#4f46e5`, e duas
+ * linhas azuis seguidas viram um bloco: o azul deixa de dizer "isto é um link"
+ * e vira cor de fundo do rodapé. O WhatsApp continua clicável, na cor do texto.
+ *
  * Tabela e não flex porque o Outlook desktop renderiza com o motor do Word:
  * `display:flex` vira uma pilha vertical e a logo cai em cima do texto. A
  * largura vai duas vezes — no atributo `width` e no `style` — pela mesma razão.
@@ -130,8 +134,27 @@ function urlDaLogo(): string | null {
  * E ela fica DENTRO do card branco, nunca no `div` de fora: aquele não declara
  * `background`, e no tema escuro do Gmail o texto escuro some no fundo escuro.
  */
+/**
+ * O ícone de uma linha de contato, ou string vazia.
+ *
+ * `alt=""` NÃO é descuido: o ícone é decorativo e o texto ao lado já diz o que
+ * ele é. Com um `alt` de verdade, o leitor de tela anunciaria "globo,
+ * www.softeum.com.br" e o cliente de e-mail que bloqueia imagem — que é a
+ * maioria, por padrão — mostraria a palavra "globo" grudada no link.
+ *
+ * Largura e altura vão no ATRIBUTO e no `style`: o Outlook desktop ignora o
+ * `style` e usa o atributo; o resto faz o contrário. Com os dois, a imagem
+ * bloqueada deixa um vão de 14px e a linha não se desalinha.
+ */
+function iconeDaLinha(arquivo: string): string {
+  const url = urlPublica(arquivo);
+  return url
+    ? `<img src="${url}" alt="" width="14" height="14" style="width:14px; height:14px; border:0; vertical-align:-2px; margin-right:7px;" />`
+    : "";
+}
+
 function assinaturaEmHtml(nome: string): string {
-  const logo = urlDaLogo();
+  const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
     ? `<td width="58" style="width:58px; padding:20px 14px 0 0; vertical-align:top;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
     : "";
@@ -141,8 +164,8 @@ function assinaturaEmHtml(nome: string): string {
           <td style="padding-top:20px; vertical-align:top; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:13px; line-height:1.6; color:#475569;">
             <strong style="color:#0f172a; font-size:14px;">${escaparHtml(nome)}</strong><br />
             ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
-            <a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
-            <a href="https://wa.me/${WHATSAPP_E164}" style="color:#4f46e5; text-decoration:none;">WhatsApp ${WHATSAPP_LEGIVEL}</a>
+            ${iconeDaLinha("icone-site.png")}<a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
+            ${iconeDaLinha("icone-whatsapp.png")}<a href="https://wa.me/${WHATSAPP_E164}" style="color:#475569; text-decoration:none;">WhatsApp ${WHATSAPP_LEGIVEL}</a>
           </td>
         </tr>
       </table>`;
