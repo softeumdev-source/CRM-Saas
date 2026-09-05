@@ -1,8 +1,37 @@
 import type { Tables } from "@/lib/supabase/types";
-import type { CampoAssinatura } from "@/components/PdfFieldEditor";
+
+/**
+ * Um campo de assinatura posicionado no PDF.
+ *
+ * Mora AQUI, e nao no editor, por dois motivos medidos. Existiam DUAS
+ * definicoes deste mesmo formato de fio — uma no `PdfFieldEditor` com
+ * `tipo: "assinatura"` e outra dentro da rota `/api/assinar/[token]` com
+ * `tipo: string` — e as duas descrevem o que e gravado em
+ * `envelopes.campos_assinatura`. Uma escrevia, a outra lia, e nada casava as
+ * duas: qualquer divergencia passaria batida.
+ *
+ * E porque `lib/` nao pode depender de componente: importar daqui um arquivo
+ * com `"use client"` e a forma exata do erro que ja derrubou `/admin` e
+ * `/negocios/[id]` em producao ("Attempted to call X from the server").
+ * `import type` some na compilacao e nao quebra hoje, mas deixa a armadilha
+ * armada para quem trocar por um import de valor.
+ *
+ * `type` e nao `interface`: a coluna e `Json`, e so alias de tipo ganha index
+ * signature implicita.
+ */
+export type CampoAssinatura = {
+  id: string;
+  signatario_ordem: number;
+  tipo: "assinatura";
+  documento: "comercial" | "tecnica";
+  pagina: number;
+  x: number;
+  y: number;
+  largura: number;
+  altura: number;
+};
 
 export type Usuario = Tables<"usuarios">;
-export type Tenant = Tables<"tenants">;
 export type Contato = Tables<"contatos">;
 export type EtapaPipeline = Tables<"etapas_pipeline">;
 export type Negocio = Tables<"negocios">;
@@ -13,8 +42,6 @@ export type Proposta = Tables<"propostas">;
 export type Envelope = Tables<"envelopes">;
 export type Signatario = Tables<"signatarios">;
 export type Convite = Tables<"convites">;
-export type RegraDistribuicao = Tables<"regras_distribuicao">;
-export type NegocioEtapaHistorico = Tables<"negocio_etapa_historico">;
 export type SolicitacaoDesconto = Tables<"solicitacoes_desconto">;
 
 /**

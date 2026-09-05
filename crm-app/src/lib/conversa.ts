@@ -116,18 +116,3 @@ export function trecho(texto: string, limite = 120): string {
   if (!linha) return "";
   return linha.length > limite ? `${linha.slice(0, limite - 1)}…` : linha;
 }
-
-/**
- * Rótulo do dia para o separador do WhatsApp.
- *
- * `hoje`/`ontem` em vez da data crua porque numa conversa contínua o que a
- * pessoa procura é "isso foi hoje?", não o dia do mês.
- */
-export function rotuloDoDia(ms: number, agora = new Date()): string {
-  const d = new Date(ms);
-  const dia = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const diff = Math.round((dia(d) - dia(agora)) / 86400000);
-  if (diff === 0) return "hoje";
-  if (diff === -1) return "ontem";
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}

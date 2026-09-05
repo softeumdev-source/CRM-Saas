@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent, Send, Plug } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
@@ -16,7 +16,7 @@ import { DescontosTab } from "@/components/admin/DescontosTab";
 import { CadenciasTab } from "@/components/admin/CadenciasTab";
 import { IntegracoesTab } from "@/components/admin/IntegracoesTab";
 import { Abas, PainelDaAba, useAbaNaUrl, useIdDeAbas } from "@/components/ui";
-import { ehAbaAdmin, type AbaAdmin } from "@/components/admin/abas";
+import type { AbaAdmin } from "@/components/admin/abas";
 
 /**
  * A lista COM ÍCONES, para desenhar. As chaves e o validador vivem em
@@ -39,10 +39,6 @@ const ABAS_COM_ICONE = [
   { chave: "integracoes", rotulo: "Integrações", icone: Plug },
 ] as const satisfies readonly { chave: AbaAdmin; rotulo: string; icone: typeof Users }[];
 
-// Reexportados para quem já importava daqui continuar valendo. O valor vem de
-// `abas.ts`; não há uma segunda definição para divergir.
-export { ehAbaAdmin };
-export type { AbaAdmin };
 
 export function AdminClient({
   usuarios,

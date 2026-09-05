@@ -6,10 +6,6 @@ export function temResendConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY;
 }
 
-export function usandoRemetenteTest(): boolean {
-  return !process.env.RESEND_FROM_EMAIL;
-}
-
 export interface EmailResult {
   sent: boolean;
   skipped: boolean;

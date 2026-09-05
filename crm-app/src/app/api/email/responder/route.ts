@@ -247,12 +247,6 @@ export async function POST(request: Request) {
     negocio.titulo || "Contato da Softeum",
   );
 
-  const { data: usuarioAtual } = await sessao
-    .from("usuarios")
-    .select("nome, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
   // ------------------------------------------------------------------
   // 6. GRAVAR ANTES DE ENVIAR.
   //

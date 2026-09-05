@@ -1,4 +1,4 @@
-import type { Atividade, NegocioComRelacoes, TipoAtividade } from "@/lib/types";
+import type { Atividade, NegocioComRelacoes } from "@/lib/types";
 
 export const ROTULOS_ATIVIDADE: Record<string, string> = {
   ligacao: "Ligação",
@@ -263,8 +263,4 @@ export const TIPOS_REUNIAO: readonly string[] = ["reuniao", "demo"];
 
 export function ehReuniao(tipo: string | null | undefined): boolean {
   return !!tipo && TIPOS_REUNIAO.includes(tipo);
-}
-
-export function ehTipoValido(tipo: string): tipo is TipoAtividade {
-  return tipo in ROTULOS_ATIVIDADE;
 }

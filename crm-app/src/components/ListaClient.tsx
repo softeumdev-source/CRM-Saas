@@ -56,7 +56,7 @@ export function ListaClient({
   const recarregar = useCallback(async () => {
     const { data } = await buscarAte(Math.max(carregados, lote));
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
-  }, [buscarAte, carregados, lote]);
+  }, [buscarAte, carregados, lote, setNegocios]);
 
   const carregarMais = useCallback(async () => {
     const alvo = carregados + lote;

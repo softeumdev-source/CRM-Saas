@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit3, Trash2, X } from "lucide-react";
+import { Plus, Edit3, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";

@@ -16,16 +16,6 @@ export const ROTULO_STATUS_INSCRICAO: Record<string, string> = {
   cancelada: "Cancelada",
 };
 
-export const ROTULO_STATUS_MENSAGEM: Record<string, string> = {
-  aguardando_aprovacao: "Aguardando aprovação",
-  aprovada: "Aprovada, na fila",
-  enviando: "Enviando",
-  enviada: "Enviada",
-  falhou: "Falhou",
-  cancelada: "Cancelada",
-  recebida: "Recebida",
-};
-
 /**
  * O "plano de ação": a sequência inteira com as datas, calculada antes de
  * inscrever alguém.

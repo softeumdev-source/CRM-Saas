@@ -7,6 +7,23 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
+      // O projeto JÁ escreve `const { id: _id, ...campos } = form` para tirar
+      // colunas de um payload, e `_` na frente é o combinado de "existe só para
+      // ser descartado". Faltava dizer isso ao eslint: sem estas opções, o
+      // próprio idioma que o código adota virava dez avisos.
+      //
+      // `ignoreRestSiblings` é o que cobre o caso real: quem é desestruturado
+      // ao lado de um `...rest` está sendo REMOVIDO do rest de propósito.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
       // Ler `etapas_pipeline` sem filtro de funil é a regressão silenciosa mais
       // cara do projeto: a primeira etapa de SDR criada vira coluna extra no
       // board do vendedor, na lista e no seletor de etapa do negócio — em

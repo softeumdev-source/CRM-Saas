@@ -9,19 +9,7 @@ import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 import { mensagemDoErro } from "@/lib/erros";
-import type { AssinaturaRegistrada, EnvelopePublico } from "@/lib/types";
-
-interface CampoAssinatura {
-  id: string;
-  signatario_ordem: number;
-  tipo: string;
-  documento: "comercial" | "tecnica";
-  pagina: number;
-  x: number;
-  y: number;
-  largura: number;
-  altura: number;
-}
+import type { AssinaturaRegistrada, CampoAssinatura, EnvelopePublico } from "@/lib/types";
 
 async function embutirAssinaturasNoPdf(
   pdfBytes: ArrayBuffer | Uint8Array,

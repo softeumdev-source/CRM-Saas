@@ -2,28 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { FileSignature, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, Send, MousePointer2 } from "lucide-react";
+import type { CampoAssinatura } from "@/lib/types";
+import { FileSignature, Trash2, ChevronLeft, ChevronRight, Loader2, Send, MousePointer2 } from "lucide-react";
 
-/**
- * Um campo de assinatura posicionado no PDF.
- *
- * `type` e nao `interface`, e a diferenca NAO e estilo: a coluna
- * `envelopes.campos_assinatura` e `Json`, e o TypeScript so da index signature
- * implicita a alias de tipo. Como `interface`, gravar a lista exigia um
- * `as any` no `insert` — que apagava a conferencia de forma justamente onde ela
- * importa, na fronteira com o banco.
- */
-export type CampoAssinatura = {
-  id: string;
-  signatario_ordem: number;
-  tipo: "assinatura";
-  documento: "comercial" | "tecnica";
-  pagina: number;
-  x: number;
-  y: number;
-  largura: number;
-  altura: number;
-}
+// Reexportado para quem ja importava o tipo daqui junto com o componente.
+// A definicao vive em `@/lib/types`, longe do `"use client"`.
+export type { CampoAssinatura };
 
 interface Signatario {
   nome: string;

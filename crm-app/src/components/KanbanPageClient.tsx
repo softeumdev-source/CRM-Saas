@@ -291,7 +291,7 @@ export function KanbanPageClient({
       }
       void recarregar();
     },
-    [negocios, etapas, usuarioAtual.id, recarregar],
+    [negocios, etapas, usuarioAtual.id, recarregar, setNegocios],
   );
 
   const filtrados = useMemo(() => {

@@ -124,7 +124,7 @@ export function AgendaClient({
       .or("concluida.is.null,concluida.is.false")
       .order("data_agendada", { ascending: true });
     if (data) setAtividades(data as unknown as AtividadeAgenda[]);
-  }, []);
+  }, [setAtividades]);
 
   useSincronizacao(recarregar, {
     canal: "agenda",

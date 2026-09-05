@@ -221,7 +221,8 @@ export function LeadsTab({
   const alternarSelecao = (id: string) => {
     setSelecionados((prev) => {
       const novo = new Set(prev);
-      novo.has(id) ? novo.delete(id) : novo.add(id);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
       return novo;
     });
   };
@@ -314,7 +315,8 @@ export function LeadsTab({
   const alternarSelComDono = (id: string) => {
     setSelComDono((prev) => {
       const novo = new Set(prev);
-      novo.has(id) ? novo.delete(id) : novo.add(id);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
       return novo;
     });
   };
