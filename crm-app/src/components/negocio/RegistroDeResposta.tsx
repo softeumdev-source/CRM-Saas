@@ -71,7 +71,7 @@ export function RegistroDeResposta({ negocio }: { negocio: NegocioComRelacoes })
   };
 
   return (
-    <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-3">
+    <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5 space-y-3">
       <div>
         <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-acento" /> O cliente respondeu no WhatsApp?

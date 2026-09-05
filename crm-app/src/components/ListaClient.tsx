@@ -109,23 +109,39 @@ export function ListaClient({
     });
   }, [negocios, busca, etapaFiltro, ordem]);
 
+  /** O que o recorte visível soma. É o número grande do cabeçalho. */
+  const totalFiltrado = useMemo(
+    () => filtrados.reduce((soma, n) => soma + (n.valor || 0), 0),
+    [filtrados],
+  );
+
   return (
     <div className="max-w-pagina mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-titulo font-semibold text-tinta">
-            Lista de Negócios ({filtrados.length})
-          </h1>
-          {/* A busca só alcança o que está carregado. Dizer isso é a diferença
-              entre "não existe" e "ainda não veio" — sem esta linha, procurar
-              um cliente que está na posição 300 devolveria "nenhum negócio
-              encontrado", que é uma resposta errada. */}
-          {carregados < total && (
-            <p className="text-rotulo text-tinta-suave mt-0.5">
-              Mostrando {carregados} de {total}. A busca e os filtros trabalham
-              sobre estes {carregados}.
-            </p>
-          )}
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          {/* O ASSUNTO desta tela é quanto dinheiro está no recorte que a
+              pessoa acabou de filtrar — não o texto "Lista de Negócios".
+              Antes o título era o maior elemento (20px) e o total não existia
+              em lugar nenhum: dava para filtrar por etapa e não saber quanto
+              aquilo somava.
+
+              É o mesmo idioma da tela de quarentena — rótulo miúdo, número
+              grande, apoio embaixo — e é o que dá a esta tela um elemento com
+              permissão de ser grande (craft R4). */}
+          <h1 className="text-rotulo text-tinta-suave">Lista de negócios</h1>
+          <p className="text-display font-semibold text-tinta tabular leading-none mt-1">
+            {formatarMoeda(totalFiltrado)}
+          </p>
+          <p className="text-rotulo text-tinta-suave mt-1.5">
+            {filtrados.length} {filtrados.length === 1 ? "negócio" : "negócios"}
+            {/* A busca só alcança o que está carregado. Dizer isso é a diferença
+                entre "não existe" e "ainda não veio" — sem esta linha, procurar
+                um cliente que está na posição 300 devolveria "nenhum negócio
+                encontrado", que é uma resposta errada. */}
+            {carregados < total ? (
+              <> · mostrando {carregados} de {total}, e os filtros trabalham sobre estes {carregados}</>
+            ) : null}
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
@@ -160,7 +176,7 @@ export function ListaClient({
         </div>
       </div>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-rotulo">
             <thead>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Users, Wallet, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Maximize2, Minimize2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -446,67 +446,87 @@ export function KanbanPageClient({
           </div>
         </div>
 
-        {/* Cinco colunas só quando o card de respostas existe. As duas classes
-            estão escritas por extenso de propósito: o Tailwind varre o código
-            em busca de literais, e uma classe montada por interpolação
-            (`md:grid-cols-${n}`) simplesmente não seria gerada.
+        {/* Eram QUATRO cartões iguais, lado a lado: mesma borda, mesmo raio,
+            mesmo padding, mesmo corpo de 16px. Desfocando a tela eram quatro
+            retângulos cinza idênticos — nenhum deles com permissão de ser o
+            assunto, que é exatamente a monotonia que o craft R4 descreve.
 
-            E o bloco inteiro some ao maximizar: são ~122px, o pedaço mais gordo
-            do cabeçalho, e é o único que ninguém CLICA — número que se lê de
-            vez em quando cede espaço para card que se arrasta o dia todo. Os
-            contadores que importam continuam nos chips de filtro logo abaixo. */}
+            Agora UM número é grande: o dinheiro no board de vendas, os leads
+            no do SDR. O resto vira uma faixa quieta de 12px, sem moldura
+            nenhuma — a hierarquia passa a vir de TAMANHO e COR (craft R9), e
+            não de quatro caixas competindo em pé de igualdade.
+
+            E o bloco inteiro continua sumindo ao maximizar: é o pedaço do
+            cabeçalho que ninguém CLICA. */}
         {!maximizado && (
-        <div
-          className={`grid grid-cols-2 gap-2.5 ${
-            resumo.responderam > 0 ? "md:grid-cols-5" : "md:grid-cols-4"
-          }`}
-        >
-          {/* Primeiro cartão, e só quando há alguém esperando. Um layout que
-              muda quando acontece algo importante é sinal, não defeito — e um
-              "Responderam: 0" fixo seria mais um número morto na tela. */}
-          {resumo.responderam > 0 && (
-            <ResumoCard
-              icone={<MessageCircle className="h-3.5 w-3.5" />}
-              rotulo="Responderam"
-              valor={String(resumo.responderam)}
-              cor="text-info"
-              detalhe="esperando você"
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-1">
+          <div className="min-w-0">
+            <p className="text-display font-semibold text-tinta tabular leading-none">
+              {ehSdr ? resumo.abertos : formatarMoeda(resumo.valor)}
+            </p>
+            <p className="text-rotulo text-tinta-suave mt-1.5">
+              {ehSdr ? (
+                <>
+                  {resumo.abertos === 1 ? "lead em prospecção" : "leads em prospecção"}
+                  {" · "}
+                  {filtrados.length} no board
+                </>
+              ) : (
+                <>
+                  pipeline aberto · {resumo.abertos}{" "}
+                  {resumo.abertos === 1 ? "negócio" : "negócios"} · ponderado{" "}
+                  <span className="tabular">{formatarMoeda(resumo.ponderado)}</span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* A faixa de apoio. Um estado em zero não é notícia: fica em tinta
+              fraca e some no fundo; passou de zero, ganha a cor do estado. É a
+              mesma ideia do cartão "Responderam", que já só existia quando
+              havia alguém esperando. */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            <Estado
+              icone={<CheckCircle2 className="h-3.5 w-3.5" />}
+              valor={resumo.hoje}
+              rotulo="trabalhados hoje"
+              cor={resumo.hoje > 0 ? "text-ok" : undefined}
             />
-          )}
-          {ehSdr ? (
-            <ResumoCard
-              icone={<Users className="h-3.5 w-3.5" />}
-              rotulo="Leads em prospecção"
-              valor={String(resumo.abertos)}
-              detalhe={`${filtrados.length} no board`}
+            <Estado
+              icone={<AlertTriangle className="h-3.5 w-3.5" />}
+              valor={resumo.atrasados}
+              rotulo={resumo.atrasados === 1 ? "passo atrasado" : "passos atrasados"}
+              cor={resumo.atrasados > 0 ? "text-risco" : undefined}
             />
-          ) : (
-            <ResumoCard
-              icone={<Wallet className="h-3.5 w-3.5" />}
-              rotulo={`Pipeline aberto (${resumo.abertos})`}
-              valor={formatarMoeda(resumo.valor)}
-              detalhe={`Ponderado: ${formatarMoeda(resumo.ponderado)}`}
+            <Estado
+              icone={<CalendarClock className="h-3.5 w-3.5" />}
+              valor={resumo.semAgenda}
+              rotulo="sem próximo passo"
+              cor={resumo.semAgenda > 0 ? "text-alerta" : undefined}
             />
-          )}
-          <ResumoCard
-            icone={<CheckCircle2 className="h-3.5 w-3.5" />}
-            rotulo="Trabalhados hoje"
-            valor={String(resumo.hoje)}
-            cor="text-ok"
-          />
-          <ResumoCard
-            icone={<AlertTriangle className="h-3.5 w-3.5" />}
-            rotulo="Passos atrasados"
-            valor={String(resumo.atrasados)}
-            cor={resumo.atrasados > 0 ? "text-risco" : undefined}
-          />
-          <ResumoCard
-            icone={<CalendarClock className="h-3.5 w-3.5" />}
-            rotulo="Sem próximo passo"
-            valor={String(resumo.semAgenda)}
-            cor={resumo.semAgenda > 0 ? "text-alerta" : undefined}
-          />
+          </div>
         </div>
+        )}
+
+        {/* Quem respondeu não é "mais uma métrica": é a única linha do
+            cabeçalho que pede AÇÃO agora. Então sai da fileira de números e
+            vira uma faixa tingida, com tratamento que nenhum outro elemento da
+            tela tem — que é como o craft R4 manda quebrar a monotonia: não
+            deixando tudo com o mesmo peso. */}
+        {!maximizado && resumo.responderam > 0 && (
+          <button
+            onClick={() => setFoco("respondeu")}
+            className="foco flex w-full items-center gap-2.5 rounded-xl border border-info/40 bg-info-fraco px-3.5 py-2.5 text-left transition-colors duration-150 ease-out hover:border-info"
+          >
+            <MessageCircle className="h-4 w-4 shrink-0 text-info" aria-hidden />
+            <span className="text-corpo text-tinta">
+              <span className="font-medium tabular">{resumo.responderam}</span>{" "}
+              {resumo.responderam === 1
+                ? "cliente respondeu e está esperando você"
+                : "clientes responderam e estão esperando você"}
+            </span>
+            <span className="ml-auto shrink-0 text-rotulo font-medium text-info">Ver</span>
+          </button>
         )}
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -532,7 +552,7 @@ export function KanbanPageClient({
                 onClick={() => setFoco(f.chave)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-semibold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap pointer-coarse:min-h-11 ${
                   foco === f.chave
-                    ? "bg-superficie text-acento shadow-xs"
+                    ? "bg-superficie text-acento shadow-cartao"
                     : "text-tinta-suave hover:text-tinta"
                 }`}
               >
@@ -659,26 +679,34 @@ export function KanbanPageClient({
   );
 }
 
-function ResumoCard({
+/**
+ * Um estado do board na faixa de apoio: ícone, número e o que ele conta.
+ *
+ * Substitui o `ResumoCard`, que era `bg-superficie border border-fio
+ * rounded-2xl` — moldura completa para cada número, quatro vezes seguidas. Sem
+ * moldura nenhuma aqui de propósito: estes três números são APOIO do número
+ * grande ao lado, e dar cartão a eles era dar o mesmo peso visual ao apoio e
+ * ao assunto (craft R4).
+ *
+ * Em zero fica em tinta fraca — nada a fazer não é notícia e não precisa de
+ * cor. É a diferença entre um painel que avisa e um que só exibe.
+ */
+function Estado({
   icone,
-  rotulo,
   valor,
-  detalhe,
+  rotulo,
   cor,
 }: {
   icone: React.ReactNode;
+  valor: number;
   rotulo: string;
-  valor: string;
-  detalhe?: string;
   cor?: string;
 }) {
   return (
-    <div className="bg-superficie border border-fio rounded-2xl px-3.5 py-2.5">
-      <p className="text-rotulo font-medium uppercase tracking-wider text-tinta-fraca flex items-center gap-1.5">
-        {icone} {rotulo}
-      </p>
-      <p className={`text-corpo-lg font-semibold mt-0.5 ${cor || "text-tinta"}`}>{valor}</p>
-      {detalhe && <p className="text-rotulo text-tinta-fraca font-medium">{detalhe}</p>}
-    </div>
+    <span className={`flex items-center gap-1.5 text-rotulo ${cor ?? "text-tinta-fraca"}`}>
+      <span aria-hidden>{icone}</span>
+      <span className="text-corpo font-medium tabular">{valor}</span>
+      <span className={cor ? "text-tinta-suave" : undefined}>{rotulo}</span>
+    </span>
   );
 }

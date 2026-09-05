@@ -139,7 +139,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   }
 
   return (
-    <header className="bg-superficie border-b border-fio sticky top-0 z-30 shadow-xs">
+    <header className="bg-superficie border-b border-fio sticky top-0 z-30 shadow-cartao">
       <div className="max-w-pagina mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center">
@@ -169,7 +169,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
                 href={l.href}
                 className={`flex items-center gap-2 px-3 py-1.5 text-rotulo font-medium rounded-lg transition-colors duration-150 ease-out ${
                   active
-                    ? "bg-superficie text-acento shadow-xs"
+                    ? "bg-superficie text-acento shadow-cartao"
                     : "text-tinta-suave hover:text-tinta"
                 }`}
               >

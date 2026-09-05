@@ -248,7 +248,7 @@ export function VendedoresTab({
             const deles = negocios.filter((n) => n.responsavel_id === v.id);
             const valorAtivo = deles.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
-              <div key={v.id} className="col-span-full sm:col-span-3 bg-superficie p-4 rounded-2xl border border-fio shadow-xs flex items-center justify-between gap-3">
+              <div key={v.id} className="col-span-full sm:col-span-3 bg-superficie p-4 rounded-2xl border border-fio shadow-cartao flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-10 w-10 rounded-xl bg-acento-fraco text-acento flex items-center justify-center text-rotulo font-medium shrink-0">
                     {iniciais(v.nome)}

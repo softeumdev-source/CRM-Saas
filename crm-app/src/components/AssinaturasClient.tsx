@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search, Eye } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search, Eye, Ban } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { abrirPdf } from "@/lib/storage";
@@ -56,23 +56,41 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
 
   return (
     <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <FileSignature className="h-5 w-5 text-acento" />
-        <h1 className="text-titulo font-semibold text-tinta">Assinaturas</h1>
-      </div>
+      {/* Eram TRÊS cartões idênticos, centralizados, os três com o número a
+          28px — "todo bloco com a mesma largura, todo cartão com o mesmo peso,
+          tudo centralizado" é literalmente a descrição do craft R4.
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
-          <p className="text-display font-semibold text-alerta">{contadores.acaoNecessaria}</p>
-          <p className="text-rotulo font-medium text-tinta-suave uppercase">Aguardando assinatura</p>
+          Só um destes números pede alguma coisa de alguém: o que está
+          aguardando assinatura. Ele fica grande; concluídas e canceladas são
+          histórico e viram a linha de apoio ao lado. E o número em zero deixa
+          de ser âmbar: não ter nada esperando é uma boa notícia, não um
+          alerta. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-rotulo text-tinta-suave">
+            <FileSignature className="h-3.5 w-3.5 text-acento" aria-hidden />
+            Assinaturas aguardando o cliente
+          </p>
+          <h1
+            className={`text-display font-semibold tabular leading-none mt-1.5 ${
+              contadores.acaoNecessaria > 0 ? "text-alerta" : "text-tinta"
+            }`}
+          >
+            {contadores.acaoNecessaria}
+          </h1>
         </div>
-        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
-          <p className="text-display font-semibold text-ok">{contadores.concluido}</p>
-          <p className="text-rotulo font-medium text-tinta-suave uppercase">Concluídas</p>
-        </div>
-        <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
-          <p className="text-display font-semibold text-tinta-fraca">{contadores.cancelado}</p>
-          <p className="text-rotulo font-medium text-tinta-suave uppercase">Canceladas</p>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-rotulo">
+          <span className="flex items-center gap-1.5 text-tinta-suave">
+            <CheckCircle2 className="h-3.5 w-3.5 text-ok" aria-hidden />
+            <span className="text-corpo font-medium text-tinta tabular">{contadores.concluido}</span>
+            {contadores.concluido === 1 ? "concluída" : "concluídas"}
+          </span>
+          <span className="flex items-center gap-1.5 text-tinta-fraca">
+            <Ban className="h-3.5 w-3.5" aria-hidden />
+            <span className="text-corpo font-medium tabular">{contadores.cancelado}</span>
+            {contadores.cancelado === 1 ? "cancelada" : "canceladas"}
+          </span>
         </div>
       </div>
 
@@ -86,7 +104,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
         />
       </div>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs divide-y divide-fio">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao divide-y divide-fio">
         {envelopes.length === 0 && <p className="p-6 text-rotulo text-tinta-fraca text-center">Nenhum envelope de assinatura ainda.</p>}
         {envelopes.length > 0 && envelopesFiltrados.length === 0 && (
           <p className="p-6 text-rotulo text-tinta-fraca text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
@@ -106,7 +124,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                     <p className="text-rotulo text-tinta-suave">Vendedor: {negocio?.responsavel?.nome || "—"}</p>
                   </div>
                   <span
-                    className={`flex items-center gap-1.5 px-3 py-1 text-rotulo font-semibold rounded-full ${
+                    className={`flex items-center gap-1.5 px-3 py-1 text-rotulo font-medium rounded-full ${
                       env.status === "concluido"
                         ? "bg-ok-fraco text-ok"
                         : env.status === "cancelado"

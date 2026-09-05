@@ -122,15 +122,25 @@ export function LeadCard({
 
   // Uma resposta nao lida manda no card: e a coisa mais urgente que pode
   // acontecer com um lead, e ganha do atraso e do "trabalhado hoje".
+  //
+  // O CARD DE RESPOSTA TROCA A SUPERFICIE, e nao so a borda. Um fio de 1px
+  // colorido em volta de um card de 300px nao se ve de longe: com o board
+  // desfocado, os 25 cards liam todos igual, que e a monotonia do craft R4. O
+  // unico estado em que alguem esta esperando do outro lado ganha um fundo
+  // tingido e passa a ser achavel de relance.
+  //
+  // Trocar, e nao EMPILHAR: nos outros estados a superficie continua neutra e
+  // quem fala e a borda. Fundo tingido + fio forte + sombra no mesmo elemento e
+  // o que o craft R10 proibe.
   const borda = respondeu
-    ? "border-info hover:border-info"
+    ? "border-info bg-info-fraco hover:border-info"
     : temAlgoPendente
-      ? "border-alerta hover:border-alerta"
+      ? "border-alerta bg-superficie hover:border-alerta"
       : comAtividadeHoje
-        ? "border-ok/40 hover:border-ok"
+        ? "border-ok/40 bg-superficie hover:border-ok"
         : proximaAtrasada
-          ? "border-risco/40 hover:border-risco"
-          : "border-fio hover:border-fio-forte";
+          ? "border-risco/40 bg-superficie hover:border-risco"
+          : "border-fio bg-superficie hover:border-fio-forte";
 
   return (
     <Link
@@ -146,7 +156,7 @@ export function LeadCard({
       // de que a pessoa vai abrir justamente aquele card.
       prefetch={false}
       className={[
-        "foco group block rounded-2xl border bg-superficie p-3.5 shadow-cartao",
+        "foco group block rounded-2xl border p-3.5 shadow-cartao",
         "transition-[border-color] duration-150 ease-out",
         borda,
       ].join(" ")}
@@ -246,9 +256,17 @@ export function LeadCard({
 
       {/* O bloco do meio e o que separa as duas variantes, e separa pela FORMA
           antes do conteudo: faixa cheia de um lado, trilho de fios do outro.
-          E o que faz os dois boards se distinguirem de longe, borrados. */}
+          E o que faz os dois boards se distinguirem de longe, borrados.
+
+          A faixa recua um degrau da superficie DO CARD — e num card de resposta
+          a superficie e o tingido, entao quem recua e o branco. Sem isto, um
+          `bg-recuo` cinza ficaria boiando sobre o azul palido. */}
       {variante === "vendas" ? (
-        <div className="my-3 flex items-center justify-between gap-2 rounded-xl bg-recuo px-3 py-2">
+        <div
+          className={`my-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
+            respondeu ? "bg-superficie" : "bg-recuo"
+          }`}
+        >
           {/* Sem valor, a faixa NÃO grita "R$ 0,00".
               O elemento mais forte do card era um zero — e zero aqui não é o
               preço, é "ainda não foi precificado". A FAIXA fica, porque é ela

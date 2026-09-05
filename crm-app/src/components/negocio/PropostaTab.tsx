@@ -396,7 +396,7 @@ export function PropostaTab({
         </div>
       )}
 
-      <div className={`bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4 ${!temCnpj ? "opacity-50 pointer-events-none" : ""}`}>
+      <div className={`bg-superficie rounded-2xl border border-fio shadow-cartao p-5 space-y-4 ${!temCnpj ? "opacity-50 pointer-events-none" : ""}`}>
         <h3 className="font-medium text-corpo text-tinta">Gerar nova proposta</h3>
 
         <div>
@@ -582,7 +582,7 @@ export function PropostaTab({
         </button>
       </div>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao overflow-hidden">
         <div className="p-5 border-b border-fio">
           <h3 className="font-medium text-corpo text-tinta">Propostas geradas ({propostas.length})</h3>
           <p className="text-rotulo text-tinta-suave mt-0.5">

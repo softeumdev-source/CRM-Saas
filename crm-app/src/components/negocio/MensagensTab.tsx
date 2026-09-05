@@ -234,7 +234,7 @@ export function MensagensTab({
 
   if (carregando) {
     return (
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-8 flex items-center justify-center gap-2 text-corpo text-tinta-suave">
         <Loader2 className="h-4 w-4 animate-spin" /> Carregando cadência…
       </div>
     );
@@ -242,7 +242,7 @@ export function MensagensTab({
 
   if (erroCarga) {
     return (
-      <div className="bg-superficie rounded-2xl border border-risco/40 shadow-xs p-8 text-center space-y-3">
+      <div className="bg-superficie rounded-2xl border border-risco/40 shadow-cartao p-8 text-center space-y-3">
         <AlertTriangle className="h-6 w-6 text-risco mx-auto" />
         <p className="text-corpo text-tinta-suave">{erroCarga}</p>
         <Botao
@@ -499,7 +499,7 @@ export function MensagensTab({
       {/* ---------------------------------------------------------------- */}
       {/* Cadência: estado atual ou inscrição, com o plano à vista          */}
       {/* ---------------------------------------------------------------- */}
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5 space-y-4">
         <h3 className="font-medium text-corpo text-tinta flex items-center gap-2">
           <Send className="h-4 w-4 text-acento" /> Cadência
         </h3>

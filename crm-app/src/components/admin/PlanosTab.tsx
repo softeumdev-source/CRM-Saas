@@ -122,7 +122,7 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {planos.map((p) => (
-          <div key={p.id} className="bg-superficie rounded-2xl p-6 border border-fio shadow-xs space-y-3">
+          <div key={p.id} className="bg-superficie rounded-2xl p-6 border border-fio shadow-cartao space-y-3">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-titulo font-medium text-tinta">{p.nome}</h4>

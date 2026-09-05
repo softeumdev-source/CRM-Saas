@@ -446,7 +446,7 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       <form
         onSubmit={handleRegistrar}
-        className="bg-superficie rounded-2xl border border-fio shadow-xs p-5 space-y-4"
+        className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5 space-y-4"
       >
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
@@ -632,7 +632,7 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       {/* Próximos passos                                                     */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5">
         <h3 className="font-medium text-corpo text-tinta mb-3 flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-acento" /> Próximos passos ({proximosPassos.length})
         </h3>
@@ -889,7 +889,7 @@ export function CadenciaTab({
       {/* ------------------------------------------------------------------ */}
       {/* Histórico                                                           */}
       {/* ------------------------------------------------------------------ */}
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
           <h3 className="font-medium text-corpo text-tinta">Histórico ({historico.length})</h3>
           <div className="flex items-center gap-2">

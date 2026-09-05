@@ -378,7 +378,7 @@ export function NegocioDetailClient({
         <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao pipeline
       </Link>
 
-      <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-5">
+      <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -415,6 +415,27 @@ export function NegocioDetailClient({
               )}
             </div>
             <p className="text-rotulo text-tinta-suave mt-1">{negocio.titulo}</p>
+
+            {/* O VALOR sobe para cá, a 28px.
+                Ele estava lá embaixo, a 14px, dentro da quarta caixinha tingida
+                de uma grade de caixinhas tingidas todas do mesmo tamanho. Num
+                negócio, o preço é o assunto — e o cabeçalho inteiro não tinha
+                UM elemento com permissão de ser grande (craft R4): tudo entre
+                12 e 20px, e a hierarquia sumia.
+
+                Sem valor não aparece nada. Um "R$ 0,00" grande seria a maior
+                coisa da tela dizendo que o negócio não vale nada, quando o que
+                ele diz é "ainda não foi precificado" — a mesma lição que já
+                tinha tirado o zero do card do board. */}
+            {(negocio.valor ?? 0) > 0 && (
+              <p className="mt-2 text-display font-semibold text-tinta tabular leading-none">
+                {formatarMoeda(negocio.valor)}
+                <span className="text-corpo font-normal text-tinta-suave">
+                  {" "}
+                  /mês
+                </span>
+              </p>
+            )}
             {/* Os dados do contato deixam de ser texto e viram AÇÃO. Antes
                 eram três spans: para falar com o cliente era preciso
                 selecionar, copiar e trocar de aplicativo.
@@ -639,14 +660,9 @@ export function NegocioDetailClient({
             </div>
           )}
 
-          {(negocio.valor ?? 0) > 0 && (
-            <div className="sm:col-span-2 bg-acento-fraco rounded-xl p-3">
-              <p className="text-rotulo font-medium uppercase text-acento">Valor da proposta</p>
-              <p className="mt-1 text-corpo font-medium text-acento">
-                {formatarMoeda(negocio.valor)}<span className="text-rotulo font-medium text-tinta-suave">/mês</span>
-              </p>
-            </div>
-          )}
+          {/* A caixa "Valor da proposta" saiu daqui: virou o número de 28px lá
+              em cima. Repetir o mesmo valor duas vezes na mesma tela é o tipo
+              de redundância que fez o cabeçalho ficar denso. */}
         </div>
       </div>
 

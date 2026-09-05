@@ -123,13 +123,13 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       <div className="flex items-center gap-2 bg-recuo p-1 rounded-xl w-fit">
         <button
           onClick={() => setModoAssinatura("digitada")}
-          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
+          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-cartao text-acento" : "text-tinta-suave"}`}
         >
           Digitar nome
         </button>
         <button
           onClick={() => setModoAssinatura("desenhada")}
-          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
+          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-cartao text-acento" : "text-tinta-suave"}`}
         >
           Desenhar assinatura
         </button>
@@ -233,7 +233,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           </div>
         ) : (
           <>
-            <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-6">
+            <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
               <div className="flex items-center gap-2 mb-1">
                 <Building2 className="h-4 w-4 text-acento" />
                 <h1 className="font-semibold text-tinta">{dados.contato.empresa || dados.contato.nome}</h1>
@@ -272,7 +272,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
               </div>
             </div>
 
-            <div className="bg-superficie rounded-2xl border border-fio shadow-xs p-6 space-y-4">
+            <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-6 space-y-4">
               <h2 className="font-semibold text-corpo text-tinta flex items-center gap-2">
                 <FileSignature className="h-4 w-4 text-acento" />
                 Assinar Proposta Comercial como {dados.signatario.nome}
@@ -280,7 +280,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
               {painelAssinatura}
             </div>
 
-            <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
+            <div className="bg-superficie rounded-2xl border border-fio shadow-cartao overflow-hidden">
               <button
                 onClick={() => setTecnicaAberta(!tecnicaAberta)}
                 className="foco w-full flex items-center justify-between px-6 py-4 text-left hover:bg-recuo transition-colors"

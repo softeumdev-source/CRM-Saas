@@ -85,9 +85,18 @@ export function DesempenhoTab({
         </div>
       </div>
 
-      {/* KPIs da equipe */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiCard icon={DollarSign} tom="ok" label="Receita ganha" valor={formatarMoeda(totais.receitaGanha)} sub={`${totais.ganhos} negócios`} />
+      {/* KPIs da equipe.
+          Eram CINCO cartões idênticos, todos com o número a 28px. Quando cinco
+          coisas são a maior coisa da tela, nenhuma é — é a monotonia do craft
+          R4 na forma mais pura, e desfocando a fileira eram cinco retângulos
+          iguais.
+
+          A receita ganha é o assunto de uma tela de desempenho: ela fica em
+          28px e ocupa o dobro da largura. Os outros quatro descem para 20px e
+          viram a linha de apoio. A informação é a mesma; a hierarquia é que
+          passou a existir. */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <KpiCard destaque icon={DollarSign} tom="ok" label="Receita ganha" valor={formatarMoeda(totais.receitaGanha)} sub={`${totais.ganhos} ${totais.ganhos === 1 ? "negócio" : "negócios"}`} />
         <KpiCard icon={Percent} tom="acento" label="Taxa de conversão" valor={formatarPct(totais.taxaConversao)} sub={`${totais.ganhos}G / ${totais.perdidos}P`} />
         <KpiCard icon={Award} tom="alerta" label="Ticket médio" valor={formatarMoeda(totais.ticketMedio)} sub="por negócio ganho" />
         <KpiCard icon={TrendingDown} tom="risco" label="Perdidos" valor={String(totais.perdidos)} sub="no período" />
@@ -303,16 +312,37 @@ const TOM_KPI: Record<Tom, string> = {
   info: "bg-info-fraco text-info",
 };
 
-function KpiCard({ icon: Icon, tom, label, valor, sub }: { icon: LucideIcon; tom: Tom; label: string; valor: string; sub: string }) {
+function KpiCard({
+  icon: Icon,
+  tom,
+  label,
+  valor,
+  sub,
+  destaque = false,
+}: {
+  icon: LucideIcon;
+  tom: Tom;
+  label: string;
+  valor: string;
+  sub: string;
+  /** O único da fileira que tem permissão de ser grande (craft R4). */
+  destaque?: boolean;
+}) {
   return (
-    <Cartao preenchimento="md">
+    <Cartao preenchimento="md" className={destaque ? "col-span-2" : undefined}>
       <div className="flex items-center gap-2">
-        <span className={`h-7 w-7 rounded-lg grid place-items-center shrink-0 ${TOM_KPI[tom]}`}>
-          <Icon className="h-4 w-4" />
+        <span className={`rounded-lg grid place-items-center shrink-0 ${destaque ? "h-7 w-7" : "h-6 w-6"} ${TOM_KPI[tom]}`}>
+          <Icon className={destaque ? "h-4 w-4" : "h-3.5 w-3.5"} />
         </span>
         <span className="text-rotulo text-tinta-suave">{label}</span>
       </div>
-      <p className="text-display font-semibold text-tinta tabular tracking-tight mt-2">{valor}</p>
+      <p
+        className={`font-semibold text-tinta tabular tracking-tight ${
+          destaque ? "text-display mt-2" : "text-titulo mt-1.5"
+        }`}
+      >
+        {valor}
+      </p>
       <p className="text-rotulo text-tinta-fraca">{sub}</p>
     </Cartao>
   );
