@@ -227,22 +227,33 @@ export function VendedoresTab({
         </Cartao>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
-          <Cartao>
-            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Time ativo</p>
-            <p className="text-display font-medium text-tinta mt-1">{ativos.length}</p>
-            <p className="text-rotulo text-tinta-fraca mt-0.5">
+          {/* Eram TRÊS cartões iguais, os três com o número a 28px, e logo
+              abaixo vem a lista de pessoas do time — que é o assunto desta
+              aba. Três destaques competindo acima do conteúdo real é a mesma
+              monotonia do craft R4.
+
+              Um resumo só, numa faixa: quantas pessoas, quanto de meta somada
+              e quantos negócios ativos. É informação de contexto, e informação
+              de contexto não precisa de três molduras. */}
+          <div className="sm:col-span-3 flex flex-wrap items-baseline gap-x-6 gap-y-2 rounded-2xl border border-fio bg-superficie px-4 py-3 shadow-cartao">
+            <p className="text-corpo text-tinta-suave">
+              <span className="text-titulo font-medium text-tinta tabular">{ativos.length}</span>{" "}
+              no time —{" "}
               {vendedoresAtivos.length} {vendedoresAtivos.length === 1 ? "vendedor" : "vendedores"}
-              {ativos.length - vendedoresAtivos.length > 0 && ` · ${ativos.length - vendedoresAtivos.length} SDR`}
+              {ativos.length - vendedoresAtivos.length > 0 &&
+                ` · ${ativos.length - vendedoresAtivos.length} SDR`}
             </p>
-          </Cartao>
-          <Cartao>
-            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Meta mensal somada</p>
-            <p className="text-display font-medium text-acento mt-1">{formatarMoeda(totalMeta)}</p>
-          </Cartao>
-          <Cartao>
-            <p className="text-rotulo font-medium uppercase text-tinta-fraca">Negócios ativos</p>
-            <p className="text-display font-medium text-ok mt-1">{negocios.filter((n) => !n.ganho).length}</p>
-          </Cartao>
+            <p className="text-corpo text-tinta-suave">
+              <span className="text-titulo font-medium text-acento tabular">{formatarMoeda(totalMeta)}</span>{" "}
+              de meta somada
+            </p>
+            <p className="text-corpo text-tinta-suave">
+              <span className="text-titulo font-medium text-ok tabular">
+                {negocios.filter((n) => !n.ganho).length}
+              </span>{" "}
+              negócios ativos
+            </p>
+          </div>
 
           {ativos.map((v) => {
             const deles = negocios.filter((n) => n.responsavel_id === v.id);
