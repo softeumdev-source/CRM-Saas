@@ -211,15 +211,37 @@ export function ListaClient({
                       </p>
                       <p className="text-rotulo text-tinta-suave pl-3.5">{n.contato?.nome}</p>
                     </td>
+                    {/* A pilula era `background: cor + "22"` — hex com alfa
+                        concatenado. Isso pinta um VEU CLARO da cor da etapa, e
+                        sobre o fundo escuro do tema escuro o resultado clareia
+                        em vez de tingir: a pilula ficava mais clara que o
+                        cartao em volta. O mesmo defeito ja tinha sido corrigido
+                        no cabecalho da coluna do kanban.
+
+                        E o conserto e o mesmo de la, o que tambem resolve
+                        consistencia: PONTO na cor da etapa + nome em tinta
+                        normal. A cor continua dizendo qual etapa e, sem
+                        precisar de um fundo que so funciona num tema. */}
                     <td className="p-4">
-                      <span
-                        className="px-2.5 py-1 text-rotulo font-medium rounded-full"
-                        style={{ background: (n.etapa?.cor || "#6366f1") + "22", color: n.etapa?.cor || "#6366f1" }}
-                      >
+                      <span className="flex items-center gap-1.5 text-tinta">
+                        <span
+                          aria-hidden
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: n.etapa?.cor || "var(--cor-acento)" }}
+                        />
                         {n.etapa?.nome}
                       </span>
                     </td>
-                    <td className="p-4 font-semibold text-acento">{formatarMoeda(n.valor)}</td>
+                    {/* "R$ 0,00" nao e o preco, e "ainda nao foi precificado" —
+                        a mesma licao que ja tinha tirado o zero do card do
+                        board, e que aqui tinha ficado. */}
+                    <td className="p-4">
+                      {n.valor ? (
+                        <span className="font-medium text-tinta tabular">{formatarMoeda(n.valor)}</span>
+                      ) : (
+                        <span className="text-tinta-fraca">a definir</span>
+                      )}
+                    </td>
                     <td className="p-4">
                       {hoje ? (
                         <span className="flex items-center gap-1 font-semibold text-ok">
@@ -245,16 +267,27 @@ export function ListaClient({
                     </td>
                     <td className="p-4 font-medium text-tinta-suave">{n.responsavel?.nome || "Sem dono"}</td>
                     <td className="p-4">
+                      {/* "OK" VERDE aparecia em quase toda linha, e sinal que
+                          nao varia nao e sinal — e ruido que treina a pessoa a
+                          ignorar a coluna. A informacao FICA (o "OK" continua
+                          escrito, a regra 14 do DESIGN.md), mas recua para
+                          tinta fraca. Quem grita e a falta, que e a unica
+                          notícia: sem CNPJ nao sai proposta. */}
                       {n.contato?.cnpj ? (
-                        <span className="text-ok font-medium">OK</span>
+                        <span className="text-tinta-fraca">OK</span>
                       ) : (
-                        <span className="text-alerta font-medium">Faltando</span>
+                        <span className="font-medium text-alerta">Faltando</span>
                       )}
                     </td>
                     <td className="p-4 text-right">
+                      {/* Era um botao tingido em CADA linha: sete retangulos
+                          indigo identicos numa coluna, dizendo sete vezes a
+                          mesma coisa. Vira link — a acao continua no mesmo
+                          lugar e com o mesmo texto, mas para de competir com o
+                          nome da empresa, que e o que a pessoa esta lendo. */}
                       <Link
                         href={`/negocios/${n.id}`}
-                        className="px-3 py-1.5 text-rotulo font-semibold text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out whitespace-nowrap"
+                        className="foco rounded-lg text-rotulo font-medium text-acento hover:underline whitespace-nowrap"
                       >
                         Ver detalhes
                       </Link>

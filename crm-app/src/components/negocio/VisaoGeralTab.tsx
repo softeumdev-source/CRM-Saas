@@ -208,17 +208,26 @@ export function VisaoGeralTab({
           )}
         </Campo>
 
-        <Botao
-          variante="primario"
-          tamanho="lg"
-          larguraTotal
-          icone={Save}
-          carregando={salvando}
-          disabled={!nome.trim()}
-          onClick={salvar}
-        >
-          Salvar alterações
-        </Botao>
+        {/* Era `tamanho="lg"` + `larguraTotal`: uma barra indigo de ponta a
+            ponta, o elemento MAIS FORTE da tela que se abre ao clicar num card
+            do board — para a acao menos frequente que existe aqui. Ninguem abre
+            um negocio para editar o CNPJ do contato; abre para ver o que
+            aconteceu e decidir o proximo passo.
+
+            Continua sendo o botao primario do painel, porque e a unica acao
+            dele. So para de gritar: tamanho normal, alinhado a direita, do
+            tamanho do proprio texto. */}
+        <div className="flex justify-end">
+          <Botao
+            variante="primario"
+            icone={Save}
+            carregando={salvando}
+            disabled={!nome.trim()}
+            onClick={salvar}
+          >
+              Salvar alterações
+          </Botao>
+        </div>
       </Cartao>
 
       {/* A COLUNA DA DIREITA ESTAVA DOIS TERÇOS VAZIA.
