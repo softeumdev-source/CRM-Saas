@@ -249,9 +249,21 @@ export function LeadCard({
           E o que faz os dois boards se distinguirem de longe, borrados. */}
       {variante === "vendas" ? (
         <div className="my-3 flex items-center justify-between gap-2 rounded-xl bg-recuo px-3 py-2">
-          <span className="text-corpo-lg font-semibold text-tinta tabular">
-            {formatarMoeda(negocio.valor)}
-          </span>
+          {/* Sem valor, a faixa NÃO grita "R$ 0,00".
+              O elemento mais forte do card era um zero — e zero aqui não é o
+              preço, é "ainda não foi precificado". A FAIXA fica, porque é ela
+              que distingue o card de vendas do card do SDR quando se olha o
+              board borrado; o que muda é o que ela diz. Mesmo raciocínio que já
+              tinha tirado o "R$ 0,00" da coluna do SDR.
+              E `font-medium`: o tamanho (`text-corpo-lg`) já dá o destaque, e o
+              DESIGN.md pede hierarquia por cor e tamanho antes de peso. */}
+          {negocio.valor ? (
+            <span className="text-corpo-lg font-medium text-tinta tabular">
+              {formatarMoeda(negocio.valor)}
+            </span>
+          ) : (
+            <span className="text-rotulo text-tinta-suave">Valor a definir</span>
+          )}
           {semCnpj && (
             <Selo tom="alerta" icone={AlertTriangle}>
               Falta CNPJ
