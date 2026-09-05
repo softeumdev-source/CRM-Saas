@@ -10,7 +10,9 @@ import {
   SemanaDaAgenda,
   comoDataLocal,
   inicioDaSemana,
+  meiaNoite,
   useMontado,
+  useSemanaInteira,
 } from "@/components/agenda/SemanaDaAgenda";
 
 const UM_DIA_MS = 86_400_000;
@@ -51,10 +53,22 @@ export function AgendaClient({
   vendedor: string;
 }) {
   const montado = useMontado();
-  const [deslocamento, setDeslocamento] = useState(0);
+  const semanaInteira = useSemanaInteira();
+  /**
+   * O dia escolhido, como `AAAA-MM-DD`. `null` = "a semana de hoje".
+   *
+   * String e não `Date` porque é o que vai e volta da URL sem ambiguidade de
+   * fuso — o mesmo motivo de `comoDataLocal` existir.
+   */
+  const [dia, setDia] = useState<string | null>(null);
   const [google, setGoogle] = useState<EstadoDoGoogle>({ estado: "carregando" });
+  /** Verdadeiro durante QUALQUER busca, não só a primeira. Ver `buscarGoogle`. */
+  const [buscando, setBuscando] = useState(true);
   const [agendando, setAgendando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+
+  /** Sete dias no desktop, três no celular — a grade continua grade. */
+  const quantosDias = semanaInteira ? 7 : 3;
 
   /**
    * A semana só existe DEPOIS de montar, e isso não é preciosismo.
@@ -65,13 +79,45 @@ export function AgendaClient({
    * `montado` é falso a grade não desenha, e é honesto: sem o Google
    * respondido não há o que desenhar mesmo.
    */
-  const inicio = useMemo(
-    () =>
-      montado
-        ? new Date(inicioDaSemana(new Date()).getTime() + deslocamento * 7 * UM_DIA_MS)
-        : null,
-    [montado, deslocamento],
-  );
+  const inicio = useMemo(() => {
+    if (!montado) return null;
+    // A semana pedida pela URL, na primeira pintura; depois, a que a pessoa
+    // escolheu. Ler `location` aqui é seguro porque `montado` já garante que
+    // isto só roda no navegador.
+    const daUrl = dia ?? new URLSearchParams(window.location.search).get("semana");
+    const base = daUrl ? new Date(`${daUrl}T00:00:00`) : new Date();
+    const valida = Number.isNaN(base.getTime()) ? new Date() : base;
+    // No desktop a grade é sempre domingo→sábado; no celular ela começa no dia
+    // escolhido, senão as setas de 3 em 3 nunca sairiam do começo da semana.
+    return semanaInteira ? inicioDaSemana(valida) : meiaNoite(valida);
+  }, [montado, dia, semanaInteira]);
+
+  /**
+   * A semana mora na URL.
+   *
+   * Sem isso, recarregar a página, voltar do modal de agendamento ou mandar o
+   * link para alguém devolvia sempre a semana atual — e não havia como apontar
+   * para uma semana específica. `replaceState` e não `router.push`: trocar de
+   * semana não é navegar, e empilhar histórico faria o "voltar" do navegador
+   * andar semana a semana.
+   */
+  useEffect(() => {
+    if (!inicio) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("semana", comoDataLocal(inicio));
+    window.history.replaceState(null, "", url);
+  }, [inicio]);
+
+  const naSemanaAtual = useMemo(() => {
+    if (!inicio || !montado) return false;
+    const agora = semanaInteira ? inicioDaSemana(new Date()) : meiaNoite(new Date());
+    return agora.getTime() === inicio.getTime();
+  }, [inicio, montado, semanaInteira]);
+
+  const andar = (passos: number) => {
+    if (!inicio) return;
+    setDia(comoDataLocal(new Date(inicio.getTime() + passos * quantosDias * UM_DIA_MS)));
+  };
 
   /**
    * A agenda do Google fica FORA do `useSincronizacao` de propósito.
@@ -83,11 +129,16 @@ export function AgendaClient({
    * de dois em dois minutos) e depois de agendar.
    */
   const ultimaBusca = useRef(0);
-  const buscarGoogle = useCallback(async (de: Date, forcar = false) => {
+  const buscarGoogle = useCallback(async (de: Date, dias: number, forcar = false) => {
     if (!forcar && Date.now() - ultimaBusca.current < INTERVALO_GOOGLE_MS) return;
     ultimaBusca.current = Date.now();
+    // `buscando` cobre TODA busca. O `carregando` de antes era
+    // `google.estado === "carregando"`, que só é verdade antes da PRIMEIRA
+    // resposta: trocar de semana esvaziava a lista e desenhava a grade vazia,
+    // sem uma palavra, até a Google responder. Parecia que não havia reuniões.
+    setBuscando(true);
     try {
-      const resp = await fetch(`/api/google/eventos?de=${comoDataLocal(de)}&dias=7`);
+      const resp = await fetch(`/api/google/eventos?de=${comoDataLocal(de)}&dias=${dias}`);
       const dados = await resp.json();
       if (dados?.conectado) setGoogle({ estado: "conectada", eventos: dados.eventos || [] });
       else
@@ -102,6 +153,8 @@ export function AgendaClient({
         motivo: "Não foi possível falar com a Google.",
         precisaReconectar: false,
       });
+    } finally {
+      setBuscando(false);
     }
   }, []);
 
@@ -113,9 +166,9 @@ export function AgendaClient({
   useEffect(() => {
     if (!inicio) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void buscarGoogle(inicio, true);
+    void buscarGoogle(inicio, quantosDias, true);
     const aoVoltar = () => {
-      if (!document.hidden) void buscarGoogle(inicio);
+      if (!document.hidden) void buscarGoogle(inicio, quantosDias);
     };
     document.addEventListener("visibilitychange", aoVoltar);
     window.addEventListener("focus", aoVoltar);
@@ -123,7 +176,7 @@ export function AgendaClient({
       document.removeEventListener("visibilitychange", aoVoltar);
       window.removeEventListener("focus", aoVoltar);
     };
-  }, [buscarGoogle, inicio]);
+  }, [buscarGoogle, inicio, quantosDias]);
 
   const eventos = google.estado === "conectada" ? google.eventos : [];
 
@@ -170,13 +223,16 @@ export function AgendaClient({
         <SemanaDaAgenda
           eventos={eventos}
           inicio={inicio}
-          carregando={google.estado === "carregando"}
-          onSemanaAnterior={() => setDeslocamento((d) => d - 1)}
-          onSemanaSeguinte={() => setDeslocamento((d) => d + 1)}
-          onHoje={() => setDeslocamento(0)}
+          quantosDias={quantosDias}
+          carregando={buscando}
+          naSemanaAtual={naSemanaAtual}
+          onAnterior={() => andar(-1)}
+          onSeguinte={() => andar(1)}
+          onHoje={() => setDia(null)}
+          onEscolherData={setDia}
         />
       ) : (
-        <div className="flex-1 min-h-[420px] rounded-2xl border border-fio bg-superficie" aria-hidden />
+        <div className="flex-1 min-h-96 rounded-2xl border border-fio bg-superficie" aria-hidden />
       )}
 
       {/* Montado só quando abre: é o que garante que cada abertura comece com
@@ -188,7 +244,7 @@ export function AgendaClient({
           vendedor={vendedor}
           aoAgendado={(r) => {
             setAviso(r.aviso);
-            if (inicio) void buscarGoogle(inicio, true);
+            if (inicio) void buscarGoogle(inicio, quantosDias, true);
           }}
         />
       )}
