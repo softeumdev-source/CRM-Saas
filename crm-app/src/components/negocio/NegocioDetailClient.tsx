@@ -22,7 +22,7 @@ import { VisaoGeralTab } from "@/components/negocio/VisaoGeralTab";
 import { CadenciaTab } from "@/components/negocio/CadenciaTab";
 import { PropostaTab } from "@/components/negocio/PropostaTab";
 import { MensagensTab } from "@/components/negocio/MensagensTab";
-import { usarRespostasLidas } from "@/components/negocio/usarRespostasLidas";
+import { useRespostasLidas } from "@/components/negocio/useRespostasLidas";
 import { EmailTab } from "@/components/negocio/EmailTab";
 import { RegistroDeResposta } from "@/components/negocio/RegistroDeResposta";
 import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
@@ -116,9 +116,9 @@ export function NegocioDetailClient({
    * também é ignorado.
    *
    * A trava contra apagar sem ninguém ver continua, e é a certa: a aba do
-   * navegador precisa estar VISÍVEL (ver `usarRespostasLidas`).
+   * navegador precisa estar VISÍVEL (ver `useRespostasLidas`).
    */
-  usarRespostasLidas(negocioInicial.id, negocio.respostas_nao_lidas);
+  useRespostasLidas(negocioInicial.id, negocio.respostas_nao_lidas);
   const [atividades, setAtividades] = useState(atividadesIniciais);
   const [propostas, setPropostas] = useState(propostasIniciais);
   // A troca de aba agora vai para a URL: F5 e link compartilhado caem na mesma

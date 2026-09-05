@@ -88,7 +88,13 @@ export function CadenciasTab() {
     }
   }, []);
 
+  // A regra `set-state-in-effect` acusa qualquer efeito que chame função que
+  // mexe em estado, mesmo quando TODO `setState` acontece depois de um
+  // `await` — medido com uma sonda: a busca assíncrona é acusada igual à
+  // atribuição síncrona. Aqui `carregar` só escreve depois da
+  // resposta do banco, e buscar dado ao montar é o que efeito serve para fazer.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregar();
   }, [carregar]);
 

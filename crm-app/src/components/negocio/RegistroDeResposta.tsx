@@ -62,7 +62,7 @@ export function RegistroDeResposta({ negocio }: { negocio: NegocioComRelacoes })
     // `await`, e não `void`: o builder do PostgREST é um thenable preguiçoso —
     // sem `await` nem `.then()` a requisição nunca sai, sem erro nenhum. Foi
     // exatamente esse `void` que deixou o selo de "Respondeu" aceso para
-    // sempre (ver o bloco no topo de `usarRespostasLidas.ts`).
+    // sempre (ver o bloco no topo de `useRespostasLidas.ts`).
     const { error } = await createClient()
       .from("negocios")
       .update({ respostas_nao_lidas: 0, respostas_lidas_em: new Date().toISOString() })

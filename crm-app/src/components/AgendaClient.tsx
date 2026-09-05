@@ -176,7 +176,14 @@ export function AgendaClient({
    *
    * Então: a agenda do CRM pinta na hora, e a do Google chega quando chegar.
    */
+  // A regra `set-state-in-effect` acusa qualquer efeito que chame função que
+  // mexe em estado, mesmo quando TODO `setState` acontece depois de um
+  // `await` — medido com uma sonda: a busca assíncrona é acusada igual à
+  // atribuição síncrona. `buscarGoogle` só escreve quando a Google
+  // responde. O comentário acima explica por que esta busca NÃO pode subir
+  // para o servidor: prenderia o render da agenda inteira na Google.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void buscarGoogle(true);
     const aoVoltar = () => {
       if (!document.hidden) void buscarGoogle();

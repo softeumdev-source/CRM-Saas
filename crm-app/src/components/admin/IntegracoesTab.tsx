@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Send, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
@@ -23,10 +24,14 @@ export function IntegracoesTab({
   const [conexoes, setConexoes] = useState<Integracao[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  // Estado separado de propósito: o erro que volta do consentimento não pode
-  // ser apagado pelo `setErro(null)` do carregamento, que resolve DEPOIS do
-  // efeito e engolia a mensagem. Medido no navegador: a faixa não aparecia.
-  const [erroDaVolta, setErroDaVolta] = useState<string | null>(null);
+  // DERIVADO da URL, e não estado: a volta do consentimento traz
+  // `?google_erro=...`, e ler isso durante o render resolve de vez o problema
+  // que o estado separado existia para contornar — o `setErro(null)` do
+  // carregamento resolvia DEPOIS e engolia a mensagem (medido no navegador: a
+  // faixa não aparecia). O que não é estado ninguém apaga por engano.
+  const parametros = useSearchParams();
+  const falhaDaVolta = parametros.get("google_erro");
+  const erroDaVolta = falhaDaVolta ? `A conexão com a Google não foi concluída: ${falhaDaVolta}` : null;
   const [desconectando, setDesconectando] = useState<Integracao | null>(null);
   // A caixa por onde o CRM MANDA e-mail para o cliente. É do tenant, não da
   // pessoa: a cadência e a proposta saem sempre do mesmo endereço, senão a
@@ -73,12 +78,15 @@ export function IntegracoesTab({
     }
   }, [usuarioAtual.tenant_id]);
 
+  // A regra `set-state-in-effect` acusa qualquer efeito que chame função que
+  // mexe em estado, mesmo quando TODO `setState` acontece depois de um `await`
+  // — medido com uma sonda: a busca assíncrona é acusada igual à atribuição
+  // síncrona. Aqui não há `setState` síncrono nenhum: `carregar` só escreve
+  // depois da resposta do banco. Buscar dado ao montar é o que efeito serve
+  // para fazer, e contorcer isso para calar a regra sairia mais caro.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregar();
-    // A volta do consentimento traz ?google=conectado ou ?google_erro=...
-    const p = new URLSearchParams(window.location.search);
-    const falha = p.get("google_erro");
-    if (falha) setErroDaVolta(`A conexão com a Google não foi concluída: ${falha}`);
   }, [carregar]);
 
   const minha = conexoes.find((c) => c.usuario_id === usuarioAtual.id);

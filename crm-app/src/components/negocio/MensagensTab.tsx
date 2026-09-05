@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   AlertTriangle,
   Bot,
@@ -141,11 +141,12 @@ export function MensagensTab({
     }
   }, [negocio.id, negocio.pipeline_id]);
 
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
 
+  // `carregarAoMontar` em vez de um `useEffect` separado: o mesmo gancho que
+  // ja escuta o Realtime tambem faz a primeira carga, adiada para fora do
+  // corpo do efeito. Uma peca a menos, e sem o render em cascata.
   useSincronizacao(carregar, {
+    carregarAoMontar: true,
     canal: `mensagens-${negocio.id}`,
     tabelas: [
       { tabela: "mensagens", filtro: `negocio_id=eq.${negocio.id}` },

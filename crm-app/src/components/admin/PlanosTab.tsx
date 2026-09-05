@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, Edit3, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
 import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal } from "@/components/ui";
 import { Confirmar } from "@/components/ui";
+import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
 /**
  * O formulário do plano: o que o modal edita, e não a linha da tabela.
@@ -30,11 +31,13 @@ const PLANO_VAZIO = {
 };
 
 export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[]; tenantId: string | null }) {
-  const [planos, setPlanos] = useState(planosIniciais);
+  // `useEstadoDaProp` e nao `useEffect`: e o padrao oficial do React de
+  // ajustar estado durante o render. Com o efeito, o navegador chegava a
+  // PINTAR a lista velha antes de o efeito rodar — um piscar de dado
+  // desatualizado a cada `router.refresh()`.
+  const [planos, setPlanos] = useEstadoDaProp(planosIniciais);
   const [modalAberto, setModalAberto] = useState(false);
 
-  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
-  useEffect(() => setPlanos(planosIniciais), [planosIniciais]);
   const [editando, setEditando] = useState<Plano | null>(null);
   const [form, setForm] = useState<FormularioDePlano>(PLANO_VAZIO);
   const [erro, setErro] = useState<string | null>(null);

@@ -96,7 +96,14 @@ export function PdfSignViewer({
     return () => { cancelado = true; clearTimeout(timeout); };
   }, [pdfUrl, renderizarPagina, campos, documento, signatarioOrdem]);
 
+  // A regra `set-state-in-effect` acusa qualquer efeito que chame função que
+  // mexe em estado, mesmo quando TODO `setState` acontece depois de um
+  // `await` — medido com uma sonda: a busca assíncrona é acusada igual à
+  // atribuição síncrona. `renderizarPagina` desenha no canvas e só
+  // escreve estado no `catch`, depois do `await` do pdf.js. Desenhar num
+  // canvas é efeito colateral por definição — não há onde mais isto morar.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!carregando && !erro) renderizarPagina(paginaAtual);
   }, [paginaAtual, carregando, erro, renderizarPagina]);
 

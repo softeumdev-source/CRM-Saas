@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle } from "lucide-react";
@@ -18,6 +18,7 @@ import {
   type StatusLinha,
 } from "@/lib/importarLeads";
 import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
+import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
 type ContatoComDono = Contato & { responsavel: { id: string; nome: string } | null };
 
@@ -60,12 +61,12 @@ export function LeadsTab({
    */
   negociosAbertos?: { contato_id: string | null; pipeline: { chave: string; nome: string } | null }[];
 }) {
-  const [contatosSemDono, setContatosSemDono] = useState(contatosSemDonoIniciais);
-  const [contatosComDono, setContatosComDono] = useState<ContatoComDono[]>(contatosComDonoIniciais);
-
-  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
-  useEffect(() => setContatosSemDono(contatosSemDonoIniciais), [contatosSemDonoIniciais]);
-  useEffect(() => setContatosComDono(contatosComDonoIniciais), [contatosComDonoIniciais]);
+  // `useEstadoDaProp` e nao `useEffect`: e o padrao oficial do React de
+  // ajustar estado durante o render. Com o efeito, o navegador chegava a
+  // PINTAR a lista velha antes de o efeito rodar — um piscar de dado
+  // desatualizado a cada `router.refresh()`.
+  const [contatosSemDono, setContatosSemDono] = useEstadoDaProp(contatosSemDonoIniciais);
+  const [contatosComDono, setContatosComDono] = useEstadoDaProp<ContatoComDono[]>(contatosComDonoIniciais);
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ inseridos: number; total: number } | null>(null);

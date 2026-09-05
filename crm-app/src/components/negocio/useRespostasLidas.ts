@@ -48,7 +48,7 @@ import { createClient } from "@/lib/supabase/client";
  * idêntico ao `negocios_select` e, sem WITH CHECK próprio, o Postgres
  * reaproveita o USING. Quem enxerga o card pode atualizá-lo.
  */
-export function usarRespostasLidas(negocioId: string, naoLidas: number | null | undefined): void {
+export function useRespostasLidas(negocioId: string, naoLidas: number | null | undefined): void {
   useEffect(() => {
     if (!naoLidas) return;
 

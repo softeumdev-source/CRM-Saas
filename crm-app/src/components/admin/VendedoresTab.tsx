@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
 import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
 import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selecao } from "@/components/ui";
+import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
 export function VendedoresTab({
   membros,
@@ -19,7 +20,11 @@ export function VendedoresTab({
   negocios: NegocioComRelacoes[];
   usuarioAtual: Usuario;
 }) {
-  const [convites, setConvites] = useState(convitesIniciais);
+  // `useEstadoDaProp` e nao `useEffect`: e o padrao oficial do React de
+  // ajustar estado durante o render. Com o efeito, o navegador chegava a
+  // PINTAR a lista velha antes de o efeito rodar — um piscar de dado
+  // desatualizado a cada `router.refresh()`.
+  const [convites, setConvites] = useEstadoDaProp(convitesIniciais);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [papel, setPapel] = useState<Papel>("vendedor");
@@ -30,13 +35,10 @@ export function VendedoresTab({
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [emailErro, setEmailErro] = useState<string | null>(null);
   const [remetenteTest, setRemetenteTest] = useState(false);
-  const [membrosState, setMembrosState] = useState(membros);
+  const [membrosState, setMembrosState] = useEstadoDaProp(membros);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
 
-  // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
-  useEffect(() => setMembrosState(membros), [membros]);
-  useEffect(() => setConvites(convitesIniciais), [convitesIniciais]);
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,11 +341,13 @@ export function VendedoresTab({
 
 /** Edicao da meta mensal na propria linha da pessoa. */
 function MetaMensal({ usuario }: { usuario: Usuario }) {
-  const [meta, setMeta] = useState(String(usuario.meta_mensal ?? 0));
+  // Espelho de prop, e nao efeito: quando o admin salva a meta de outra
+  // pessoa, a lista volta do servidor e este campo tem de acompanhar. Pelo
+  // efeito, ele chegava a PINTAR o valor velho antes de corrigir.
+  const [meta, setMeta] = useEstadoDaProp(String(usuario.meta_mensal ?? 0));
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => setMeta(String(usuario.meta_mensal ?? 0)), [usuario.meta_mensal]);
 
   const alterada = Number(meta) !== (usuario.meta_mensal ?? 0);
 
