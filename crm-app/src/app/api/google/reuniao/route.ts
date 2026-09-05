@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { quemAssina } from "@/lib/gmail/caixa";
+import { descricaoSugerida, tituloSugerido } from "@/components/agenda/tipos";
 import { createClient } from "@/lib/supabase/server";
 import { criarEvento } from "@/lib/google/calendar";
 import { temGoogleConfigurado } from "@/lib/google/config";
@@ -74,15 +76,21 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
+  const { data: usuarioAtual } = await supabase
+    .from("usuarios")
+    .select("tenant_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { data: negocio } = await supabase
     .from("negocios")
-    .select("id, titulo, contato:contatos(nome, email)")
+    .select("id, titulo, contato:contatos(nome, empresa, email)")
     .eq("id", negocioId)
     .maybeSingle();
 
   if (!negocio) return NextResponse.json({ error: "Negócio não encontrado." }, { status: 404 });
 
-  const contato = negocio.contato as never as { nome?: string; email?: string } | null;
+  const contato = negocio.contato as never as { nome?: string; empresa?: string | null; email?: string } | null;
   const email = contato?.email?.trim() || null;
 
   // Convite pedido e contato sem e-mail: recusar ANTES de gravar. Gravar a
@@ -105,8 +113,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const empresa = contato?.nome || negocio.titulo || "cliente";
-  const tituloFinal = (typeof titulo === "string" && titulo.trim()) || `Reunião — ${empresa}`;
+  // As mesmas funções que o modal usou para mostrar o texto. Antes havia dois
+  // fallbacks diferentes — a tela prometia a empresa, o servidor gravava o nome
+  // do contato e, faltando ele, `negocio.titulo`, que é texto livre de CRM indo
+  // para a agenda do cliente. Um contato sem nome com empresa preenchida saía
+  // com um título que a pessoa nunca viu.
+  const alvo = { contato: { nome: contato?.nome || "", empresa: contato?.empresa ?? null } };
+  const assina = await quemAssina(supabase, usuarioAtual?.tenant_id);
+  const tituloFinal = (typeof titulo === "string" && titulo.trim()) || tituloSugerido(alvo);
+  const descricaoFinal =
+    (typeof descricao === "string" && descricao.trim()) ||
+    descricaoSugerida(alvo, minutosFinais, assina);
   const quandoIso = inicio.toISOString();
 
   const { data: atividade, error: erroInsert } = await supabase
@@ -116,7 +133,7 @@ export async function POST(request: Request) {
       usuario_id: user.id,
       tipo: "reuniao",
       titulo: tituloFinal,
-      descricao: typeof descricao === "string" ? descricao.trim() || null : null,
+      descricao: descricaoFinal,
       concluida: false,
       data_agendada: quandoIso,
       // Mesmo par que o resto do app grava: o lembrete acompanha a data, senão
@@ -142,7 +159,7 @@ export async function POST(request: Request) {
     evento = await criarEvento({
       usuarioId: user.id,
       titulo: tituloFinal,
-      descricao: typeof descricao === "string" ? descricao.trim() || undefined : undefined,
+      descricao: descricaoFinal,
       inicio,
       minutos: minutosFinais,
       convidados: [{ email: email!, nome: contato?.nome }],

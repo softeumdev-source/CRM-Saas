@@ -74,6 +74,7 @@ export function NegocioDetailClient({
   atividadesIniciais,
   propostasIniciais,
   usuarioAtual,
+  vendedor,
   abaInicial = "geral",
 }: {
   negocioInicial: NegocioComRelacoes;
@@ -86,6 +87,12 @@ export function NegocioDetailClient({
   atividadesIniciais: AtividadeComUsuario[];
   propostasIniciais: PropostaComRelacoes[];
   usuarioAtual: Usuario;
+  /**
+   * Quem assina o convite de reunião — o nome da caixa comercial
+   * (`tenants.caixa_email_nome`), e não o de quem clicou em agendar. Mesma
+   * fonte do `From:` do e-mail: o cliente conhece uma pessoa só.
+   */
+  vendedor: string;
   /** Vem de `?tab=` — as notificações do sino abrem direto na cadência. */
   abaInicial?: Aba;
 }) {
@@ -796,6 +803,7 @@ export function NegocioDetailClient({
       {agendando && (
         <AgendarReuniao
           aoFechar={() => setAgendando(false)}
+          vendedor={vendedor}
           negocios={[
             {
               id: negocio.id,

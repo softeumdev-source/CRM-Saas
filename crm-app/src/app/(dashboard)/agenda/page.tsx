@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AgendaClient, type AtividadeAgenda } from "@/components/AgendaClient";
 import type { NegocioAgendavel } from "@/components/agenda/tipos";
 import { SELECT_AGENDA } from "@/lib/types";
+import { quemAssina } from "@/lib/gmail/caixa";
 
 /**
  * Teto do seletor de negócios do agendamento. É uma lista de escolha, não um
@@ -35,11 +36,17 @@ export default async function AgendaPage() {
       .limit(TETO_NEGOCIOS),
   ]);
 
+  // Depois do `Promise.all` porque depende do tenant que veio dele. Uma
+  // consulta a mais numa tela que já faz três, e é o que garante que o convite
+  // assine com o mesmo nome do e-mail.
+  const vendedor = await quemAssina(supabase, usuarioAtual?.tenant_id);
+
   return (
     <AgendaClient
       atividadesIniciais={(atividades as unknown as AtividadeAgenda[]) || []}
       usuarioAtual={usuarioAtual!}
       negociosAgendaveis={(negocios as unknown as NegocioAgendavel[]) || []}
+      vendedor={vendedor}
     />
   );
 }

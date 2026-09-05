@@ -93,11 +93,18 @@ export function AgendaClient({
   atividadesIniciais,
   usuarioAtual,
   negociosAgendaveis = [],
+  vendedor,
 }: {
   atividadesIniciais: AtividadeAgenda[];
   usuarioAtual: Usuario;
   /** Negócios abertos e visíveis, para o seletor do agendamento. */
   negociosAgendaveis?: NegocioAgendavel[];
+  /**
+   * Quem assina o convite de reunião — o nome da caixa comercial
+   * (`tenants.caixa_email_nome`), e não o de quem clicou em agendar. Mesma
+   * fonte do `From:` do e-mail: o cliente conhece uma pessoa só.
+   */
+  vendedor: string;
 }) {
   const [atividades, setAtividades] = useEstadoDaProp(atividadesIniciais);
   const [apenasMinhas, setApenasMinhas] = useState(usuarioAtual.role !== "admin");
@@ -444,6 +451,7 @@ export function AgendaClient({
         <AgendarReuniao
           aoFechar={() => setAgendando(false)}
           negocios={negociosAgendaveis}
+          vendedor={vendedor}
           aoAgendado={(r) => {
             setAviso(r.aviso);
             void recarregar();

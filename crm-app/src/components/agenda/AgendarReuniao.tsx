@@ -5,7 +5,13 @@ import { CalendarPlus, Video } from "lucide-react";
 import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal, Recuo, Selecao } from "@/components/ui";
 import { PRESETS_AGENDAMENTO, dataDoPreset, paraInputDataHora } from "@/lib/atividades";
 // Os tipos vivem num arquivo SEM `"use client"` — ver o cabeçalho de `tipos.ts`.
-import type { NegocioAgendavel, ReuniaoAgendada } from "@/components/agenda/tipos";
+import {
+  descricaoSugerida,
+  duracaoLegivel,
+  tituloSugerido,
+  type NegocioAgendavel,
+  type ReuniaoAgendada,
+} from "@/components/agenda/tipos";
 export type { NegocioAgendavel, ReuniaoAgendada };
 
 /**
@@ -37,19 +43,38 @@ export function AgendarReuniao({
   aoFechar,
   negocios,
   negocioIdInicial,
+  vendedor,
   aoAgendado,
 }: {
   aoFechar: () => void;
   /** Um só (a partir do card) ou vários (a partir da Agenda). */
   negocios: NegocioAgendavel[];
   negocioIdInicial?: string;
+  /**
+   * Quem assina o convite — o nome da CAIXA comercial, não o de quem clicou.
+   * Ver `descricaoSugerida` em `tipos.ts`.
+   */
+  vendedor: string;
   aoAgendado?: (resultado: ReuniaoAgendada) => void;
 }) {
   const [negocioId, setNegocioId] = useState(negocioIdInicial || negocios[0]?.id || "");
-  const [titulo, setTitulo] = useState("");
   const [quando, setQuando] = useState("");
   const [minutos, setMinutos] = useState(30);
-  const [descricao, setDescricao] = useState("");
+  /**
+   * `null` significa "ninguém tocou", e é diferente de `""`.
+   *
+   * Com `""` como sentinela, apagar o campo o repopularia sob o cursor no render
+   * seguinte — a pessoa não conseguiria deixá-lo vazio. Com `null`, o primeiro
+   * caractere digitado (ou o primeiro apagar) transfere a posse do campo para
+   * ela, e a sugestão não volta mais.
+   *
+   * E derivado no render, não copiado por efeito: trocar de negócio no seletor
+   * da Agenda re-sugere na hora enquanto ninguém editou, sem um render
+   * intermediário mostrando o texto do negócio anterior. É a mesma doutrina do
+   * `convite` logo abaixo.
+   */
+  const [tituloEditado, setTituloEditado] = useState<string | null>(null);
+  const [descricaoEditada, setDescricaoEditada] = useState<string | null>(null);
   const [querConvite, setQuerConvite] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -59,6 +84,9 @@ export function AgendarReuniao({
     [negocios, negocioId],
   );
   const email = escolhido?.contato?.email?.trim() || null;
+
+  const titulo = tituloEditado ?? (escolhido ? tituloSugerido(escolhido) : "");
+  const descricao = descricaoEditada ?? (escolhido ? descricaoSugerida(escolhido, minutos, vendedor) : "");
 
   /**
    * Sem e-mail não há convite possível, e isso é DERIVADO — não um estado que
@@ -173,15 +201,12 @@ export function AgendarReuniao({
           </Campo>
         )}
 
-        <Campo
-          rotulo="Título"
-          dica={escolhido ? `Em branco vira "Reunião — ${escolhido.contato?.nome || nomeDe(escolhido)}"` : undefined}
-        >
+        <Campo rotulo="Título" dica="É o que o cliente vê na agenda dele. Edite à vontade.">
           {(props) => (
             <Entrada
               {...props}
               value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              onChange={(e) => setTituloEditado(e.target.value)}
               placeholder="Apresentação da proposta"
               maxLength={120}
             />
@@ -226,7 +251,7 @@ export function AgendarReuniao({
             >
               {DURACOES.map((m) => (
                 <option key={m} value={m}>
-                  {m >= 60 ? `${m / 60} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`}
+                  {duracaoLegivel(m)}
                 </option>
               ))}
             </Selecao>
@@ -237,9 +262,9 @@ export function AgendarReuniao({
           {(props) => (
             <AreaTexto
               {...props}
-              rows={3}
+              rows={8}
               value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
+              onChange={(e) => setDescricaoEditada(e.target.value)}
               placeholder="O que será tratado na reunião"
             />
           )}

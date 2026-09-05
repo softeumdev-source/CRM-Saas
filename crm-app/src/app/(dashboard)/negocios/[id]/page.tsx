@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { quemAssina } from "@/lib/gmail/caixa";
 import { NegocioDetailClient } from "@/components/negocio/NegocioDetailClient";
 import {
   carregarEtapas,
@@ -67,6 +68,10 @@ export default async function NegocioPage({
     supabase.from("usuarios").select("*").eq("id", user!.id).single(),
   ]);
 
+  // Mesma fonte do `From:` do e-mail. Depois do `Promise.all` porque depende do
+  // tenant que veio dele.
+  const vendedor = await quemAssina(supabase, usuarioAtual?.tenant_id);
+
   return (
     <NegocioDetailClient
       negocioInicial={negocio as never}
@@ -95,6 +100,7 @@ export default async function NegocioPage({
       atividadesIniciais={(atividades as never) || []}
       propostasIniciais={(propostas as never) || []}
       usuarioAtual={usuarioAtual!}
+      vendedor={vendedor}
       abaInicial={normalizarAba(tab) ?? "geral"}
     />
   );
