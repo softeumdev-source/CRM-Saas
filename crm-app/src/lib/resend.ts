@@ -153,15 +153,31 @@ function iconeDaLinha(arquivo: string): string {
     : "";
 }
 
+/**
+ * O bloco de assinatura: logo à esquerda, quatro linhas à direita.
+ *
+ * As duas células vão em `middle` porque o texto ocupa quase o dobro da altura
+ * da logo (44×42). Com `top`, a logo encostava no topo e ficava 21px acima do
+ * meio das quatro linhas — pendurada, com um vão embaixo dela.
+ *
+ * O `valign="middle"` no atributo NÃO é redundância do `vertical-align` do
+ * `style`: o Outlook desktop renderiza com o motor do Word, que ignora o
+ * alinhamento vertical vindo do CSS de `<td>` mas obedece o atributo. É o mesmo
+ * motivo de `width` aparecer duas vezes nas imagens daqui.
+ *
+ * O `padding` fica assimétrico de propósito (20px só em cima): ele é o respiro
+ * abaixo da linha que separa a assinatura do corpo, não parte da centralização
+ * — com `middle`, o alinhamento sai exato mesmo assim.
+ */
 function assinaturaEmHtml(nome: string): string {
   const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
-    ? `<td width="58" style="width:58px; padding:20px 14px 0 0; vertical-align:top;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
+    ? `<td width="58" valign="middle" style="width:58px; padding:20px 14px 0 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
     : "";
   return `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin-top:28px; border-top:1px solid #e2e8f0;">
         <tr>${celulaDaLogo}
-          <td style="padding-top:20px; vertical-align:top; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:13px; line-height:1.6; color:#475569;">
+          <td valign="middle" style="padding-top:20px; vertical-align:middle; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:13px; line-height:1.6; color:#475569;">
             <strong style="color:#0f172a; font-size:14px;">${escaparHtml(nome)}</strong><br />
             ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
             ${iconeDaLinha("icone-site.png")}<a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
