@@ -23,7 +23,7 @@ import {
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
-import type { NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
+import type { NegocioComRelacoes, Plano, PropostaComRelacoes, SolicitacaoDesconto, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 import { abrirPdf } from "@/lib/storage";
@@ -110,7 +110,7 @@ export function PropostaTab({
 }: {
   negocio: NegocioComRelacoes;
   planos: Plano[];
-  propostasIniciais: any[];
+  propostasIniciais: PropostaComRelacoes[];
   usuarioAtual: Usuario;
 }) {
   const isAdmin = usuarioAtual.role === "admin";
@@ -149,7 +149,7 @@ export function PropostaTab({
   const valorMensalBase = (plano?.valor_plataforma_base || 0) + (plano?.valor_uso_base || 0);
 
   // Solicitação de desconto (vendedor pede abaixo do plano; admin aprova)
-  const [solicitacao, setSolicitacao] = useState<any>(null);
+  const [solicitacao, setSolicitacao] = useState<SolicitacaoDesconto | null>(null);
   const [motivoDesconto, setMotivoDesconto] = useState("");
   const [enviandoSolic, setEnviandoSolic] = useState(false);
   const [decidindo, setDecidindo] = useState(false);
@@ -205,8 +205,14 @@ export function PropostaTab({
       p_plano_id: planoId,
       p_valor_mensal: valorMensal,
       p_valor_setup: valorSetup,
-      p_motivo: motivoDesconto.trim() || null,
-    } as any);
+      // O gerador de tipos declara todo parametro `text` como `string`, mesmo
+      // quando a funcao aceita NULL — e esta aceita: `p_motivo` NAO tem DEFAULT,
+      // entao a chave precisa ir, e vai nula quando ninguem escreveu motivo.
+      // O cast e so nesta expressao: nos outros quatro parametros a conferencia
+      // de nome e tipo continua de pe, que era o que o `as any` no objeto
+      // inteiro desligava.
+      p_motivo: (motivoDesconto.trim() || null) as unknown as string,
+    });
     setEnviandoSolic(false);
     if (error) {
       setErro("Falha ao solicitar desconto: " + error.message);
@@ -224,8 +230,11 @@ export function PropostaTab({
     const { data, error } = await supabase.rpc("decidir_desconto", {
       p_solicitacao_id: solicitacao.id,
       p_aprovar: aprovar,
-      p_resposta: respostaAdmin.trim() || null,
-    } as any);
+      // `undefined` e nao `null`: o `supabase-js` omite a chave e
+      // `decidir_desconto(..., p_resposta text DEFAULT NULL)` cai no proprio
+      // default — mesmo resultado no banco, sem cast nenhum.
+      p_resposta: respostaAdmin.trim() || undefined,
+    });
     setDecidindo(false);
     if (error) {
       setErro("Falha ao decidir: " + error.message);
@@ -273,7 +282,7 @@ export function PropostaTab({
     const propostaId = excluindoProposta.id;
     const supabase = createClient();
     const proposta = propostas.find((p) => p.id === propostaId);
-    const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter(Boolean);
+    const paths = [proposta?.pdf_comercial_path, proposta?.pdf_tecnica_path].filter((c): c is string => !!c);
     if (paths.length > 0) {
       await supabase.storage.from("documentos").remove(paths);
     }
@@ -362,7 +371,10 @@ export function PropostaTab({
 
   // A logica de assinar a URL vive em lib/storage: a tela de Assinaturas
   // precisa da mesma coisa, e la ela estava faltando (os links davam 404).
-  const baixarPdf = (path: string) => void abrirPdf(path);
+  // Aceita nulo porque as colunas de caminho SAO anulaveis (proposta sem PDF
+  // assinado ainda nao tem os dois ultimos). `abrirPdf` ja devolve `false` sem
+  // fazer nada nesse caso — quem estreitava era este embrulho.
+  const baixarPdf = (path: string | null | undefined) => void abrirPdf(path);
 
   const copiarLink = (link: string) => {
     navigator.clipboard.writeText(link);
@@ -790,14 +802,14 @@ export function PropostaTab({
                         Status da assinatura (tempo real)
                       </p>
                       {[...(envelope.signatarios || [])]
-                        .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-                        .map((s: any) => (
+                        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+                        .map((s) => (
                           <div key={s.id} className="flex items-center justify-between text-rotulo gap-2 flex-wrap">
                             <span className="font-medium text-tinta-suave">{s.nome} <span className="text-tinta-fraca">({s.papel})</span></span>
                             {s.status === "assinado" ? (
                               <span className="flex items-center gap-1 font-medium text-ok">
                                 <CheckCircle2 className="h-3.5 w-3.5" />
-                                Assinado em {new Date(s.assinado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                Assinado em {s.assinado_em ? new Date(s.assinado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                               </span>
                             ) : s.status === "visualizado" ? (
                               <span className="flex items-center gap-1 font-medium text-info">

@@ -6,24 +6,25 @@ import { BadgePercent, ThumbsUp, ThumbsDown, Clock, CheckCircle2, XCircle, Loade
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { formatarMoeda } from "@/lib/types";
+import type { SolicitacaoDescontoComRelacoes } from "@/lib/types";
 import { Alerta, Botao, Cartao } from "@/components/ui";
 
 const SELECT =
   "*, negocio:negocios(id, titulo, contato:contatos(nome, empresa)), vendedor:usuarios!solicitacoes_desconto_vendedor_id_fkey(nome), plano:planos(nome)";
 
-function nomeNegocio(s: any): string {
+function nomeNegocio(s: SolicitacaoDescontoComRelacoes): string {
   return s.negocio?.contato?.empresa || s.negocio?.contato?.nome || s.negocio?.titulo || "Negócio";
 }
 
-function pctDesconto(s: any): number {
+function pctDesconto(s: SolicitacaoDescontoComRelacoes): number {
   const base = Number(s.valor_mensal_base) || 0;
   const pedido = Number(s.valor_mensal_solicitado) || 0;
   if (base <= 0) return 0;
   return Math.round(((base - pedido) / base) * 100);
 }
 
-export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: any[] }) {
-  const [solicitacoes, setSolicitacoes] = useState<any[]>(solicitacoesIniciais);
+export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: SolicitacaoDescontoComRelacoes[] }) {
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoDescontoComRelacoes[]>(solicitacoesIniciais);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [decidindo, setDecidindo] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -45,7 +46,9 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
     const rank = (st: string) => (st === "pendente" ? 0 : 1);
     return [...solicitacoes].sort((a, b) => {
       if (rank(a.status) !== rank(b.status)) return rank(a.status) - rank(b.status);
-      return new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime();
+      // `criado_em` e anulavel na tabela. `new Date(null)` virava a epoca em
+      // silencio; `?? 0` e exatamente o mesmo instante, agora dito em voz alta.
+      return new Date(b.criado_em ?? 0).getTime() - new Date(a.criado_em ?? 0).getTime();
     });
   }, [solicitacoes]);
 
@@ -58,8 +61,12 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
     const { data, error } = await supabase.rpc("decidir_desconto", {
       p_solicitacao_id: id,
       p_aprovar: aprovar,
-      p_resposta: (respostas[id] || "").trim() || null,
-    } as any);
+      // `undefined` e nao `null`: o `supabase-js` omite a chave, e
+      // `decidir_desconto(..., p_resposta text DEFAULT NULL)` cai no proprio
+      // default — mesmo resultado no banco, sem precisar de `as any` para
+      // driblar o tipo gerado, que declara o parametro opcional e nao anulavel.
+      p_resposta: (respostas[id] || "").trim() || undefined,
+    });
     setDecidindo(null);
     if (error) {
       setErro("Falha ao decidir: " + error.message);
@@ -109,7 +116,7 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: a
                       {s.plano?.nome && <span className="text-rotulo text-tinta-fraca">· {s.plano.nome}</span>}
                     </div>
                     <p className="text-rotulo text-tinta-suave mt-0.5">
-                      Vendedor: {s.vendedor?.nome || "—"} · {new Date(s.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                      Vendedor: {s.vendedor?.nome || "—"} · {s.criado_em ? new Date(s.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </p>
                   </div>
                   <span

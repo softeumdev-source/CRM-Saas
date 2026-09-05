@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, BarChart3, Package, UserSquare2, LineChart, BadgePercent, Send, Plug } from "lucide-react";
 import { assinarRealtime } from "@/lib/supabase/realtime";
-import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato } from "@/lib/types";
+import type { Convite, EtapaPipeline, NegocioComRelacoes, Plano, Usuario, Contato, SolicitacaoDescontoComRelacoes } from "@/lib/types";
 import { ehDoTime, operaNegocios } from "@/lib/types";
 import type { Tables } from "@/lib/supabase/types";
 import { VendedoresTab } from "@/components/admin/VendedoresTab";
@@ -69,7 +69,7 @@ export function AdminClient({
   tetoLeadsSemDono?: number;
   contatosComDono?: (Contato & { responsavel: { id: string; nome: string } | null })[];
   historicoEtapas?: { negocio_id: string; etapa_id: string | null }[];
-  solicitacoesDesconto?: any[];
+  solicitacoesDesconto?: SolicitacaoDescontoComRelacoes[];
   /** Vem de `?tab=`, validado no servidor. */
   abaInicial?: AbaAdmin;
   preferenciasAgenda: Tables<"preferencias_agenda"> | null;

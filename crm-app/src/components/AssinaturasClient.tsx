@@ -6,8 +6,9 @@ import { CheckCircle2, Clock, XCircle, FileSignature, Download, Search, Eye } fr
 import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { abrirPdf } from "@/lib/storage";
+import type { EnvelopeComRelacoes } from "@/lib/types";
 
-export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: any[] }) {
+export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: EnvelopeComRelacoes[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
   const [busca, setBusca] = useState("");
 
@@ -17,7 +18,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
         .from("envelopes")
         .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*)))")
         .order("criado_em", { ascending: false })
-        .then(({ data }) => data && setEnvelopes(data));
+        .then(({ data }) => data && setEnvelopes(data as EnvelopeComRelacoes[]));
     };
     return assinarRealtime("envelopes-realtime", (canal) =>
       canal
@@ -48,7 +49,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
           contato?.email,
           env.proposta?.numero,
           env.proposta?.negocio?.responsavel?.nome,
-          ...(env.signatarios || []).flatMap((s: any) => [s.nome, s.email]),
+          ...(env.signatarios || []).flatMap((s) => [s.nome, s.email]),
         ];
         return campos.some((v) => v && String(v).toLowerCase().includes(termo));
       });
@@ -125,8 +126,8 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: an
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {[...(env.signatarios || [])]
-                    .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
-                    .map((s: any) => (
+                    .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+                    .map((s) => (
                       <span
                         key={s.id}
                         title={

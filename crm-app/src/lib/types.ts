@@ -1,4 +1,5 @@
 import type { Tables } from "@/lib/supabase/types";
+import type { CampoAssinatura } from "@/components/PdfFieldEditor";
 
 export type Usuario = Tables<"usuarios">;
 export type Tenant = Tables<"tenants">;
@@ -14,6 +15,93 @@ export type Signatario = Tables<"signatarios">;
 export type Convite = Tables<"convites">;
 export type RegraDistribuicao = Tables<"regras_distribuicao">;
 export type NegocioEtapaHistorico = Tables<"negocio_etapa_historico">;
+export type SolicitacaoDesconto = Tables<"solicitacoes_desconto">;
+
+/**
+ * `solicitacoes_desconto` com os embeds que a aba de descontos do admin pede.
+ *
+ * Os embeds NÃO são a linha inteira: o `select` traz de `negocios` só `id` e
+ * `titulo`, e de `contatos` só `nome` e `empresa`. Declarar `Negocio` aqui
+ * seria mentir para quem lê o tipo — o campo existiria no editor e chegaria
+ * `undefined` na tela.
+ */
+export type SolicitacaoDescontoComRelacoes = SolicitacaoDesconto & {
+  negocio: { id: string; titulo: string; contato: { nome: string; empresa: string | null } | null } | null;
+  vendedor: { nome: string } | null;
+  plano: { nome: string } | null;
+};
+
+/** Os dois PDFs assinados que a rota devolve quando o envelope fecha. */
+export type DocumentosAssinados = {
+  comercial: string;
+  tecnica: string;
+};
+
+/**
+ * O que a RPC `obter_envelope_publico` devolve para quem abre o link de
+ * assinatura sem estar logado.
+ *
+ * A função devolve `json` no banco, então o tipo gerado só sabe dizer `Json` —
+ * e por isso a leitura precisa de um cast. O cast em si não é o problema; o
+ * problema era ele ser `as any`, que não descreve NADA e deixava a página e a
+ * rota lerem campos diferentes da mesma resposta sem ninguém notar. Aqui a
+ * forma está escrita uma vez só, e as duas leem dela.
+ *
+ * Morava dentro de `src/app/assinar/[token]/page.tsx`, onde a rota não
+ * alcançava.
+ */
+export type EnvelopePublico = {
+  signatario: { id: string; nome: string; email: string; papel: string; status: string; ordem: number };
+  envelope: { id: string; status: string; campos_assinatura: CampoAssinatura[] | null };
+  outros_signatarios: { nome: string; papel: string; status: string }[];
+  documentos_assinados?: DocumentosAssinados | null;
+  proposta: {
+    numero: string;
+    versao: number;
+    aviso_previo_dias: number;
+    prazo_contrato_meses: number;
+    valor_plataforma: number;
+    valor_uso: number;
+    valor_excedente_pedido: number;
+  };
+  negocio: { titulo: string };
+  contato: { nome: string; empresa: string; cnpj: string; email: string };
+  tenant: { nome: string; cor_primaria: string };
+};
+
+/** O que `registrar_assinatura` devolve. Também `json` no banco. */
+export type AssinaturaRegistrada = {
+  envelope_concluido?: boolean;
+};
+
+/**
+ * `propostas` com o plano e os envelopes, como a aba de proposta do negócio
+ * carrega (`*, plano:planos(*), envelopes(*, signatarios(*))`).
+ *
+ * Existia como `Record<string, unknown>` dentro do `NegocioDetailClient` — o
+ * nome certo sobre forma nenhuma. Quem lia `proposta.envelopes[0].signatarios`
+ * não tinha conferência de nada, e a página ainda precisava de um `as never`
+ * para entregar os dados.
+ */
+export type PropostaComRelacoes = Proposta & {
+  plano: Plano | null;
+  envelopes: (Envelope & { signatarios: Signatario[] })[];
+};
+
+/**
+ * `envelopes` com os signatários e a proposta inteira, como a tela de
+ * assinaturas e a aba de proposta pedem.
+ *
+ * Aqui os embeds são `*` de verdade, então os tipos das linhas valem inteiros.
+ */
+export type EnvelopeComRelacoes = Envelope & {
+  signatarios: Signatario[];
+  proposta:
+    | (Proposta & {
+        negocio: (Negocio & { contato: Contato | null; responsavel: Usuario | null }) | null;
+      })
+    | null;
+};
 
 export type NegocioComRelacoes = Negocio & {
   contato: Contato | null;

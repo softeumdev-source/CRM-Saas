@@ -58,7 +58,23 @@ export function VendedoresTab({
     setEmailErro(data.emailErro || null);
     setRemetenteTest(data.remetenteTest || false);
     setConvites((prev) => [
-      { id: data.convite_id, token: data.token, email, nome, role: papel, status: "pendente", tenant_id: usuarioAtual.tenant_id, convidado_por: usuarioAtual.id, criado_em: new Date().toISOString(), expira_em: "" } as any,
+      // A linha otimista é um `Convite` de verdade, e não um objeto com `as any`.
+      // Duas coisas que o cast escondia: `convites` NÃO tem coluna `nome` (o campo
+      // ia junto e nunca era lido — a lista de pendentes mostra e-mail e papel), e
+      // `expira_em` é NOT NULL sem valor aqui, porque `convidar_usuario` devolve só
+      // `convite_id` e `token`. Fica vazio até o Realtime trazer a linha do banco,
+      // o que é seguro porque nada na tela lê essa data.
+      {
+        id: data.convite_id,
+        token: data.token,
+        email,
+        role: papel,
+        status: "pendente",
+        tenant_id: usuarioAtual.tenant_id,
+        convidado_por: usuarioAtual.id,
+        criado_em: new Date().toISOString(),
+        expira_em: "",
+      },
       ...prev,
     ]);
     setNome("");

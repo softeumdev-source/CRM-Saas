@@ -8,6 +8,8 @@ import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
+import { mensagemDoErro } from "@/lib/erros";
+import type { AssinaturaRegistrada, EnvelopePublico } from "@/lib/types";
 
 interface CampoAssinatura {
   id: string;
@@ -155,11 +157,11 @@ export async function POST(request: Request, context: { params: Promise<{ token:
 
     let documentosAssinados: { comercial: string; tecnica: string } | null = null;
 
-    if (data && (data as any).envelope_concluido && temServiceRole()) {
+    if (data && (data as unknown as AssinaturaRegistrada).envelope_concluido && temServiceRole()) {
       try {
         const admin = createAdminClient();
-        const envelopeInfo = (await supabase.rpc("obter_envelope_publico", { p_token: token })) as any;
-        const info = envelopeInfo.data;
+        const envelopeInfo = await supabase.rpc("obter_envelope_publico", { p_token: token });
+        const info = envelopeInfo.data as unknown as EnvelopePublico | null;
         const camposAssinatura: CampoAssinatura[] = info?.envelope?.campos_assinatura || [];
 
         const { data: signatariosData } = await admin
@@ -173,7 +175,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           .select("nome, email, ip_assinatura, assinado_em, assinatura_tipo, assinatura_dados, ordem, email_faturamento")
           .eq("envelope_id", signatariosData?.envelope_id || "");
 
-        const assinantes = (todosSig || []).map((s: any) => ({
+        const assinantes = (todosSig || []).map((s) => ({
           nome: s.nome,
           email: s.email,
           ip: s.ip_assinatura || "-",
@@ -231,9 +233,9 @@ export async function POST(request: Request, context: { params: Promise<{ token:
                 admin.from("planos").select("nome, franquia_pedidos").eq("id", prop?.plano_id || "").single(),
                 admin.from("negocios").select("contato:contatos(nome, empresa, cnpj, email)").eq("id", prop?.negocio_id || "").single(),
               ]);
-              const contato = (neg as any)?.contato;
+              const contato = neg?.contato;
               if (prop && pl && contato) {
-                const dados = montarDadosDaProposta(prop as any, pl as any, contato, { emailFaturamento: emailFat });
+                const dados = montarDadosDaProposta(prop, pl, contato, { emailFaturamento: emailFat });
                 comercialBuf = await renderPropostaComercialPdf(dados);
               }
             } catch (e) {
@@ -326,7 +328,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           ];
 
           for (const emailDest of destinatarios) {
-            const sigNome = (todosSig || []).find((s: any) => s.email === emailDest)?.nome || "";
+            const sigNome = (todosSig || []).find((s) => s.email === emailDest)?.nome || "";
             await enviarDoTenant(admin, tenantId, {
               para: emailDest,
               anexos: anexosAssinados,
@@ -359,8 +361,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     }
 
     return NextResponse.json({ ...(data as Record<string, unknown>), documentos_assinados: documentosAssinados });
-  } catch (e: any) {
+  } catch (e) {
     console.error("Erro na rota /api/assinar:", e);
-    return NextResponse.json({ error: e?.message || "Erro interno ao processar assinatura." }, { status: 500 });
+    return NextResponse.json({ error: mensagemDoErro(e, "Erro interno ao processar assinatura.") }, { status: 500 });
   }
 }

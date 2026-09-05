@@ -52,7 +52,7 @@ export const estilos = StyleSheet.create({
     fontWeight: 700,
     textAlign: "right",
   },
-  link: { color: "#2563eb", fontSize: 9, textDecoration: "underline", marginBottom: 6 } as any,
+  link: { color: "#2563eb", fontSize: 9, textDecoration: "underline", marginBottom: 6 },
   assinaturaLinha: { marginTop: 44, borderTopWidth: 1, borderTopColor: "#1e293b", width: 140, paddingTop: 4 },
   assinaturaNome: { fontSize: 8, fontWeight: 700, marginTop: 2 },
   assinaturaSub: { fontSize: 7, color: CORES.slate, marginTop: 1 },

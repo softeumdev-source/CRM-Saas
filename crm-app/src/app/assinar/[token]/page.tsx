@@ -5,6 +5,8 @@ import { createAnonClient } from "@/lib/supabase/anon";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PdfSignViewer } from "@/components/PdfSignViewer";
 import type { CampoAssinatura } from "@/components/PdfFieldEditor";
+import type { DocumentosAssinados, EnvelopePublico } from "@/lib/types";
+import { mensagemDoErro } from "@/lib/erros";
 import {
   FileSignature,
   CheckCircle2,
@@ -17,30 +19,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-
-interface DocumentosAssinados {
-  comercial: string;
-  tecnica: string;
-}
-
-interface EnvelopePublico {
-  signatario: { id: string; nome: string; email: string; papel: string; status: string; ordem: number };
-  envelope: { id: string; status: string; campos_assinatura: CampoAssinatura[] | null };
-  outros_signatarios: { nome: string; papel: string; status: string }[];
-  documentos_assinados?: DocumentosAssinados | null;
-  proposta: {
-    numero: string;
-    versao: number;
-    aviso_previo_dias: number;
-    prazo_contrato_meses: number;
-    valor_plataforma: number;
-    valor_uso: number;
-    valor_excedente_pedido: number;
-  };
-  negocio: { titulo: string };
-  contato: { nome: string; empresa: string; cnpj: string; email: string };
-  tenant: { nome: string; cor_primaria: string };
-}
 
 export default function AssinarPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -62,17 +40,21 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
     const supabase = createAnonClient();
     supabase
       .rpc("obter_envelope_publico", { p_token: token })
-      .then(({ data, error }: any) => {
+      .then(({ data, error }) => {
         setCarregando(false);
         if (error || !data) {
-          setErro(error?.message || "Link inválido ou expirado.");
+          setErro(mensagemDoErro(error, "Link inválido ou expirado."));
           return;
         }
-        setDados(data as EnvelopePublico);
-        setNomeDigitado(data.signatario.nome);
+        // A RPC devolve `json`, então o tipo gerado é `Json` e o cast é
+        // inevitável. Feito UMA vez, num tipo com nome: tudo abaixo é lido com
+        // conferência, em vez de cada leitura ser um `any` solto.
+        const envelope = data as unknown as EnvelopePublico;
+        setDados(envelope);
+        setNomeDigitado(envelope.signatario.nome);
         setEmailFaturamento("");
-        if (data.signatario.status === "assinado") setConcluido(true);
-        if (data.documentos_assinados) setDocsAssinados(data.documentos_assinados);
+        if (envelope.signatario.status === "assinado") setConcluido(true);
+        if (envelope.documentos_assinados) setDocsAssinados(envelope.documentos_assinados);
       });
   }, [token]);
 
@@ -103,7 +85,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       if (resultado?.documentos_assinados) setDocsAssinados(resultado.documentos_assinados);
       setModalAssinatura(false);
       setConcluido(true);
-    } catch (e: any) {
+    } catch {
       setErro("Erro de conexão. Verifique sua internet e tente novamente.");
     }
     setEnviando(false);

@@ -6,6 +6,7 @@ import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
+import type { CampoAssinatura } from "@/components/PdfFieldEditor";
 
 interface SignatarioEntrada {
   nome: string;
@@ -17,7 +18,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const body = await request.json().catch(() => ({}));
   const signatariosEntrada: SignatarioEntrada[] = Array.isArray(body.signatarios) ? body.signatarios : [];
   const copias: string[] = Array.isArray(body.copias) ? body.copias.filter((c: string) => c && c.trim()) : [];
-  const camposAssinatura: any[] = Array.isArray(body.campos_assinatura) ? body.campos_assinatura : [];
+  const camposAssinatura: CampoAssinatura[] = Array.isArray(body.campos_assinatura) ? body.campos_assinatura : [];
 
   const supabase = await createClient();
   const {
@@ -41,7 +42,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Gere os PDFs da proposta antes de enviar." }, { status: 422 });
   }
 
-  const negocio = proposta.negocio as any;
+  const negocio = proposta.negocio;
   const contato = negocio?.contato;
 
   const signatariosFinal =
@@ -57,7 +58,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   const { data: envelope, error: erroEnvelope } = await supabase
     .from("envelopes")
-    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado", copias_emails: copias, campos_assinatura: camposAssinatura } as any)
+    .insert({ proposta_id: id, tenant_id: proposta.tenant_id, status: "enviado", copias_emails: copias, campos_assinatura: camposAssinatura })
     .select()
     .single();
   if (erroEnvelope || !envelope) {
@@ -124,7 +125,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       ? await admin.from("planos").select("nome, franquia_pedidos").eq("id", proposta.plano_id).single()
       : { data: null };
     if (plano && contato) {
-      const dados = montarDadosDaProposta(proposta as any, plano as any, contato as any);
+      const dados = montarDadosDaProposta(proposta, plano, contato);
       comercialParaAssinar = await renderPropostaComercialPdf(dados);
     }
   } catch (e) {

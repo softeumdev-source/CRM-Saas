@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRightLeft, Building2, CalendarPlus, Mail, MessageCircle
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
-import type { EtapaPipeline, NegocioComRelacoes, Plano, Usuario } from "@/lib/types";
+import type { EtapaPipeline, NegocioComRelacoes, Plano, PropostaComRelacoes, Usuario } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, resultadoDaEtapa, type Aba } from "@/lib/types";
 import { linkDeEmail, linkDeTelefone, linkDoWhatsapp } from "@/lib/contato";
 import {
@@ -41,7 +41,6 @@ import {
 import { MoverDeFunil } from "@/components/negocio/MoverDeFunil";
 import { AgendarReuniao } from "@/components/agenda/AgendarReuniao";
 
-type PropostaComRelacoes = Record<string, unknown>;
 const ABAS: readonly ItemDeAba<Aba>[] = [
   { chave: "geral", rotulo: "Visão Geral" },
   // "Atividades", e não mais "Cadência": esta aba é a agenda do lead — próximo

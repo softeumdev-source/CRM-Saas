@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { escaparHtml } from "@/lib/gmail/corpo";
+import { mensagemDoErro } from "@/lib/erros";
 
 export function temResendConfigurado(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -70,9 +71,9 @@ export async function enviarEmail(params: {
     }
 
     return { sent: true, skipped: false, id: data?.id, remetenteTest };
-  } catch (e: any) {
+  } catch (e) {
     console.error("[resend] Excecao ao enviar e-mail:", e);
-    return { sent: false, skipped: false, error: e?.message || String(e), remetenteTest };
+    return { sent: false, skipped: false, error: mensagemDoErro(e), remetenteTest };
   }
 }
 

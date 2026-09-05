@@ -5,6 +5,7 @@ import { AdminClient } from "@/components/admin/AdminClient";
 // servidor uma função que vive no cliente derruba a rota com 500.
 import { ehAbaAdmin } from "@/components/admin/abas";
 import { carregarEtapas, carregarPipeline, recorteDeFunil } from "@/lib/pipelines";
+import type { SolicitacaoDescontoComRelacoes } from "@/lib/types";
 
 /**
  * Teto explicito: a consulta era ilimitada e, no volume alvo de 500-2000
@@ -106,13 +107,13 @@ export default async function AdminPage({
       usuarios={usuarios || []}
       convites={convites || []}
       planos={planos || []}
-      negocios={(negocios as any) || []}
+      negocios={negocios || []}
       etapas={etapas}
       contatosSemDono={contatosSemDono || []}
       tetoLeadsSemDono={TETO_LEADS_SEM_DONO}
-      contatosComDono={(contatosComDono as any) || []}
+      contatosComDono={contatosComDono || []}
       historicoEtapas={historicoEtapas || []}
-      solicitacoesDesconto={(solicitacoesDesconto as any) || []}
+      solicitacoesDesconto={(solicitacoesDesconto as SolicitacaoDescontoComRelacoes[] | null) || []}
       preferenciasAgenda={preferenciasAgenda}
       negociosAbertos={negociosAbertos || []}
       usuarioAtual={usuarioAtual}

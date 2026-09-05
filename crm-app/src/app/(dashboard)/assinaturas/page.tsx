@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AssinaturasClient } from "@/components/AssinaturasClient";
+import type { EnvelopeComRelacoes } from "@/lib/types";
 
 export default async function AssinaturasPage() {
   const supabase = await createClient();
@@ -8,5 +9,5 @@ export default async function AssinaturasPage() {
     .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*)))")
     .order("criado_em", { ascending: false });
 
-  return <AssinaturasClient envelopesIniciais={(envelopes as any) || []} />;
+  return <AssinaturasClient envelopesIniciais={(envelopes as EnvelopeComRelacoes[] | null) || []} />;
 }

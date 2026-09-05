@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { FileSignature, ChevronLeft, ChevronRight, Loader2, CheckCircle2 } from "lucide-react";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { CampoAssinatura } from "./PdfFieldEditor";
+import { mensagemDoErro } from "@/lib/erros";
 
 const CORES = [
   { bg: "rgba(79,70,229,0.15)", border: "#4f46e5", text: "#4f46e5", pulse: "ring-indigo-400" },
@@ -32,7 +34,7 @@ export function PdfSignViewer({
   const [erro, setErro] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pdfDocRef = useRef<any>(null);
+  const pdfDocRef = useRef<PDFDocumentProxy | null>(null);
 
   const renderizarPagina = useCallback(async (num: number) => {
     if (!pdfDocRef.current || !canvasRef.current) return;
@@ -44,7 +46,7 @@ export function PdfSignViewer({
       canvas.height = viewport.height;
       const ctx = canvas.getContext("2d")!;
       await page.render({ canvasContext: ctx, viewport }).promise;
-    } catch (e: any) {
+    } catch (e) {
       console.error("Erro ao renderizar pagina", e);
       // Desenhar no canvas falhou (deixaria a tela em branco sem aviso) —
       // cai no fallback nativo para o cliente não ficar sem a proposta.
@@ -83,12 +85,12 @@ export function PdfSignViewer({
         if (primeiraPagComCampo && primeiraPagComCampo.pagina > 1) {
           setPaginaAtual(primeiraPagComCampo.pagina);
         }
-      } catch (e: any) {
+      } catch (e) {
         if (cancelado) return;
         clearTimeout(timeout);
         console.error("Erro ao carregar PDF", e);
         setCarregando(false);
-        setErro(e?.message || "Não foi possível carregar o documento.");
+        setErro(mensagemDoErro(e, "Não foi possível carregar o documento."));
       }
     })();
     return () => { cancelado = true; clearTimeout(timeout); };

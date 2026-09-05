@@ -10,6 +10,7 @@ import {
   etapaDaEntrega,
 } from "@/lib/pipelines";
 import { SELECT_NEGOCIO_COMPLETO, normalizarAba } from "@/lib/types";
+import type { PropostaComRelacoes } from "@/lib/types";
 
 export default async function NegocioPage({
   params,
@@ -98,7 +99,7 @@ export default async function NegocioPage({
       responsaveis={responsaveis || []}
       planos={planos || []}
       atividadesIniciais={(atividades as never) || []}
-      propostasIniciais={(propostas as never) || []}
+      propostasIniciais={(propostas as PropostaComRelacoes[] | null) || []}
       usuarioAtual={usuarioAtual!}
       vendedor={vendedor}
       abaInicial={normalizarAba(tab) ?? "geral"}

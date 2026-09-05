@@ -8,6 +8,15 @@ import { formatarMoeda } from "@/lib/types";
 import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal } from "@/components/ui";
 import { Confirmar } from "@/components/ui";
 
+/**
+ * O formulário do plano: o que o modal edita, e não a linha da tabela.
+ *
+ * Não é `Plano` porque um plano NOVO ainda não tem `id`, `tenant_id` nem
+ * `criado_em`; e não é `Partial<Plano>` porque os campos que o formulário edita
+ * estão todos preenchidos desde o começo, por `PLANO_VAZIO`.
+ */
+type FormularioDePlano = typeof PLANO_VAZIO & Partial<Plano>;
+
 const PLANO_VAZIO = {
   nome: "",
   descricao: "",
@@ -27,7 +36,7 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
   // Props chegam renovadas via Realtime + router.refresh() do AdminClient.
   useEffect(() => setPlanos(planosIniciais), [planosIniciais]);
   const [editando, setEditando] = useState<Plano | null>(null);
-  const [form, setForm] = useState<any>(PLANO_VAZIO);
+  const [form, setForm] = useState<FormularioDePlano>(PLANO_VAZIO);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -40,7 +49,17 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
 
   const abrirEdicao = (p: Plano) => {
     setEditando(p);
-    setForm({ ...p, valor_plataforma_base: (p.valor_plataforma_base || 0) + (p.valor_uso_base || 0), valor_uso_base: 0 });
+    // `descricao` é anulável na tabela, e o `<AreaTexto>` abaixo é controlado:
+    // com `value={null}` o React troca o campo de controlado para NÃO
+    // controlado no meio da edição — o texto digitado para de ser lido pelo
+    // estado e some ao salvar. O `?? ""` era o que faltava, e o `any` era o que
+    // impedia de ver.
+    setForm({
+      ...p,
+      descricao: p.descricao ?? "",
+      valor_plataforma_base: (p.valor_plataforma_base || 0) + (p.valor_uso_base || 0),
+      valor_uso_base: 0,
+    });
     setErro(null);
     setModalAberto(true);
   };

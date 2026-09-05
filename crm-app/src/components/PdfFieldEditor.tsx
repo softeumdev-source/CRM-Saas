@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import { FileSignature, Plus, Trash2, ChevronLeft, ChevronRight, Loader2, Send, MousePointer2 } from "lucide-react";
 
-export interface CampoAssinatura {
+/**
+ * Um campo de assinatura posicionado no PDF.
+ *
+ * `type` e nao `interface`, e a diferenca NAO e estilo: a coluna
+ * `envelopes.campos_assinatura` e `Json`, e o TypeScript so da index signature
+ * implicita a alias de tipo. Como `interface`, gravar a lista exigia um
+ * `as any` no `insert` — que apagava a conferencia de forma justamente onde ela
+ * importa, na fronteira com o banco.
+ */
+export type CampoAssinatura = {
   id: string;
   signatario_ordem: number;
   tipo: "assinatura";
@@ -55,7 +65,7 @@ export function PdfFieldEditor({
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const pdfDocRef = useRef<any>(null);
+  const pdfDocRef = useRef<PDFDocumentProxy | null>(null);
   const dimensoesRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const renderizarPagina = useCallback(async (num: number) => {
