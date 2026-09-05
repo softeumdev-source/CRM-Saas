@@ -604,7 +604,7 @@ export function KanbanPageClient({
             <select
               value={responsavel}
               onChange={(e) => setResponsavel(e.target.value)}
-              className="px-3 py-2 text-rotulo font-medium bg-superficie border border-fio rounded-xl"
+              className="foco px-3 py-2 text-rotulo font-medium bg-superficie border border-fio rounded-xl"
             >
               <option value="todos">Todos os responsáveis</option>
               {responsaveis.map((v) => (

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { assinarRealtime } from "@/lib/supabase/realtime";
 import { abrirPdf } from "@/lib/storage";
 import type { EnvelopeComRelacoes } from "@/lib/types";
+import { atrasoDaCascata } from "@/components/ui";
 
 export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: EnvelopeComRelacoes[] }) {
   const [envelopes, setEnvelopes] = useState(envelopesIniciais);
@@ -109,12 +110,12 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
         {envelopes.length > 0 && envelopesFiltrados.length === 0 && (
           <p className="p-6 text-rotulo text-tinta-fraca text-center">Nenhum contrato encontrado para &quot;{busca}&quot;.</p>
         )}
-        {envelopesFiltrados.map((env) => {
+        {envelopesFiltrados.map((env, i) => {
           const negocio = env.proposta?.negocio;
           const assinadoComercial = env.proposta?.pdf_assinado_comercial_path;
           const assinadoTecnica = env.proposta?.pdf_assinado_tecnica_path;
           return (
-            <div key={env.id} className="p-4 hover:bg-recuo">
+            <div key={env.id} style={atrasoDaCascata(i)} className="surge p-4 hover:bg-recuo">
               <Link href={negocio ? `/negocios/${negocio.id}` : "#"} className="block">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>

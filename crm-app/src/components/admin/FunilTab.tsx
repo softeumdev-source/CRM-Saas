@@ -46,7 +46,7 @@ export function FunilTab({
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Nome do vendedor..."
-                className="pl-8 pr-3 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-2xl w-full sm:w-56"
+                className="foco pl-8 pr-3 py-2.5 text-rotulo font-medium bg-recuo border border-fio rounded-2xl w-full sm:w-56"
               />
             </div>
           </div>

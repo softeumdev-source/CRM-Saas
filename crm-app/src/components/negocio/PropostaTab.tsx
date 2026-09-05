@@ -408,7 +408,7 @@ export function PropostaTab({
             setValorSetupTexto(exibirMoeda(Math.max(newSetup, minSetup)));
             const newMensal = (p?.valor_plataforma_base || 0) + (p?.valor_uso_base || 0);
             setValorMensalTexto(exibirMoeda(newMensal));
-          }} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium">
+          }} className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium">
             {planos.map((p) => (
               <option key={p.id} value={p.id}>{p.nome} — até {p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</option>
             ))}
@@ -425,7 +425,7 @@ export function PropostaTab({
               value={valorMensalTexto}
               onChange={(e) => setValorMensalTexto(e.target.value)}
               onBlur={() => setValorMensalTexto(exibirMoeda(parseMoeda(valorMensalTexto)))}
-              className="flex-1 px-3 py-2 text-titulo font-medium text-acento bg-superficie border border-fio rounded-xl"
+              className="foco flex-1 px-3 py-2 text-titulo font-medium text-acento bg-superficie border border-fio rounded-xl"
             />
             <span className="text-corpo font-medium text-tinta-suave">/mês</span>
           </div>
@@ -454,7 +454,7 @@ export function PropostaTab({
               value={valorSetupTexto}
               onChange={(e) => setValorSetupTexto(e.target.value)}
               onBlur={() => setValorSetupTexto(exibirMoeda(parseMoeda(valorSetupTexto)))}
-              className="flex-1 px-3 py-2 text-titulo font-medium bg-superficie border border-fio rounded-xl"
+              className="foco flex-1 px-3 py-2 text-titulo font-medium bg-superficie border border-fio rounded-xl"
             />
           </div>
           <p className="text-rotulo text-tinta-suave mt-1">
@@ -466,11 +466,11 @@ export function PropostaTab({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="propostata-4" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Prazo contrato (meses)</label>
-            <input id="propostata-4" type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
+            <input id="propostata-4" type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
           </div>
           <div>
             <label htmlFor="propostata-5" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Aviso prévio de rescisão</label>
-            <select id="propostata-5" value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium">
+            <select id="propostata-5" value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium">
               {AVISOS_PREVIOS_DIAS.map((d) => (
                 <option key={d} value={d}>{d} dias {d === 180 ? "(padrão)" : ""}</option>
               ))}
@@ -494,7 +494,7 @@ export function PropostaTab({
               value={respostaAdmin}
               onChange={(e) => setRespostaAdmin(e.target.value)}
               placeholder="Resposta ao vendedor (opcional)"
-              className="w-full px-3 py-2 text-rotulo bg-superficie border border-alerta/40 rounded-lg"
+              className="foco w-full px-3 py-2 text-rotulo bg-superficie border border-alerta/40 rounded-lg"
             />
             <div className="flex items-center gap-2">
               <button
@@ -556,7 +556,7 @@ export function PropostaTab({
               onChange={(e) => setMotivoDesconto(e.target.value)}
               placeholder="Justifique o desconto para o admin (ex.: concorrência, volume, relacionamento)"
               rows={2}
-              className="w-full px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+              className="foco w-full px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
             />
             <button
               onClick={solicitarDesconto}
@@ -681,7 +681,7 @@ export function PropostaTab({
                             }
                             placeholder="Nome completo"
                             aria-label="Nome do signatário"
-                            className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+                            className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           <input
                             value={s.email}
@@ -692,7 +692,7 @@ export function PropostaTab({
                             }
                             placeholder="email@empresa.com"
                             aria-label="E-mail do signatário"
-                            className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+                            className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           {signatarios.length > 1 && (
                             <button
@@ -725,7 +725,7 @@ export function PropostaTab({
                               }
                               placeholder="email@empresa.com"
                               aria-label="E-mail para cópia"
-                              className="flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+                              className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                             />
                             <button
                               onClick={() => setCopias((prev) => prev.filter((x) => x.chave !== c.chave))}

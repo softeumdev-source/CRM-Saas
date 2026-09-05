@@ -7,6 +7,7 @@ import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { etapasParaEscolher, recorteDeFunil } from "@/lib/pipelines";
+import { atrasoDaCascata } from "@/components/ui";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda } from "@/lib/types";
 import {
@@ -150,13 +151,13 @@ export function ListaClient({
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar empresa, contato, e-mail ou CNPJ..."
-              className="pl-9 pr-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl w-64"
+              className="foco pl-9 pr-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl w-64"
             />
           </div>
           <select
             value={etapaFiltro}
             onChange={(e) => setEtapaFiltro(e.target.value)}
-            className="px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
+            className="foco px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="all">Todas as etapas</option>
             {etapasParaEscolher(etapas).map((et) => (
@@ -166,7 +167,7 @@ export function ListaClient({
           <select
             value={ordem}
             onChange={(e) => setOrdem(e.target.value as Ordem)}
-            className="px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
+            className="foco px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="recentes">Mais recentes</option>
             <option value="sem_contato">Mais tempo sem contato</option>
@@ -192,13 +193,17 @@ export function ListaClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-fio">
-              {filtrados.map((n) => {
+              {filtrados.map((n, i) => {
                 const hoje = temAtividadeHoje(n);
                 const dias = diasSemContato(n);
                 const proxima = proximaAtividade(n.atividades_pendentes);
                 const atrasada = estaAtrasada(proxima?.data_agendada);
                 return (
-                  <tr key={n.id} className="hover:bg-recuo transition-colors">
+                  <tr
+                    key={n.id}
+                    style={atrasoDaCascata(i)}
+                    className="surge hover:bg-recuo transition-colors"
+                  >
                     <td className="p-4">
                       <p className="font-semibold text-tinta flex items-center gap-1.5">
                         <span className={`h-2 w-2 rounded-full shrink-0 ${hoje ? "bg-ok" : "bg-alerta"}`} />

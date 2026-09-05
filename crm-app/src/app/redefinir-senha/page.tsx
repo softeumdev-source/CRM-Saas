@@ -54,7 +54,7 @@ export default function RedefinirSenhaPage() {
               required
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
             />
           </div>
           <div>
@@ -66,7 +66,7 @@ export default function RedefinirSenhaPage() {
               required
               value={confirmar}
               onChange={(e) => setConfirmar(e.target.value)}
-              className="w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
             />
           </div>
           {erro && (

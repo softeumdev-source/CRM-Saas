@@ -136,7 +136,7 @@ export function VendedoresTab({
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Nome completo"
-              className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
             />
             <input
               required
@@ -144,7 +144,7 @@ export function VendedoresTab({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@softeum.com.br"
-              className="w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl"
             />
             <div>
               <Selecao

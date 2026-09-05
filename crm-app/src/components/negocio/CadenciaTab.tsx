@@ -519,7 +519,7 @@ export function CadenciaTab({
                 type="datetime-local"
                 value={realizadaEm}
                 onChange={(e) => setRealizadaEm(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-corpo rounded-xl border border-fio bg-recuo"
+                className="foco w-full px-3.5 py-2.5 text-corpo rounded-xl border border-fio bg-recuo"
               />
             </div>
           </div>
@@ -537,7 +537,7 @@ export function CadenciaTab({
                 type="checkbox"
                 checked={agendarProximo}
                 onChange={(e) => setAgendarProximo(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-indigo-600"
+                className="foco mt-0.5 h-4 w-4 accent-indigo-600"
               />
               <span>
                 <span className="text-rotulo font-medium text-tinta flex items-center gap-1.5">
@@ -569,7 +569,7 @@ export function CadenciaTab({
                     type="datetime-local"
                     value={dataAgendada}
                     onChange={(e) => setDataAgendada(e.target.value)}
-                    className="w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
+                    className="foco w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
                   />
                   {dataAgendada && (
                     <p className="text-rotulo font-medium text-acento mt-1">
@@ -583,7 +583,7 @@ export function CadenciaTab({
                   <select id="cadenciata-4"
                     value={tipoProximo}
                     onChange={(e) => setTipoProximo(e.target.value as TipoAtividade)}
-                    className="w-full px-3 py-2 text-corpo font-medium rounded-xl border border-fio bg-superficie"
+                    className="foco w-full px-3 py-2 text-corpo font-medium rounded-xl border border-fio bg-superficie"
                   >
                     {TIPOS_REGISTRAVEIS.map((t) => (
                       <option key={t} value={t}>{ROTULOS_ATIVIDADE[t]}</option>
@@ -600,7 +600,7 @@ export function CadenciaTab({
                     onChange={(e) => setTituloProximo(e.target.value)}
                     maxLength={120}
                     placeholder={`${ROTULOS_ATIVIDADE[tipoProximo]} — ${empresa}`}
-                    className="w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
+                    className="foco w-full px-3 py-2 text-corpo rounded-xl border border-fio bg-superficie"
                   />
                 </div>
               </>
@@ -803,7 +803,7 @@ export function CadenciaTab({
                           type="datetime-local"
                           value={novaData}
                           onChange={(e) => setNovaData(e.target.value)}
-                          className="px-2.5 py-1.5 text-rotulo rounded-lg border border-fio bg-superficie"
+                          className="foco px-2.5 py-1.5 text-rotulo rounded-lg border border-fio bg-superficie"
                         />
                         {PRESETS_AGENDAMENTO.slice(0, 4).map((p) => (
                           <button
@@ -899,13 +899,13 @@ export function CadenciaTab({
                 value={buscaHistorico}
                 onChange={(e) => setBuscaHistorico(e.target.value)}
                 placeholder="Buscar no histórico..."
-                className="pl-8 pr-3 py-1.5 text-rotulo bg-recuo border border-fio rounded-lg w-48"
+                className="foco pl-8 pr-3 py-1.5 text-rotulo bg-recuo border border-fio rounded-lg w-48"
               />
             </div>
             <select
               value={filtroTipo}
               onChange={(e) => setFiltroTipo(e.target.value)}
-              className="px-2.5 py-1.5 text-rotulo font-medium bg-recuo border border-fio rounded-lg"
+              className="foco px-2.5 py-1.5 text-rotulo font-medium bg-recuo border border-fio rounded-lg"
             >
               <option value="todos">Todos os tipos</option>
               {TIPOS_ATIVIDADE.map((t) => (

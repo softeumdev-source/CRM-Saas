@@ -160,7 +160,7 @@ export function DescontosTab({ solicitacoesIniciais }: { solicitacoesIniciais: S
                       value={respostas[s.id] || ""}
                       onChange={(e) => setRespostas((prev) => ({ ...prev, [s.id]: e.target.value }))}
                       placeholder="Resposta ao vendedor (opcional)"
-                      className="w-full px-3 py-2 text-rotulo bg-recuo border border-fio rounded-lg"
+                      className="foco w-full px-3 py-2 text-rotulo bg-recuo border border-fio rounded-lg"
                     />
                     <div className="flex items-center gap-2">
                       <Botao

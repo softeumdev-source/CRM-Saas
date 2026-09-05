@@ -233,7 +233,7 @@ export function CompositorDeEmail({
             ref={entrada}
             type="file"
             multiple
-            className="hidden"
+            className="foco hidden"
             onChange={(e) => {
               void escolherArquivos(e.target.files);
               // Zerado para que escolher o MESMO arquivo de novo dispare o

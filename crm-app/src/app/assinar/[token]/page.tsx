@@ -161,7 +161,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       </div>
 
       <label htmlFor="page-2" className="flex items-start gap-2 text-rotulo text-tinta-suave">
-        <input id="page-2" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="mt-0.5" />
+        <input id="page-2" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="foco mt-0.5" />
         <span>
           Declaro que li e concordo com os termos das propostas Comercial e Técnica acima, e que esta
           assinatura eletrônica tem validade jurídica nos termos do art. 10, §2º da Medida Provisória

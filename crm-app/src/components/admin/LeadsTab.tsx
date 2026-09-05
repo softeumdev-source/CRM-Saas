@@ -397,7 +397,7 @@ export function LeadsTab({
           <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl cursor-pointer w-fit foco">
             {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {processando ? progresso || "Processando..." : "Escolher arquivo"}
-            <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="hidden" onChange={analisarArquivo} disabled={processando} />
+            <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="foco hidden" onChange={analisarArquivo} disabled={processando} />
           </label>
         )}
         {resultado && (
@@ -561,6 +561,7 @@ export function LeadsTab({
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
+                    className="foco"
                     checked={contatosSemDono.length > 0 && selecionados.size === contatosSemDono.length}
                     onChange={selecionarTodosPool}
                     title="Selecionar todos"
@@ -576,7 +577,7 @@ export function LeadsTab({
             <tbody className="divide-y divide-fio">
               {contatosSemDono.map((c) => (
                 <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3"><input type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
+                  <td className="p-3"><input className="foco" type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
@@ -693,6 +694,7 @@ export function LeadsTab({
                 <th className="p-3 w-8">
                   <input
                     type="checkbox"
+                    className="foco"
                     checked={comDonoFiltrados.length > 0 && comDonoFiltrados.every((c) => selComDono.has(c.id))}
                     onChange={() =>
                       setSelComDono((prev) =>
@@ -709,7 +711,7 @@ export function LeadsTab({
             <tbody className="divide-y divide-fio">
               {comDonoFiltrados.map((c) => (
                 <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3"><input type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
+                  <td className="p-3"><input className="foco" type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-acento font-medium">

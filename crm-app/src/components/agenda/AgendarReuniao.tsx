@@ -335,7 +335,7 @@ export function AgendarReuniao({
             checked={convite}
             disabled={!email}
             onChange={(e) => setQuerConvite(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--cor-acento-solido)]"
+            className="foco mt-0.5 h-4 w-4 shrink-0 accent-[var(--cor-acento-solido)]"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 text-corpo font-medium text-tinta">
