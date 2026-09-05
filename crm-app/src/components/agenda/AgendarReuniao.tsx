@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarPlus, Video } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Video } from "lucide-react";
 import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal, Recuo, Selecao } from "@/components/ui";
 import { PRESETS_AGENDAMENTO, dataDoPreset, paraInputDataHora } from "@/lib/atividades";
 // Os tipos vivem num arquivo SEM `"use client"` — ver o cabeçalho de `tipos.ts`.
@@ -11,8 +11,9 @@ import {
   tituloSugerido,
   type NegocioAgendavel,
   type ReuniaoAgendada,
+  type ReuniaoParaEditar,
 } from "@/components/agenda/tipos";
-export type { NegocioAgendavel, ReuniaoAgendada };
+export type { NegocioAgendavel, ReuniaoAgendada, ReuniaoParaEditar };
 
 /**
  * Agendar uma reunião com o cliente, pelo Google, em um lugar só.
@@ -45,6 +46,7 @@ export function AgendarReuniao({
   negocioIdInicial,
   vendedor,
   aoAgendado,
+  edicao,
 }: {
   aoFechar: () => void;
   /** Um só (a partir do card) ou vários (a partir da Agenda). */
@@ -56,10 +58,29 @@ export function AgendarReuniao({
    */
   vendedor: string;
   aoAgendado?: (resultado: ReuniaoAgendada) => void;
+  /**
+   * Quando vem, o modal EDITA em vez de criar.
+   *
+   * Um componente com dois modos, e não um "EditarReuniao" ao lado: o
+   * formulário é o mesmo — título, hora, duração e pauta —, e duas cópias
+   * divergiriam, que é o motivo já escrito no cabeçalho para o seletor de
+   * negócio opcional.
+   */
+  edicao?: ReuniaoParaEditar;
 }) {
+  const editando = !!edicao;
   const [negocioId, setNegocioId] = useState(negocioIdInicial || negocios[0]?.id || "");
-  const [quando, setQuando] = useState("");
-  const [minutos, setMinutos] = useState(30);
+  const [quando, setQuando] = useState(
+    edicao ? paraInputDataHora(new Date(edicao.quando)) : "",
+  );
+  /**
+   * String, e vazia significa "não mexer".
+   *
+   * Ao editar, a duração real está no Google e não aqui — mostrar "30 min" num
+   * evento de uma hora seria a tela mentindo, e mandar 30 encolheria a reunião
+   * sem ninguém pedir. Vazio faz a rota preservar a duração que o evento tem.
+   */
+  const [minutos, setMinutos] = useState(edicao ? "" : "30");
   /**
    * `null` significa "ninguém tocou", e é diferente de `""`.
    *
@@ -73,8 +94,8 @@ export function AgendarReuniao({
    * intermediário mostrando o texto do negócio anterior. É a mesma doutrina do
    * `convite` logo abaixo.
    */
-  const [tituloEditado, setTituloEditado] = useState<string | null>(null);
-  const [descricaoEditada, setDescricaoEditada] = useState<string | null>(null);
+  const [tituloEditado, setTituloEditado] = useState<string | null>(edicao?.titulo ?? null);
+  const [descricaoEditada, setDescricaoEditada] = useState<string | null>(edicao?.descricao ?? null);
   const [querConvite, setQuerConvite] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -86,7 +107,9 @@ export function AgendarReuniao({
   const email = escolhido?.contato?.email?.trim() || null;
 
   const titulo = tituloEditado ?? (escolhido ? tituloSugerido(escolhido) : "");
-  const descricao = descricaoEditada ?? (escolhido ? descricaoSugerida(escolhido, minutos, vendedor) : "");
+  const minutosEscolhidos = minutos ? Number(minutos) : null;
+  const descricao =
+    descricaoEditada ?? (escolhido ? descricaoSugerida(escolhido, minutosEscolhidos ?? 30, vendedor) : "");
 
   /**
    * Sem e-mail não há convite possível, e isso é DERIVADO — não um estado que
@@ -123,29 +146,42 @@ export function AgendarReuniao({
     setEnviando(true);
     setErro(null);
     try {
+      // `datetime-local` não tem fuso; `new Date` o lê como hora local, que é o
+      // que a pessoa digitou. O ISO leva o fuso embutido daí em diante.
+      const quandoIso = new Date(quando).toISOString();
       const resp = await fetch("/api/google/reuniao", {
-        method: "POST",
+        method: edicao ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          negocioId,
-          // `datetime-local` não tem fuso; `new Date` o lê como hora local, que
-          // é o que a pessoa digitou. O ISO leva o fuso embutido daí em diante.
-          quando: new Date(quando).toISOString(),
-          minutos,
-          titulo: titulo.trim() || undefined,
-          descricao: descricao.trim() || undefined,
-          convite,
-        }),
+        body: JSON.stringify(
+          edicao
+            ? {
+                atividadeId: edicao.atividadeId,
+                quando: quandoIso,
+                // Só vai quando a pessoa escolheu outra: sem isso, a rota
+                // preserva a duração real que o evento tem na Google.
+                ...(minutosEscolhidos ? { minutos: minutosEscolhidos } : {}),
+                titulo: titulo.trim() || undefined,
+                descricao: descricao.trim() || undefined,
+              }
+            : {
+                negocioId,
+                quando: quandoIso,
+                minutos: minutosEscolhidos ?? 30,
+                titulo: titulo.trim() || undefined,
+                descricao: descricao.trim() || undefined,
+                convite,
+              },
+        ),
       });
       const dados = await resp.json();
       if (!resp.ok) {
-        setErro(dados.error || "Não foi possível agendar.");
+        setErro(dados.error || (edicao ? "Não foi possível salvar." : "Não foi possível agendar."));
         return;
       }
       aoAgendado?.(dados as ReuniaoAgendada);
       aoFechar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível agendar.");
+      setErro(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {
       setEnviando(false);
     }
@@ -157,7 +193,7 @@ export function AgendarReuniao({
     <Modal
       aberto
       aoFechar={aoFechar}
-      titulo="Agendar reunião"
+      titulo={editando ? "Editar reunião" : "Agendar reunião"}
       rodape={
         <>
           <Botao variante="sutil" onClick={aoFechar}>
@@ -165,12 +201,18 @@ export function AgendarReuniao({
           </Botao>
           <Botao
             variante="primario"
-            icone={CalendarPlus}
+            icone={editando ? CalendarCheck : CalendarPlus}
             carregando={enviando}
             disabled={semNegocios || !quando}
             onClick={() => void enviar()}
           >
-            {convite ? "Agendar e convidar" : "Agendar no CRM"}
+            {editando
+              ? edicao.temConvite
+                ? "Salvar e avisar o cliente"
+                : "Salvar"
+              : convite
+                ? "Agendar e convidar"
+                : "Agendar no CRM"}
           </Botao>
         </>
       }
@@ -244,11 +286,8 @@ export function AgendarReuniao({
 
         <Campo rotulo="Duração">
           {(props) => (
-            <Selecao
-              {...props}
-              value={String(minutos)}
-              onChange={(e) => setMinutos(Number(e.target.value))}
-            >
+            <Selecao {...props} value={minutos} onChange={(e) => setMinutos(e.target.value)}>
+              {editando && <option value="">Manter a duração atual</option>}
               {DURACOES.map((m) => (
                 <option key={m} value={m}>
                   {duracaoLegivel(m)}
@@ -270,8 +309,22 @@ export function AgendarReuniao({
           )}
         </Campo>
 
-        {/* O convite é uma escolha visível, e a linha embaixo diz exatamente o
-            que acontece nas duas posições. */}
+        {/* Ao EDITAR, o convite não é escolha: ou ele já existe (e alterar avisa
+            o cliente), ou a reunião nasceu só no CRM e criar convite agora é
+            outro caminho — o botão "Criar convite no Google" da aba Cadência.
+            Oferecer a caixa aqui prometeria algo que este verbo não faz. */}
+        {editando ? (
+          <Recuo>
+            <p className="text-corpo font-medium text-tinta">
+              {edicao.temConvite ? "O cliente será avisado" : "Reunião só no CRM"}
+            </p>
+            <p className="mt-0.5 text-rotulo text-tinta-suave">
+              {edicao.temConvite
+                ? "A Google manda o e-mail de alteração e o evento muda na agenda dele. O link do Meet continua o mesmo."
+                : "Esta reunião não tem convite. Para criar um, use \u201cCriar convite no Google\u201d na lista de próximos passos."}
+            </p>
+          </Recuo>
+        ) : (
         <label
           className={`flex items-start gap-2.5 rounded-xl border border-fio bg-recuo p-3 pointer-coarse:min-h-11 ${
             email ? "cursor-pointer" : "cursor-not-allowed opacity-70"
@@ -298,6 +351,7 @@ export function AgendarReuniao({
             </span>
           </span>
         </label>
+        )}
 
         {erro && (
           <Alerta tom="risco" urgente>

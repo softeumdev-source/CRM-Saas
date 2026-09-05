@@ -12,6 +12,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const EVENTOS = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
+/** O fuso que vai em todo `dateTime` — criar e alterar precisam concordar. */
+const FUSO = "America/Sao_Paulo";
+
 /**
  * Pega um access token válido para o usuário.
  *
@@ -74,8 +77,8 @@ export async function criarEvento(params: {
   const corpo = {
     summary: params.titulo,
     description: params.descricao,
-    start: { dateTime: params.inicio.toISOString(), timeZone: "America/Sao_Paulo" },
-    end: { dateTime: fim.toISOString(), timeZone: "America/Sao_Paulo" },
+    start: { dateTime: params.inicio.toISOString(), timeZone: FUSO },
+    end: { dateTime: fim.toISOString(), timeZone: FUSO },
     attendees: params.convidados.map((c) => ({ email: c.email, displayName: c.nome || undefined })),
     conferenceData: {
       createRequest: {
@@ -103,6 +106,105 @@ export async function criarEvento(params: {
     inicio: dados.start?.dateTime || params.inicio.toISOString(),
     fim: dados.end?.dateTime || fim.toISOString(),
   };
+}
+
+/**
+ * Muda um evento que JÁ EXISTE na agenda, e avisa o cliente.
+ *
+ * `PATCH` e não `PUT`, e a diferença não é estilo: `events.update` (o `PUT`)
+ * exige o recurso INTEIRO e trata como remoção tudo que não for enviado — o
+ * `conferenceData` incluído. Ou seja, remarcar com `PUT` apagaria o link do
+ * Meet da reunião. O `PATCH` mexe só nos campos que vão no corpo.
+ *
+ * `sendUpdates=all` é o que faz a Google mandar o e-mail de "reunião alterada".
+ * Sem ele o evento muda de hora na agenda de todo mundo em silêncio, que é uma
+ * forma diferente do mesmo defeito que esta função existe para consertar.
+ *
+ * 404 e 410 não são erro aqui: significam que o evento já não existe do lado da
+ * Google (alguém apagou por lá). Devolver `false` deixa quem chamou seguir com
+ * a limpeza do nosso lado em vez de travar.
+ */
+export async function atualizarEvento(params: {
+  usuarioId: string;
+  eventoId: string;
+  inicio?: Date;
+  minutos?: number;
+  titulo?: string;
+  descricao?: string;
+}): Promise<boolean> {
+  const token = await accessTokenDe(params.usuarioId);
+
+  const corpo: Record<string, unknown> = {};
+  if (params.titulo) corpo.summary = params.titulo;
+  if (params.descricao) corpo.description = params.descricao;
+  if (params.inicio && params.minutos) {
+    const fim = new Date(params.inicio.getTime() + params.minutos * 60_000);
+    corpo.start = { dateTime: params.inicio.toISOString(), timeZone: FUSO };
+    corpo.end = { dateTime: fim.toISOString(), timeZone: FUSO };
+  }
+
+  const resp = await fetch(`${EVENTOS}/${encodeURIComponent(params.eventoId)}?sendUpdates=all`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(corpo),
+  });
+
+  if (resp.status === 404 || resp.status === 410) return false;
+  if (!resp.ok) {
+    const dados = await resp.json().catch(() => null);
+    throw new Error(dados?.error?.message || `A Google respondeu ${resp.status} ao alterar o evento.`);
+  }
+  return true;
+}
+
+/**
+ * Cancela o evento na agenda de todo mundo, cliente incluído.
+ *
+ * Mesma regra do 404/410: evento que já sumiu é sucesso, não falha — o objetivo
+ * é "não existir mais", e ele já não existe.
+ */
+export async function cancelarEvento(usuarioId: string, eventoId: string): Promise<boolean> {
+  const token = await accessTokenDe(usuarioId);
+  const resp = await fetch(`${EVENTOS}/${encodeURIComponent(eventoId)}?sendUpdates=all`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (resp.status === 404 || resp.status === 410) return false;
+  if (!resp.ok) {
+    const dados = await resp.json().catch(() => null);
+    throw new Error(dados?.error?.message || `A Google respondeu ${resp.status} ao cancelar o evento.`);
+  }
+  return true;
+}
+
+/**
+ * Quantos minutos o evento dura HOJE, na Google.
+ *
+ * Existe porque `atividades` não guarda duração — e não vai passar a guardar.
+ * Uma coluna nossa nasceria vazia para toda reunião que já existe e viraria uma
+ * segunda cópia da verdade, divergindo no dia em que alguém arrastasse a borda
+ * do evento no Google Agenda. A duração É do Google; quando o reagendamento não
+ * informa uma nova, esta função preserva a real em vez de encolher a reunião
+ * para um padrão.
+ *
+ * Devolve `null` quando o evento sumiu ou não tem hora (dia inteiro) — e quem
+ * chama decide o padrão, em vez de receber um número inventado aqui.
+ */
+export async function duracaoDoEvento(usuarioId: string, eventoId: string): Promise<number | null> {
+  const token = await accessTokenDe(usuarioId);
+  const resp = await fetch(`${EVENTOS}/${encodeURIComponent(eventoId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) return null;
+
+  const dados = await resp.json().catch(() => null);
+  const inicio = dados?.start?.dateTime;
+  const fim = dados?.end?.dateTime;
+  if (!inicio || !fim) return null;
+
+  const minutos = Math.round((new Date(fim).getTime() - new Date(inicio).getTime()) / 60_000);
+  return Number.isFinite(minutos) && minutos > 0 ? minutos : null;
 }
 
 /**

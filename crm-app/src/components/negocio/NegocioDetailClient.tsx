@@ -252,6 +252,8 @@ export function NegocioDetailClient({
   // reunião nenhuma, e dizer que houve uma era mentira registrada no
   // histórico do negócio.
   const [agendando, setAgendando] = useState(false);
+  /** A reunião aberta para correção, ou nada. Ver `aoEditarReuniao`. */
+  const [editandoReuniao, setEditandoReuniao] = useState<AtividadeComUsuario | null>(null);
   const [entregando, setEntregando] = useState(false);
   const [destinatario, setDestinatario] = useState("");
   const [entregandoAgora, setEntregandoAgora] = useState(false);
@@ -668,6 +670,7 @@ export function NegocioDetailClient({
       )}
       {aba === "cadencia" && (
         <CadenciaTab
+          aoEditarReuniao={setEditandoReuniao}
           aoResponderComparecimento={devolucao ? responderComparecimento : undefined}
           aoEntregarComReuniao={entrega ? entregarComReuniao : undefined}
           negocio={negocio}
@@ -816,6 +819,40 @@ export function NegocioDetailClient({
                 : null,
             },
           ]}
+          aoAgendado={(r) => {
+            if (r.aviso) setErro(r.aviso);
+            void recarregar();
+          }}
+        />
+      )}
+
+      {/* O MESMO modal, em modo de edição. Montado só quando há reunião aberta,
+          pela mesma razão do de cima: cada abertura começa com o estado da
+          reunião certa, sem um efeito copiando campo por campo. */}
+      {editandoReuniao && (
+        <AgendarReuniao
+          aoFechar={() => setEditandoReuniao(null)}
+          vendedor={vendedor}
+          negocios={[
+            {
+              id: negocio.id,
+              titulo: negocio.titulo,
+              contato: negocio.contato
+                ? {
+                    nome: negocio.contato.nome,
+                    empresa: negocio.contato.empresa,
+                    email: negocio.contato.email,
+                  }
+                : null,
+            },
+          ]}
+          edicao={{
+            atividadeId: editandoReuniao.id,
+            titulo: editandoReuniao.titulo,
+            descricao: editandoReuniao.descricao ?? "",
+            quando: editandoReuniao.data_agendada ?? new Date().toISOString(),
+            temConvite: !!editandoReuniao.google_evento_id,
+          }}
           aoAgendado={(r) => {
             if (r.aviso) setErro(r.aviso);
             void recarregar();

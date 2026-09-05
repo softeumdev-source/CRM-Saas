@@ -110,3 +110,21 @@ export function descricaoSugerida(
     "Softeum",
   ].join("\n");
 }
+
+/**
+ * Uma reunião que já existe, aberta para correção.
+ *
+ * A DURAÇÃO não vem aqui de propósito: ela não mora em `atividades` e não vai
+ * passar a morar — a fonte é o Google (ver `duracaoDoEvento`). Por isso o
+ * formulário abre com "manter a duração atual" em vez de fingir um número, e só
+ * manda `minutos` quando a pessoa escolhe outro.
+ */
+export type ReuniaoParaEditar = {
+  atividadeId: string;
+  titulo: string;
+  descricao: string;
+  /** ISO da hora atual da reunião. */
+  quando: string;
+  /** Tem convite no Google — é o que decide se o cliente será avisado. */
+  temConvite: boolean;
+};

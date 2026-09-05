@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { quemAssina } from "@/lib/gmail/caixa";
 import { descricaoSugerida, tituloSugerido } from "@/components/agenda/tipos";
 import { createClient } from "@/lib/supabase/server";
-import { criarEvento } from "@/lib/google/calendar";
+import {
+  atualizarEvento,
+  cancelarEvento,
+  criarEvento,
+  duracaoDoEvento,
+} from "@/lib/google/calendar";
 import { temGoogleConfigurado } from "@/lib/google/config";
+import type { TablesUpdate } from "@/lib/supabase/types";
 
 /**
  * Agendar uma reunião com o cliente em UM passo.
@@ -48,27 +54,59 @@ const MINUTOS_PADRAO = 30;
  */
 const FOLGA_PASSADO_MS = 5 * 60_000;
 
+/** A data pedida, ou a razão pela qual ela não serve. Uma só, para POST e PATCH. */
+function lerQuando(quando: unknown): { inicio: Date } | { erro: string } {
+  const inicio = new Date(String(quando));
+  if (Number.isNaN(inicio.getTime())) return { erro: "Data inválida." };
+  if (inicio.getTime() < Date.now() - FOLGA_PASSADO_MS) {
+    return { erro: "Essa data já passou. Escolha um horário à frente." };
+  }
+  return { inicio };
+}
+
+/** Duração dentro dos limites, ou `null` quando não veio nada utilizável. */
+function lerMinutos(minutos: unknown): number | null {
+  const n = Number(minutos);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(Math.max(Math.round(n), MINUTOS_MINIMO), MINUTOS_MAXIMO);
+}
+
+/**
+ * A atividade que a chamada vai mexer — lida com a SESSÃO de quem chamou.
+ *
+ * É a mesma autorização do `POST`: a RLS de `atividades` já diz que quem
+ * enxerga o negócio pode alterar e apagar a atividade dele, sem distinção entre
+ * vendedor e SDR. Ler com a sessão em vez de repetir a regra aqui é o que
+ * impede as duas de divergirem.
+ */
+async function atividadeDaChamada(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  atividadeId: unknown,
+) {
+  if (!atividadeId || typeof atividadeId !== "string") {
+    return { erro: "atividadeId é obrigatório.", status: 422 as const };
+  }
+  const { data } = await supabase
+    .from("atividades")
+    .select("id, usuario_id, titulo, descricao, data_agendada, google_evento_id")
+    .eq("id", atividadeId)
+    .maybeSingle();
+
+  if (!data) return { erro: "Reunião não encontrada.", status: 404 as const };
+  return { atividade: data };
+}
+
 export async function POST(request: Request) {
   const { negocioId, quando, minutos, titulo, descricao, convite } = await request.json();
 
   if (!negocioId) return NextResponse.json({ error: "negocioId é obrigatório." }, { status: 422 });
   if (!quando) return NextResponse.json({ error: "Escolha a data e a hora." }, { status: 422 });
 
-  const inicio = new Date(quando);
-  if (Number.isNaN(inicio.getTime())) {
-    return NextResponse.json({ error: "Data inválida." }, { status: 422 });
-  }
-  if (inicio.getTime() < Date.now() - FOLGA_PASSADO_MS) {
-    return NextResponse.json(
-      { error: "Essa data já passou. Escolha um horário à frente." },
-      { status: 422 },
-    );
-  }
+  const data = lerQuando(quando);
+  if ("erro" in data) return NextResponse.json({ error: data.erro }, { status: 422 });
+  const { inicio } = data;
 
-  const duracao = Number(minutos);
-  const minutosFinais = Number.isFinite(duracao)
-    ? Math.min(Math.max(Math.round(duracao), MINUTOS_MINIMO), MINUTOS_MAXIMO)
-    : MINUTOS_PADRAO;
+  const minutosFinais = lerMinutos(minutos) ?? MINUTOS_PADRAO;
 
   const supabase = await createClient();
   const {
@@ -201,4 +239,177 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ atividade: atualizada ?? atividade, evento, aviso: null });
+}
+
+/**
+ * Mudar uma reunião que JÁ EXISTE: hora, duração, título ou pauta.
+ *
+ * O QUE ESTE VERBO CONSERTA. Havia um botão "Reagendar" na aba Cadência que
+ * fazia `update` só em `atividades`. Nenhuma chamada à Google. O CRM passava a
+ * mostrar a hora nova e o evento continuava na hora velha na agenda do vendedor
+ * E NA DO CLIENTE, com o Meet do horário original — e ninguém era avisado. Quem
+ * clicava achava que tinha remarcado.
+ *
+ * A GOOGLE VEM PRIMEIRO, e isso inverte de propósito a ordem do `POST` acima.
+ * Lá a atividade nasce antes porque a falha cai num estado que o sistema sabe
+ * tratar. Aqui é o contrário: gravar primeiro e falhar na Google reproduz
+ * exatamente o defeito que este código existe para fechar — o CRM afirmando uma
+ * hora que o cliente não tem.
+ *
+ * E o token é o de quem ORGANIZOU (`atividades.usuario_id`), não o de quem
+ * clicou: quando o SDR agenda e entrega ao vendedor, o dono do evento é o SDR, e
+ * um `PATCH` com o token do vendedor tomaria 403. Mesmo caminho que
+ * `/api/google/rsvp` já usa.
+ */
+export async function PATCH(request: Request) {
+  const { atividadeId, quando, minutos, titulo, descricao } = await request.json();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
+  const lida = await atividadeDaChamada(supabase, atividadeId);
+  if ("erro" in lida) return NextResponse.json({ error: lida.erro }, { status: lida.status });
+  const { atividade } = lida;
+
+  let inicio: Date | null = null;
+  if (quando !== undefined) {
+    const data = lerQuando(quando);
+    if ("erro" in data) return NextResponse.json({ error: data.erro }, { status: 422 });
+    inicio = data.inicio;
+  }
+
+  const tituloNovo = typeof titulo === "string" && titulo.trim() ? titulo.trim() : undefined;
+  const descricaoNova = typeof descricao === "string" && descricao.trim() ? descricao.trim() : undefined;
+  if (!inicio && !tituloNovo && !descricaoNova && minutos === undefined) {
+    return NextResponse.json({ error: "Nada para alterar." }, { status: 422 });
+  }
+
+  let aviso: string | null = null;
+
+  if (atividade.google_evento_id && atividade.usuario_id) {
+    const dono = atividade.usuario_id;
+    const evento = atividade.google_evento_id;
+
+    // A duração não mora no nosso banco de propósito (ver `duracaoDoEvento`).
+    // Sem esta leitura, remarcar sem informar duração encolheria silenciosamente
+    // uma reunião de uma hora para o padrão de 30 minutos.
+    let minutosFinais = lerMinutos(minutos);
+    if (inicio && minutosFinais === null) {
+      minutosFinais = (await duracaoDoEvento(dono, evento)) ?? MINUTOS_PADRAO;
+    }
+
+    try {
+      const existia = await atualizarEvento({
+        usuarioId: dono,
+        eventoId: evento,
+        inicio: inicio ?? undefined,
+        minutos: inicio ? minutosFinais ?? MINUTOS_PADRAO : undefined,
+        titulo: tituloNovo,
+        descricao: descricaoNova,
+      });
+      if (!existia) {
+        aviso =
+          "O evento não existe mais na agenda do Google — alguém o apagou por lá. A reunião foi atualizada só no CRM.";
+      }
+    } catch (e) {
+      // Nada foi gravado ainda: devolver erro aqui deixa CRM e Google
+      // concordando na hora ANTIGA, que é o estado honesto.
+      return NextResponse.json(
+        {
+          error: `Não foi possível alterar o evento na agenda: ${
+            e instanceof Error ? e.message : "falha ao falar com a Google"
+          }. Nada foi mudado.`,
+        },
+        { status: 502 },
+      );
+    }
+  }
+
+  const campos: TablesUpdate<"atividades"> = {};
+  if (inicio) {
+    const iso = inicio.toISOString();
+    campos.data_agendada = iso;
+    // Mesmo par que o resto do app grava, e `lembrete_enviado` volta a falso:
+    // a reunião mudou de hora, então o lembrete dela ainda não saiu.
+    campos.lembrete_data = iso;
+    campos.lembrete_enviado = false;
+  }
+  if (tituloNovo) campos.titulo = tituloNovo;
+  if (descricaoNova) campos.descricao = descricaoNova;
+
+  const { data: atualizada, error } = await supabase
+    .from("atividades")
+    .update(campos)
+    .eq("id", atividade.id)
+    .select("*, usuario:usuarios(*)")
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error: `A agenda do cliente já foi atualizada, mas o CRM não: ${error.message}. Recarregue a página antes de tentar de novo.`,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ atividade: atualizada, aviso });
+}
+
+/**
+ * Cancelar a reunião — na agenda do cliente também.
+ *
+ * O botão de excluir apagava a linha de `atividades` direto, e com ela o
+ * `google_evento_id`, que é a ÚNICA referência ao evento. O convite ficava na
+ * agenda do cliente sem ninguém conseguir cancelá-lo — o "convite órfão" que o
+ * comentário do `POST` cita como o estado a evitar.
+ *
+ * Por isso a Google vem primeiro aqui também: falhar depois de apagar a nossa
+ * linha é irreversível; falhar antes deixa a linha de pé para tentar de novo.
+ */
+export async function DELETE(request: Request) {
+  const { atividadeId } = await request.json();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
+  const lida = await atividadeDaChamada(supabase, atividadeId);
+  if ("erro" in lida) return NextResponse.json({ error: lida.erro }, { status: lida.status });
+  const { atividade } = lida;
+
+  let aviso: string | null = null;
+
+  if (atividade.google_evento_id && atividade.usuario_id) {
+    try {
+      const existia = await cancelarEvento(atividade.usuario_id, atividade.google_evento_id);
+      if (!existia) aviso = "O evento já não estava mais na agenda do Google.";
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error: `Não foi possível cancelar o evento na agenda: ${
+            e instanceof Error ? e.message : "falha ao falar com a Google"
+          }. A reunião continua no CRM — tente de novo.`,
+        },
+        { status: 502 },
+      );
+    }
+  }
+
+  const { error } = await supabase.from("atividades").delete().eq("id", atividade.id);
+  if (error) {
+    return NextResponse.json(
+      {
+        error: `O convite foi cancelado na agenda do cliente, mas a reunião não saiu do CRM: ${error.message}.`,
+      },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ ok: true, aviso });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Pencil,
   PhoneCall,
   Mail,
   Video,
@@ -65,6 +66,7 @@ export function CadenciaTab({
   onRegistrouAtividade,
   aoResponderComparecimento,
   aoEntregarComReuniao,
+  aoEditarReuniao,
 }: {
   /**
    * Só existe quando há um funil para onde devolver o no-show. Sem ele a
@@ -81,6 +83,15 @@ export function CadenciaTab({
    * o board, porque a RLS já não alcança este negócio).
    */
   aoEntregarComReuniao?: (info: { quando: string | null; comMeet: boolean }) => Promise<string | void>;
+  /**
+   * Abre a reunião para corrigir título, hora, duração e pauta.
+   *
+   * Sobe para o card em vez de montar o modal aqui: `AgendarReuniao` precisa do
+   * negócio no formato do convite e do nome de quem assina, e o
+   * `NegocioDetailClient` já monta os dois para agendar. Mesmo caminho de
+   * `aoEntregarComReuniao`.
+   */
+  aoEditarReuniao?: (atividade: AtividadeComUsuario) => void;
   negocio: NegocioComRelacoes;
   atividadesIniciais: AtividadeComUsuario[];
   usuarioAtual: Usuario;
@@ -225,8 +236,22 @@ export function CadenciaTab({
     }
   };
 
+  /**
+   * Remarcar — e, quando existe convite, remarcar NA AGENDA DO CLIENTE também.
+   *
+   * Este botão escrevia direto em `atividades` e mais nada. O CRM passava a
+   * mostrar a hora nova e o evento continuava na hora velha na agenda do
+   * vendedor e na do cliente, com o Meet do horário original, sem ninguém ser
+   * avisado. Quem clicava achava que tinha remarcado.
+   *
+   * Com convite, quem manda é a rota: ela altera o evento na Google ANTES de
+   * gravar aqui, então uma falha lá deixa os dois lados concordando na hora
+   * antiga em vez de o CRM mentir. Sem convite (reunião só no CRM), o caminho
+   * direto continua — não há nada para avisar.
+   */
   const reagendar = async (id: string) => {
     if (!novaData) return;
+    const alvo = atividades.find((a) => a.id === id);
     const quando = new Date(novaData).toISOString();
     const antes = atividades;
     setAtividades((prev) =>
@@ -234,6 +259,29 @@ export function CadenciaTab({
     );
     setReagendando(null);
     setNovaData("");
+    setErro(null);
+
+    if (alvo?.google_evento_id) {
+      try {
+        const resp = await fetch("/api/google/reuniao", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atividadeId: id, quando }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) {
+          setAtividades(antes);
+          setErro(dados?.error || "Não foi possível reagendar.");
+          return;
+        }
+        if (dados?.aviso) setErro(dados.aviso);
+      } catch (e) {
+        setAtividades(antes);
+        setErro(e instanceof Error ? e.message : "Não foi possível reagendar.");
+      }
+      return;
+    }
+
     const { error } = await createClient()
       .from("atividades")
       .update({ data_agendada: quando, lembrete_data: quando, lembrete_enviado: false })
@@ -345,11 +393,41 @@ export function CadenciaTab({
 
   const [excluindo, setExcluindo] = useState<AtividadeComUsuario | null>(null);
 
+  /**
+   * Excluir — cancelando o convite na agenda do cliente quando ele existe.
+   *
+   * Apagar a linha direto destruía o `google_evento_id` junto, e ele é a ÚNICA
+   * referência ao evento: o convite ficava na agenda do cliente sem ninguém
+   * conseguir cancelá-lo depois. A rota cancela na Google primeiro, justamente
+   * porque essa perda é irreversível e a nossa não é.
+   */
   const excluirAtividade = async (): Promise<string | void> => {
     if (!excluindo) return;
     const antes = atividades;
     const id = excluindo.id;
+    const tinhaConvite = !!excluindo.google_evento_id;
     setAtividades((prev) => prev.filter((a) => a.id !== id));
+
+    if (tinhaConvite) {
+      try {
+        const resp = await fetch("/api/google/reuniao", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atividadeId: id }),
+        });
+        const dados = await resp.json();
+        if (!resp.ok) {
+          setAtividades(antes);
+          return dados?.error || "Não foi possível cancelar a reunião.";
+        }
+        if (dados?.aviso) setErro(dados.aviso);
+      } catch (e) {
+        setAtividades(antes);
+        return e instanceof Error ? e.message : "Não foi possível cancelar a reunião.";
+      }
+      return;
+    }
+
     const { error } = await createClient().from("atividades").delete().eq("id", id);
     if (error) {
       setAtividades(antes);
@@ -751,6 +829,11 @@ export function CadenciaTab({
                         >
                           Cancelar
                         </button>
+                        {a.google_evento_id ? (
+                          <p className="w-full text-rotulo text-tinta-suave">
+                            O evento muda na agenda do cliente e a Google avisa por e-mail.
+                          </p>
+                        ) : null}
                       </div>
                     )}
                   </div>
@@ -771,10 +854,19 @@ export function CadenciaTab({
                         setNovaData(a.data_agendada ? paraInputDataHora(new Date(a.data_agendada)) : "");
                       }}
                       title="Reagendar"
-                      className="text-tinta-fraca hover:text-acento p-1.5 rounded-lg"
+                      className="foco text-tinta-fraca hover:text-acento p-1.5 rounded-lg transition-colors duration-150 ease-out"
                     >
                       <RotateCcw className="h-3.5 w-3.5" />
                     </button>
+                    {aoEditarReuniao && a.tipo === "reuniao" && (
+                      <button
+                        onClick={() => aoEditarReuniao(a)}
+                        title="Editar título, duração e pauta"
+                        className="foco text-tinta-fraca hover:text-acento p-1.5 rounded-lg transition-colors duration-150 ease-out"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={() => marcarConcluida(a.id)}
                       className="text-rotulo font-medium text-ok hover:bg-ok-fraco px-2 py-1.5 rounded-lg"
@@ -866,14 +958,23 @@ export function CadenciaTab({
 
       <Confirmar
         aberto={!!excluindo}
-        titulo="Excluir passo da cadência"
-        rotuloConfirmar="Excluir passo"
+        titulo={excluindo?.google_evento_id ? "Cancelar a reunião?" : "Excluir passo da cadência"}
+        rotuloConfirmar={excluindo?.google_evento_id ? "Cancelar reunião" : "Excluir passo"}
         aoFechar={() => setExcluindo(null)}
         aoConfirmar={excluirAtividade}
         descricao={
           <>
             <strong className="font-medium text-tinta">{excluindo?.titulo}</strong>{" "}
             sai do histórico deste negócio. Não dá para desfazer.
+            {excluindo?.google_evento_id ? (
+              <>
+                {" "}
+                <strong className="font-medium text-tinta">
+                  O convite também será cancelado na agenda do cliente
+                </strong>
+                , e a Google vai avisá-lo por e-mail.
+              </>
+            ) : null}
           </>
         }
       />

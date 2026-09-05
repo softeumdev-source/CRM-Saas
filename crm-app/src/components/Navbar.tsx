@@ -109,9 +109,28 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   if (usuario.role === "sdr" || usuario.role === "admin") {
     links.push({ href: "/sdr", label: "Prospecção", icon: Radar });
   }
+  links.push({ href: "/agenda", label: "Agenda", icon: CalendarClock });
+  // A quarentena so entra no menu QUANDO TEM ALGO nela.
+  //
+  // Ela cai aqui quando um contato tem mais de um negocio aberto e a resposta
+  // dele nao decide sozinha em qual card entrar — e medido no banco: ha ZERO
+  // contatos nessa situacao, e a tabela nunca teve uma linha. Ou seja, a aba
+  // estava ocupando um lugar fixo na barra para mostrar "0" todo dia.
+  //
+  // A ROTA, A TELA E A GRAVACAO CONTINUAM. Sao coisas diferentes: o dia em que
+  // a condicao acontecer, a mensagem precisa estar guardada e a aba reaparece
+  // sozinha. Apagar a gravacao junto (`lib/entrada/gravar.ts`, chamada pela
+  // sincronizacao do Gmail e pelo webhook do WhatsApp) transformaria uma
+  // resposta de cliente em descarte silencioso.
+  if (semNegocio > 0) {
+    links.push({
+      href: "/nao-identificadas",
+      label: "Não identificadas",
+      icon: Inbox,
+      contador: semNegocio,
+    });
+  }
   links.push(
-    { href: "/agenda", label: "Agenda", icon: CalendarClock },
-    { href: "/nao-identificadas", label: "Não identificadas", icon: Inbox, contador: semNegocio },
     { href: "/lista", label: "Lista de Leads", icon: ListFilter },
     { href: "/assinaturas", label: "Assinaturas", icon: FileSignature },
   );
