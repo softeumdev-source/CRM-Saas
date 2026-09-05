@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Users, Wallet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Users, Wallet, Maximize2, Minimize2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -39,6 +39,64 @@ type Foco = "todos" | "respondeu" | "aprovacao" | "atencao" | "atrasados" | "sem
  * borda âmbar lá, e esconder o chip deixaria o vendedor vendo o aviso sem meio
  * de filtrar por ele.
  */
+/** Preferência de tela cheia, uma para os dois boards. */
+const CHAVE_MAXIMIZADO = "crm:kanban-maximizado";
+
+/**
+ * A preferência de tela cheia vive FORA do React, e é lida por
+ * `useSyncExternalStore`. Isso não é preciosismo — é o conserto de um defeito
+ * que eu escrevi e o lint pegou.
+ *
+ * A primeira versão nascia `false` e um `useEffect` chamava `setMaximizado`
+ * depois de ler o `localStorage`. Funciona, e é errado por dois motivos: rende
+ * um render inteiro com o board pequeno antes de crescer (o "pulo" ao abrir a
+ * página), e é `setState` síncrono dentro de efeito, que encadeia renders. O
+ * projeto já documenta essa doutrina em `AgendarReuniao.tsx`, no comentário do
+ * `convite`, e eu a violei.
+ *
+ * Ler direto no `useState` também não serve: o servidor renderiza `false` e o
+ * cliente renderizaria `true`, e o React descarta a árvore com erro de
+ * hidratação — o mesmo bug de outra cor.
+ *
+ * `useSyncExternalStore` é a única forma que o React oferece de ter as duas
+ * coisas: um retrato para o SERVIDOR (`false`) e outro para o CLIENTE (o que
+ * está guardado), sem mismatch e sem efeito.
+ *
+ * O valor fica em cache no módulo porque `getSnapshot` é chamado a cada render:
+ * sem ele, seria uma leitura de `localStorage` — I/O síncrona — por render.
+ */
+let maximizadoEmCache: boolean | null = null;
+const ouvintesDoMaximizado = new Set<() => void>();
+
+function lerMaximizado(): boolean {
+  if (maximizadoEmCache === null) {
+    try {
+      maximizadoEmCache = localStorage.getItem(CHAVE_MAXIMIZADO) === "1";
+    } catch {
+      // Janela anônima ou site data bloqueado: a preferência não é essencial.
+      maximizadoEmCache = false;
+    }
+  }
+  return maximizadoEmCache;
+}
+
+function definirMaximizado(valor: boolean): void {
+  maximizadoEmCache = valor;
+  try {
+    localStorage.setItem(CHAVE_MAXIMIZADO, valor ? "1" : "0");
+  } catch {
+    /* idem: a tela obedece mesmo sem conseguir guardar */
+  }
+  for (const avisar of ouvintesDoMaximizado) avisar();
+}
+
+function assinarMaximizado(avisar: () => void): () => void {
+  ouvintesDoMaximizado.add(avisar);
+  return () => {
+    ouvintesDoMaximizado.delete(avisar);
+  };
+}
+
 const FOCOS: { chave: Foco; label: string }[] = [
   { chave: "todos", label: "Todos" },
   { chave: "respondeu", label: "Responderam" },
@@ -89,6 +147,22 @@ export function KanbanPageClient({
   const [etapaNovoNegocio, setEtapaNovoNegocio] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [foco, setFoco] = useState<Foco>("todos");
+  /**
+   * O board ocupando a janela inteira.
+   *
+   * A CONTA QUE ORIGINOU ISTO: entre o topo da tela e o primeiro card havia
+   * ~325px de cabeçalho — Navbar (60), título e subtítulo (60), os quatro
+   * cartões de resumo (110), a fileira de filtros (56) e os respiros. Numa tela
+   * de 900px sobravam ~575 para o board; num notebook de 768, ~440. Com card de
+   * ~150px, isso é menos de três cards por coluna antes de rolar.
+   *
+   * MEDIDO depois: a lista de cards vai de 471px para 643px em 1280x900 (+37%),
+   * e de 339px para 511px num notebook de 1366x768 (+51%).
+   *
+   * O retrato do servidor é `false` de propósito — ver a loja no topo do
+   * arquivo.
+   */
+  const maximizado = useSyncExternalStore(assinarMaximizado, lerMaximizado, () => false);
   // O RLS já limita o vendedor aos seus negócios + os do pool (sem dono);
   // filtrar por responsável aqui esconderia justamente os leads do pool.
   const [responsavel, setResponsavel] = useState<string>("todos");
@@ -292,6 +366,19 @@ export function KanbanPageClient({
     return contagem;
   }, [negocios]);
 
+  // Maximizado, a Navbar fica coberta. `Esc` e o botão são as DUAS saídas: ter
+  // só o botão seria uma armadilha para quem está acostumado com tela cheia.
+  // Este efeito só ASSINA um evento do navegador — não escreve estado no corpo,
+  // que é o que o `useSyncExternalStore` acima existe para evitar.
+  useEffect(() => {
+    if (!maximizado) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") definirMaximizado(false);
+    };
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  }, [maximizado]);
+
   const abrirNovoNegocio = (etapaId: string) => {
     setEtapaNovoNegocio(etapaId);
     setModalAberto(true);
@@ -306,32 +393,69 @@ export function KanbanPageClient({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 pt-5 space-y-3">
+    // `z-40` nao e numero solto: a Navbar e `z-30` e o `Modal` e `z-50`. Ficar
+    // no meio e o que faz o board cobrir a navegacao e, ainda assim, o modal de
+    // "Novo Lead" aparecer por cima dele.
+    <div
+      className={
+        maximizado
+          ? "fixed inset-0 z-40 flex flex-col bg-fundo"
+          : "flex-1 min-h-0 flex flex-col"
+      }
+    >
+      <div
+        className={`max-w-[1700px] mx-auto w-full px-4 sm:px-6 ${
+          maximizado ? "pt-3 space-y-2.5" : "pt-5 space-y-3"
+        }`}
+      >
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-titulo font-semibold text-tinta">
               {ehSdr ? "Prospecção (SDR)" : "Pipeline de Vendas"}
             </h1>
-            <p className="text-rotulo text-tinta-suave">
-              {ehSdr
-                ? "Cadência, qualificação e agendamento. Quando o cliente aceita a reunião, entregue o lead ao vendedor pelo card."
-                : "Arraste os cards entre as etapas. Quem recebe atividade hoje fica verde e desce para o fim da coluna."}
-            </p>
+            {/* O subtítulo explica o board para quem chega. Depois de
+                maximizar, quem está ali já sabe o que é — e são 20px que viram
+                card. */}
+            {!maximizado && (
+              <p className="text-rotulo text-tinta-suave">
+                {ehSdr
+                  ? "Cadência, qualificação e agendamento. Quando o cliente aceita a reunião, entregue o lead ao vendedor pelo card."
+                  : "Arraste os cards entre as etapas. Quem recebe atividade hoje fica verde e desce para o fim da coluna."}
+              </p>
+            )}
           </div>
-          <button
-            onClick={() => abrirNovoNegocio(etapas[0]?.id || "")}
-            className="flex items-center gap-2 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
-          >
-            <Plus className="h-4 w-4" />
-            <span>{ehSdr ? "Novo Lead" : "Novo Negócio"}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Fica VISÍVEL nos dois estados: escondido no modo normal, ninguém
+                descobre que existe; escondido no maximizado, ninguém sai. */}
+            <button
+              onClick={() => definirMaximizado(!maximizado)}
+              title={maximizado ? "Sair da tela cheia (Esc)" : "Usar a janela inteira"}
+              aria-pressed={maximizado}
+              className="foco flex items-center gap-2 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-tinta bg-superficie border border-fio hover:border-fio-forte rounded-xl transition-colors duration-150 ease-out pointer-coarse:min-h-11"
+            >
+              {maximizado ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              <span className="hidden sm:inline">{maximizado ? "Sair" : "Maximizar"}</span>
+            </button>
+            <button
+              onClick={() => abrirNovoNegocio(etapas[0]?.id || "")}
+              className="flex items-center gap-2 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{ehSdr ? "Novo Lead" : "Novo Negócio"}</span>
+            </button>
+          </div>
         </div>
 
         {/* Cinco colunas só quando o card de respostas existe. As duas classes
             estão escritas por extenso de propósito: o Tailwind varre o código
             em busca de literais, e uma classe montada por interpolação
-            (`md:grid-cols-${n}`) simplesmente não seria gerada. */}
+            (`md:grid-cols-${n}`) simplesmente não seria gerada.
+
+            E o bloco inteiro some ao maximizar: são ~122px, o pedaço mais gordo
+            do cabeçalho, e é o único que ninguém CLICA — número que se lê de
+            vez em quando cede espaço para card que se arrasta o dia todo. Os
+            contadores que importam continuam nos chips de filtro logo abaixo. */}
+        {!maximizado && (
         <div
           className={`grid grid-cols-2 gap-2.5 ${
             resumo.responderam > 0 ? "md:grid-cols-5" : "md:grid-cols-4"
@@ -383,6 +507,7 @@ export function KanbanPageClient({
             cor={resumo.semAgenda > 0 ? "text-alerta" : undefined}
           />
         </div>
+        )}
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[240px] max-w-md">
