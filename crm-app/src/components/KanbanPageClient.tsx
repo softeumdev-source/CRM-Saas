@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { Vazio } from "@/components/ui/Cartao";
+import { Segmentado } from "@/components/ui";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
@@ -557,48 +558,33 @@ export function KanbanPageClient({
             />
           </div>
 
-          {/* `overflow-x-auto` + `min-w-0`: com o quinto filtro, esta fileira
-              media 575px num viewport de 390 e empurrava a PAGINA inteira para
-              o lado (medido). Rolar dentro do proprio controle preserva a forma
-              de segmento unico — quebrar em duas linhas empilharia tres fileiras
-              em cima do board no celular. */}
-          <div className="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-recuo p-1">
-            {FOCOS.map((f) => (
-              <button
-                key={f.chave}
-                onClick={() => setFoco(f.chave)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-semibold rounded-lg transition-colors duration-150 ease-out whitespace-nowrap pointer-coarse:min-h-11 ${
-                  foco === f.chave
-                    ? "bg-superficie text-acento shadow-cartao"
-                    : "text-tinta-suave hover:text-tinta"
-                }`}
-              >
-                {f.label}
-                {/* O contador só existe em "Responderam", e só quando há alguém
-                    esperando: um "(0)" permanente seria ruído, e o zero é
-                    justamente o estado em que não há nada a fazer. */}
-                {f.chave === "respondeu" && totalResponderam > 0 && (
-                  <span className="rounded-full bg-info-fraco px-1.5 text-rotulo font-medium text-info tabular">
-                    {totalResponderam}
-                  </span>
-                )}
-                {/* Âmbar, e não o azul do vizinho: azul neste board quer dizer
-                    "o cliente respondeu". Fila nossa é outra coisa, e a mesma
-                    cor faria os dois avisos se confundirem.
+          {/* Este bloco era o segmento escrito a mao — e o admin, dois
+              cliques ao lado, desenhava a MESMA pergunta como botao indigo
+              cheio. Duas implementacoes do mesmo controle divergindo. Agora as
+              duas telas usam `Segmentado`, e o comportamento de rolar dentro do
+              proprio trilho (que existe porque com cinco filtros a fileira
+              media 575px num viewport de 390 e empurrava a PAGINA para o lado)
+              mora num lugar so.
 
-                    O par `-fraco` + texto colorido é a convenção do projeto
-                    para pílula colorida (LeadsTab, VendedoresTab), e é a que
-                    passa contraste nos dois temas. O selo azul ao lado era
-                    `bg-info text-white` e ficava apertado no escuro; hoje usa o
-                    mesmo par, `bg-info-fraco text-info`. */}
-                {f.chave === "aprovacao" && totalPendentes > 0 && (
-                  <span className="rounded-full bg-alerta-fraco px-1.5 text-rotulo font-medium text-alerta tabular">
-                    {totalPendentes}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+              Os contadores tem TONS DIFERENTES de proposito: azul e "o cliente
+              respondeu", ambar e "fila nossa esperando um clique". A mesma cor
+              nos dois faria os dois avisos se confundirem. */}
+          <Segmentado
+            rotulo="Filtrar o board"
+            valor={foco}
+            aoTrocar={setFoco}
+            itens={FOCOS.map((f) => ({
+              chave: f.chave,
+              rotulo: f.label,
+              contador:
+                f.chave === "respondeu"
+                  ? totalResponderam
+                  : f.chave === "aprovacao"
+                    ? totalPendentes
+                    : undefined,
+              tomDoContador: f.chave === "aprovacao" ? ("alerta" as const) : ("info" as const),
+            }))}
+          />
 
           {usuarioAtual.role === "admin" && (
             <select

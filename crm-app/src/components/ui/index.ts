@@ -8,3 +8,4 @@ export { Abas, PainelDaAba, useAbaNaUrl, useIdDeAbas, type Aba } from "./Abas";
 export { Modal } from "./Modal";
 export { Confirmar } from "./Confirmar";
 export { Surge, atrasoDaCascata } from "./Surge";
+export { Segmentado, type ItemSegmentado } from "./Segmentado";

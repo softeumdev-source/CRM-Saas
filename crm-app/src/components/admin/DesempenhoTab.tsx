@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Trophy, TrendingDown, Target, Percent, DollarSign, Award, Users, Filter, type LucideIcon } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, iniciais } from "@/lib/types";
-import { Botao, Cartao, Rotulo, Selecao, Selo, Vazio, type Tom } from "@/components/ui";
+import { Cartao, Rotulo, Segmentado, Selecao, Selo, Vazio, atrasoDaCascata, type Tom } from "@/components/ui";
 import {
   PERIODOS,
   type PeriodoChave,
@@ -69,20 +69,19 @@ export function DesempenhoTab({
       <div className="flex items-center gap-3 flex-wrap">
         <Filter className="h-4 w-4 text-tinta-fraca" />
         <span className="text-rotulo text-tinta-suave">Período</span>
-        <div className="flex flex-wrap gap-1.5">
-          {PERIODOS.map((p) => (
-            <Botao
-              key={p.chave}
-              tamanho="sm"
-              // O `shadow-md` daqui era sombra emprestada: o botão flutuava mais
-              // que o cartão que o continha. A seleção é dita pela cor.
-              variante={periodo === p.chave ? "primario" : "sutil"}
-              onClick={() => setPeriodo(p.chave)}
-            >
-              {p.label}
-            </Botao>
-          ))}
-        </div>
+        {/* Era `Botao variante="primario"` no ativo — um botão INDIGO CHEIO
+            para dizer "este é o recorte selecionado". Mas no `DESIGN.md` o
+            acento sólido significa AÇÃO: algo acontece quando você clica. Um
+            filtro não é ação, é ESTADO. E o board, dois cliques ao lado, já
+            desenhava a mesma pergunta como segmento — dois idiomas para o
+            mesmo controle na mesma aplicação. Agora é o componente do sistema,
+            e os dois usam ele. */}
+        <Segmentado
+          rotulo="Período do relatório"
+          itens={PERIODOS.map((p) => ({ chave: p.chave, rotulo: p.label }))}
+          valor={periodo}
+          aoTrocar={setPeriodo}
+        />
       </div>
 
       {/* KPIs da equipe.
@@ -129,7 +128,8 @@ export function DesempenhoTab({
             return (
               <div
                 key={m.vendedor.id}
-                className={`px-5 py-3 border-l-2 ${
+                style={atrasoDaCascata(i)}
+                className={`surge px-5 py-3 border-l-2 ${
                   ehMelhor ? "border-l-alerta" : ehPior ? "border-l-risco" : "border-l-transparent"
                 }`}
               >

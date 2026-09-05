@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { Cartao, Rotulo, Selecao } from "@/components/ui";
+import { Cartao, Rotulo, Selecao, atrasoDaCascata } from "@/components/ui";
 
 export function FunilTab({
   vendedores,
@@ -71,11 +71,15 @@ export function FunilTab({
       <Cartao className="space-y-4">
         <Rotulo>Distribuição por etapa</Rotulo>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {etapas.map((etapa) => {
+          {etapas.map((etapa, i) => {
             const doEtapa = negociosFiltrados.filter((n) => n.etapa_id === etapa.id);
             const valor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
-              <div key={etapa.id} className="p-4 rounded-2xl border border-fio bg-recuo space-y-2">
+              <div
+                key={etapa.id}
+                style={atrasoDaCascata(i)}
+                className="surge p-4 rounded-2xl border border-fio bg-recuo space-y-2"
+              >
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-rotulo text-tinta">{etapa.nome}</span>
                   <span
