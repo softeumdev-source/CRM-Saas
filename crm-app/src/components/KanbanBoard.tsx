@@ -162,7 +162,7 @@ export function KanbanBoard({
                   </span>
                 </div>
                 {doEtapa.length > 0 && (
-                  <div className="flex items-center gap-3 mt-1.5 text-rotulo font-semibold">
+                  <div className="flex items-center gap-3 mt-1.5 text-rotulo font-medium">
                     <span className="flex items-center gap-1 text-ok" title="Negócios com atividade registrada hoje">
                       <CheckCircle2 className="h-3 w-3" /> {trabalhadosHoje} hoje
                     </span>

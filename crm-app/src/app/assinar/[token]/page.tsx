@@ -205,7 +205,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
             </p>
             {docsAssinados ? (
               <div className="mt-6 pt-6 border-t border-fio">
-                <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-3">Baixe seus documentos assinados (com certificado de conclusão)</p>
+                <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-3">Baixe seus documentos assinados (com certificado de conclusão)</p>
                 <div className="flex items-center justify-center gap-3 flex-wrap">
                   <a
                     href={docsAssinados.comercial}
@@ -245,7 +245,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-rotulo font-semibold uppercase text-acento">Proposta Comercial — documento para assinatura</p>
+                  <p className="text-rotulo font-medium uppercase text-acento">Proposta Comercial — documento para assinatura</p>
                   <a
                     href={comercialUrl}
                     target="_blank"
@@ -287,7 +287,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
               >
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-tinta-fraca" />
-                  <p className="text-rotulo font-semibold text-tinta-suave">Proposta Técnica (referência)</p>
+                  <p className="text-rotulo font-medium text-tinta-suave">Proposta Técnica (referência)</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <a

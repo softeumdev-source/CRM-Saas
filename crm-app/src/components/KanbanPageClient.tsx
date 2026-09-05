@@ -674,7 +674,7 @@ function ResumoCard({
 }) {
   return (
     <div className="bg-superficie border border-fio rounded-2xl px-3.5 py-2.5">
-      <p className="text-rotulo font-semibold uppercase tracking-wider text-tinta-fraca flex items-center gap-1.5">
+      <p className="text-rotulo font-medium uppercase tracking-wider text-tinta-fraca flex items-center gap-1.5">
         {icone} {rotulo}
       </p>
       <p className={`text-corpo-lg font-semibold mt-0.5 ${cor || "text-tinta"}`}>{valor}</p>

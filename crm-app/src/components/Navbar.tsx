@@ -203,7 +203,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             {showNotifs && (
               <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-flutuante z-40">
                 <div className="p-3 border-b border-fio flex items-center justify-between gap-2">
-                  <span className="text-rotulo font-semibold text-tinta-suave">Notificações</span>
+                  <span className="text-rotulo font-medium text-tinta-suave">Notificações</span>
                   {notificacoes.length > 0 && (
                     <button
                       onClick={limparNotificacoes}
@@ -245,7 +245,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               {iniciais(usuario.nome)}
             </div>
             <div className="hidden sm:block">
-              <p className="text-rotulo font-semibold text-tinta leading-tight">{usuario.nome}</p>
+              <p className="text-rotulo font-medium text-tinta leading-tight">{usuario.nome}</p>
               <p className="text-rotulo text-tinta-fraca capitalize">{usuario.role}</p>
             </div>
             <button

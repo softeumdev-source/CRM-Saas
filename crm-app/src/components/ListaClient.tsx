@@ -164,7 +164,7 @@ export function ListaClient({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-rotulo">
             <thead>
-              <tr className="border-b border-fio text-tinta-fraca uppercase tracking-wider font-semibold text-rotulo">
+              <tr className="border-b border-fio text-tinta-fraca uppercase tracking-wider font-medium text-rotulo">
                 <th className="p-4">Empresa / Contato</th>
                 <th className="p-4">Etapa</th>
                 <th className="p-4">Valor</th>
@@ -192,7 +192,7 @@ export function ListaClient({
                     </td>
                     <td className="p-4">
                       <span
-                        className="px-2.5 py-1 text-rotulo font-semibold rounded-full"
+                        className="px-2.5 py-1 text-rotulo font-medium rounded-full"
                         style={{ background: (n.etapa?.cor || "#6366f1") + "22", color: n.etapa?.cor || "#6366f1" }}
                       >
                         {n.etapa?.nome}

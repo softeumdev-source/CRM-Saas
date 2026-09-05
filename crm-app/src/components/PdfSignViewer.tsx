@@ -172,7 +172,7 @@ export function PdfSignViewer({
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-rotulo font-semibold text-tinta-suave">
+        <span className="text-rotulo font-medium text-tinta-suave">
           Página {paginaAtual} / {totalPaginas}
         </span>
         <button

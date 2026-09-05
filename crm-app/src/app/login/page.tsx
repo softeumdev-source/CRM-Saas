@@ -84,7 +84,7 @@ function LoginForm() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="page-1" className="text-rotulo font-semibold text-tinta-suave block mb-1">
+                <label htmlFor="page-1" className="text-rotulo font-medium text-tinta-suave block mb-1">
                   E-mail
                 </label>
                 <div className="relative">
@@ -102,7 +102,7 @@ function LoginForm() {
 
               {!modoRecuperar && (
                 <div>
-                  <label htmlFor="page-2" className="text-rotulo font-semibold text-tinta-suave block mb-1">
+                  <label htmlFor="page-2" className="text-rotulo font-medium text-tinta-suave block mb-1">
                     Senha
                   </label>
                   <div className="relative">

@@ -178,7 +178,7 @@ export function PdfFieldEditor({
       {/* Sidebar */}
       <div className="lg:w-64 shrink-0 space-y-4">
         <div className="bg-recuo rounded-xl p-3 border border-fio">
-          <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-2">Signatarios</p>
+          <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">Signatarios</p>
           {signatarios.map((s) => {
             const cor = corSignatario(s.ordem);
             const selecionado = signatarioSelecionado === s.ordem;
@@ -196,7 +196,7 @@ export function PdfFieldEditor({
         </div>
 
         <div className="bg-recuo rounded-xl p-3 border border-fio">
-          <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-2">Campos</p>
+          <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">Campos</p>
           <button onClick={adicionarCampo} className="foco w-full flex items-center gap-2 px-3 py-2 text-rotulo font-semibold text-acento bg-acento-fraco hover:bg-acento-fraco rounded-lg border border-fio">
             <FileSignature className="h-4 w-4" /> Assinatura
           </button>
@@ -206,7 +206,7 @@ export function PdfFieldEditor({
         </div>
 
         <div className="bg-recuo rounded-xl p-3 border border-fio">
-          <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-2">Campos posicionados ({campos.length})</p>
+          <p className="text-rotulo font-medium uppercase text-tinta-fraca mb-2">Campos posicionados ({campos.length})</p>
           {campos.length === 0 && <p className="text-rotulo text-tinta-fraca">Nenhum campo adicionado.</p>}
           {campos.map((c) => {
             const sig = signatarios.find((s) => s.ordem === c.signatario_ordem);
@@ -250,7 +250,7 @@ export function PdfFieldEditor({
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-rotulo font-semibold text-tinta-suave min-w-20 text-center">
+            <span className="text-rotulo font-medium text-tinta-suave min-w-20 text-center">
               Pagina {paginaAtual} / {totalPaginas}
             </span>
             <button

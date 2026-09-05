@@ -64,15 +64,15 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
           <p className="text-display font-semibold text-alerta">{contadores.acaoNecessaria}</p>
-          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Aguardando assinatura</p>
+          <p className="text-rotulo font-medium text-tinta-suave uppercase">Aguardando assinatura</p>
         </div>
         <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
           <p className="text-display font-semibold text-ok">{contadores.concluido}</p>
-          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Concluídas</p>
+          <p className="text-rotulo font-medium text-tinta-suave uppercase">Concluídas</p>
         </div>
         <div className="bg-superficie p-4 rounded-2xl border border-fio text-center">
           <p className="text-display font-semibold text-tinta-fraca">{contadores.cancelado}</p>
-          <p className="text-rotulo font-semibold text-tinta-suave uppercase">Canceladas</p>
+          <p className="text-rotulo font-medium text-tinta-suave uppercase">Canceladas</p>
         </div>
       </div>
 

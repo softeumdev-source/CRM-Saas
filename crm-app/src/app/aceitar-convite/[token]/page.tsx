@@ -70,7 +70,7 @@ export default function AceitarConvitePage({
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="page-1" className="text-rotulo font-semibold text-tinta-suave block mb-1">
+            <label htmlFor="page-1" className="text-rotulo font-medium text-tinta-suave block mb-1">
               Senha
             </label>
             <input id="page-1"
@@ -82,7 +82,7 @@ export default function AceitarConvitePage({
             />
           </div>
           <div>
-            <label htmlFor="page-2" className="text-rotulo font-semibold text-tinta-suave block mb-1">
+            <label htmlFor="page-2" className="text-rotulo font-medium text-tinta-suave block mb-1">
               Confirmar senha
             </label>
             <input id="page-2"

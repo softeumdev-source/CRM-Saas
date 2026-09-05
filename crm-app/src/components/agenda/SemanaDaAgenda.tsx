@@ -459,7 +459,7 @@ export function SemanaDaAgenda({
                           mesma linha do título. */}
                       {cabeDuasLinhas ? (
                         <>
-                          <div className="text-rotulo font-semibold text-acento leading-tight truncate">
+                          <div className="text-rotulo font-medium text-acento leading-tight truncate">
                             {evento.titulo}
                           </div>
                           <div className="text-rotulo text-tinta-suave leading-tight truncate">
