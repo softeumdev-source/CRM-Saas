@@ -50,8 +50,26 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4 px-4 sm:px-6">
-      <div className="flex gap-4 min-w-max h-full">
+    /**
+     * O board vive no MESMO contêiner do cabeçalho e dos filtros.
+     *
+     * Eles estão em `max-w-[1700px] mx-auto`, como a Navbar; o board não tinha
+     * contêiner nenhum, então numa tela larga a página inteira ficava
+     * centralizada e só as colunas começavam coladas na esquerda. Era isso que
+     * se via como "não alinhado".
+     *
+     * E `mx-auto w-max` na FILEIRA, não `justify-center`: com `justify-center`
+     * num contêiner que rola, o excedente vaza para a esquerda e a primeira
+     * coluna fica inalcançável — a rolagem não vai a offset negativo. Com
+     * `w-max`, as margens automáticas viram zero assim que o conteúdo passa da
+     * largura, e aí ele rola normalmente a partir da esquerda.
+     *
+     * O respiro lateral vai na fileira e não no contêiner: assim ele ROLA junto,
+     * e a última coluna não termina colada na borda.
+     */
+    <div className="mx-auto w-full max-w-[1700px] flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4">
+        <div className="mx-auto flex h-full w-max gap-4 px-4 sm:px-6">
         {etapas.map((etapa) => {
           const doEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
           const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
@@ -86,18 +104,36 @@ export function KanbanBoard({
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) setEtapaAlvo(null);
               }}
               onDrop={(e) => handleDrop(e, etapa.id)}
-              className={`w-[320px] shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-colors duration-150 ease-out ${
-                alvo ? "ring-2 ring-acento ring-offset-2" : ""
+              /**
+               * `w-72` no celular e `w-80` a partir de `sm`: com 320px fixos, um
+               * telefone de 360px mostrava uma coluna e uma lasca da seguinte.
+               * 288 + 32 de respiro cabem, e ainda sobra a espiada que diz que
+               * há mais board para o lado.
+               *
+               * A cor da etapa saiu do FUNDO. Ela era concatenada em hex com
+               * alfa (`cor + "0a"`), o que o `DESIGN.md` proíbe — e no tema
+               * escuro pintava um véu claro por cima de fundo escuro. A
+               * identidade da etapa agora é o ponto ao lado do nome e o fio
+               * abaixo do cabeçalho; a superfície é `bg-recuo`, que é o degrau
+               * certo para o cartão branco ficar por cima.
+               */
+              className={`w-72 sm:w-80 shrink-0 flex flex-col rounded-2xl border p-3.5 h-full max-h-full transition-colors duration-150 ease-out ${
+                alvo ? "border-acento bg-acento-fraco" : "border-fio bg-recuo"
               }`}
-              style={{ borderColor: cor + "40", background: cor + (alvo ? "1f" : "0a") }}
             >
-              <div className="mb-3 pb-2.5 border-b border-fio/80">
+              <div className="mb-3 pb-2.5 border-b-2" style={{ borderColor: cor }}>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2 min-w-0">
-                    <h2 className="font-semibold text-corpo text-tinta truncate">{etapa.nome}</h2>
+                    {/* O ponto nunca é a única informação: o nome da etapa está
+                        do lado, que é a regra do `DESIGN.md`. */}
                     <span
-                      className="px-2 py-0.5 text-rotulo font-semibold rounded-full shrink-0"
-                      style={{ background: cor + "22", color: cor }}
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: cor }}
+                      aria-hidden
+                    />
+                    <h2 className="font-medium text-corpo text-tinta truncate">{etapa.nome}</h2>
+                    <span
+                      className="shrink-0 rounded-full border border-fio bg-superficie px-2 py-0.5 text-rotulo font-medium text-tinta tabular"
                       title={
                         filtrando
                           ? `${doEtapa.length} de ${carregados} carregados (${total} no total)`
@@ -111,7 +147,7 @@ export function KanbanBoard({
                   </div>
                   <button
                     onClick={() => onNovoNegocio(etapa.id)}
-                    className="p-1 rounded-lg text-tinta-fraca hover:text-tinta hover:bg-superficie/80 transition-colors duration-150 ease-out shrink-0"
+                    className="foco shrink-0 rounded-lg p-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-superficie hover:text-tinta pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                     title={`Adicionar negócio em ${etapa.nome}`}
                   >
                     <Plus className="h-4 w-4" />
@@ -177,7 +213,7 @@ export function KanbanBoard({
                   <button
                     onClick={onCarregarMais}
                     disabled={carregandoMais}
-                    className="w-full py-2 text-rotulo font-semibold text-tinta-suave hover:text-acento bg-superficie/70 border border-dashed border-fio-forte rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
+                    className="foco w-full rounded-xl border border-dashed border-fio-forte bg-superficie py-2 text-rotulo font-medium text-tinta-suave transition-colors duration-150 ease-out hover:text-acento disabled:opacity-60 pointer-coarse:min-h-11"
                   >
                     {carregandoMais ? "Carregando…" : `Ver mais ${faltam > 50 ? 50 : faltam}`}
                   </button>
@@ -186,6 +222,7 @@ export function KanbanBoard({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );
