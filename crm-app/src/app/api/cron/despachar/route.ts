@@ -3,13 +3,7 @@ import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { emailBase } from "@/lib/resend";
 import { enviarTemplate, temWhatsappConfigurado } from "@/lib/whatsapp/cliente";
 import { enviarPeloGmail } from "@/lib/gmail/enviar";
-import {
-  assuntoDeResposta,
-  caixasDeSaida,
-  NOME_PADRAO_DO_REMETENTE,
-  threadsDosNegocios,
-  type ContextoDeThread,
-} from "@/lib/gmail/caixa";
+import { caixasDeSaida, NOME_PADRAO_DO_REMETENTE } from "@/lib/gmail/caixa";
 import { temGoogleConfigurado } from "@/lib/google/config";
 
 /**
@@ -79,31 +73,18 @@ export async function GET(request: Request) {
 
   const resultado = { reservadas: mensagens?.length ?? 0, enviadas: 0, reagendadas: 0, falhou: 0 };
 
-  // Quem assina o e-mail, e em que conversa ele entra.
+  // Quem assina o e-mail.
   //
   // Reply-To deixou de ser necessario: o endereco de saida JA e a caixa que a
   // sincronizacao le, entao a resposta volta sozinha para dentro do CRM. O que
   // sobra do dono do negocio e o NOME exibido — o cliente ve com quem esta
-  // falando, sem que o endereco mude e a thread quebre.
+  // falando, sem que o endereco mude.
   //
-  // Duas consultas para o LOTE inteiro, nao duas por mensagem: sao ate 20 por
-  // rodada, a cada 5 minutos.
-  const idsDeNegocio = [
-    ...new Set(
-      (mensagens || [])
-        .filter((m) => m.canal === "email" && m.negocio_id)
-        .map((m) => m.negocio_id as string),
-    ),
-  ];
   // A consulta dos DONOS saiu daqui junto com `quemAssina`. Ela existia só para
   // decidir o nome do remetente a partir do responsável pelo negócio — e esse
   // era o defeito: lead novo em prospecção não tem dono, então o nome caía num
   // literal, e quando tinha dono saía o nome de quem por acaso estava com o
   // card. O nome agora vem da caixa (`caixa.nome`), que é uma só.
-  let threads = new Map<string, ContextoDeThread>();
-  if (idsDeNegocio.length > 0) {
-    threads = await threadsDosNegocios(supabase, idsDeNegocio);
-  }
 
   for (const m of mensagens || []) {
     if (!m.destino) {
@@ -140,13 +121,28 @@ export async function GET(request: Request) {
                 codigo: "sem_caixa",
               };
             }
-            // A thread manda no assunto: o Gmail recusa um `threadId` cujo
-            // assunto nao bate com o da conversa. Sem thread, o assunto e o do
-            // proprio passo da cadencia.
-            const t = m.negocio_id ? threads.get(m.negocio_id) : undefined;
-            const assunto = t?.threadId
-              ? assuntoDeResposta(t.assunto, m.assunto || "Softeum")
-              : m.assunto || "Softeum";
+            // CADA PASSO ABRE A SUA PROPRIA CONVERSA. Sem `threadId`, sem
+            // `In-Reply-To`, sem `References` — o assunto que sai e o que o
+            // passo escreveu, e mais nada.
+            //
+            // O despachante fazia o contrario: pegava a ULTIMA conversa de
+            // e-mail daquele negocio, fosse ela qual fosse, e mandava o passo
+            // como resposta dentro dela. O Gmail recusa um `threadId` cujo
+            // assunto nao bate com o da conversa, entao o assunto do passo era
+            // descartado e virava `Re: <assunto daquela conversa>`.
+            //
+            // O estrago era duplo. Os sete assuntos da cadencia de primeiro
+            // contato — sete angulos diferentes, um por e-mail — nunca
+            // chegavam: o cliente recebia sete vezes o mesmo `Re:`. E a
+            // "ultima conversa" nao era necessariamente uma conversa: uma
+            // aceitacao de convite do Google Agenda entra em `mensagens` como
+            // e-mail recebido, e o passo seguinte saiu como
+            // `Re: Aceito: Automacao de Pedidos - sex. 4 set...`.
+            //
+            // Responder DENTRO da thread continua certo, e continua existindo:
+            // e o que `/api/email/responder` faz quando a PESSOA responde o
+            // cliente pela caixa de entrada. O que nao pode e o robo responder
+            // uma conversa que ninguem comecou.
             try {
               const e = await enviarPeloGmail(
                 caixa.usuarioId,
@@ -154,12 +150,12 @@ export async function GET(request: Request) {
                   de: caixa.email,
                   nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                   para: m.destino!,
-                  assunto,
+                  assunto: m.assunto || "Softeum",
                   html: emailBase(m.corpo, { assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE }),
-                  emRespostaA: t?.emRespostaA ?? null,
-                  referencias: t?.referencias ?? null,
+                  emRespostaA: null,
+                  referencias: null,
                 },
-                t?.threadId ?? null,
+                null,
               );
               return { ok: true, id: e.id, threadId: e.threadId, messageId: e.messageId };
             } catch (erro) {
