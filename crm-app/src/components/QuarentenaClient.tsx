@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { formatarDataHora } from "@/lib/atividades";
 import type { Tables } from "@/lib/supabase/types";
-import { Alerta, Botao, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
+import { Alerta, Botao, Cartao, Entrada, Rotulo, Segmentado, Selecao, Selo, Vazio } from "@/components/ui";
 
 /**
  * As mensagens que o CRM recebeu e não soube de quem eram.
@@ -102,26 +102,22 @@ export function QuarentenaClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 rounded-xl bg-recuo p-1">
-          {[
-            { v: false, r: "Esperando", n: pendentes.length },
-            { v: true, r: "Resolvidas", n: resolvidas.length },
-          ].map((a) => (
-            <button
-              key={a.r}
-              onClick={() => setVerResolvidas(a.v)}
-              aria-current={verResolvidas === a.v ? "true" : undefined}
-              className={`foco flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-rotulo font-medium transition-colors duration-150 ease-out ${
-                verResolvidas === a.v
-                  ? "bg-superficie text-acento shadow-cartao"
-                  : "text-tinta-suave hover:text-tinta"
-              }`}
-            >
-              {a.r}
-              <span className="text-tinta-fraca tabular">{a.n}</span>
-            </button>
-          ))}
-        </div>
+        {/* ERA A TERCEIRA COPIA A MAO DO MESMO CONTROLE. As outras duas — o
+            filtro de periodo do admin e o do board — ja foram para o
+            `Segmentado`; esta ficou para tras e divergiu em duas coisas
+            visiveis: o contador saia como texto cinza solto em vez da pilula
+            tingida, e o "Resolvidas 0" ficava permanente na tela. O zero e
+            justamente o estado em que nao ha nada para ver, e o `Segmentado`
+            esconde o contador nesse caso de proposito. */}
+        <Segmentado
+          rotulo="O que mostrar"
+          valor={verResolvidas ? "resolvidas" : "esperando"}
+          aoTrocar={(c) => setVerResolvidas(c === "resolvidas")}
+          itens={[
+            { chave: "esperando", rotulo: "Esperando", contador: pendentes.length, tomDoContador: "alerta" },
+            { chave: "resolvidas", rotulo: "Resolvidas", contador: resolvidas.length },
+          ]}
+        />
       </header>
 
       {/* Medido: `mensagens_sem_negocio_select` e "mesmo tenant E (admin OU a

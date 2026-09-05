@@ -106,9 +106,57 @@ export function separarCitacao(texto: string): { corpo: string; citacao: string 
   return { corpo: texto, citacao: null };
 }
 
-/** Primeira linha com texto, para o trecho da lista. */
-export function trecho(texto: string, limite = 120): string {
-  const { corpo } = separarCitacao(texto);
+/**
+ * O texto que um corpo HTML diz, para a PRÉVIA da lista.
+ *
+ * **Não é sanitizador e não deve ser usado como um.** O corpo é renderizado com
+ * `dangerouslySetInnerHTML` em `EmailTab`, e a fronteira de segurança de lá é
+ * `corpo_formato`: só entra como `html` o que nós escrevemos. Aqui o resultado
+ * volta como texto puro, que o React escapa sozinho.
+ *
+ * Fecha-tag de bloco vira quebra de linha ANTES de as tags saírem, porque é a
+ * quebra que o `separarCitacao` procura para achar onde o histórico começa —
+ * um corpo HTML é uma linha só, e sem isso a citação inteira contaria como
+ * primeira linha.
+ */
+export function textoDeHtml(html: string): string {
+  return (
+    html
+      // `<style>` e `<script>` levam junto o CONTEÚDO. Resposta vinda do Gmail
+      // chega com folha de estilo embutida, e sem isto a prévia começaria com
+      // um seletor CSS.
+      .replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li|tr|h[1-6]|blockquote)\s*>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#0*39;|&apos;/gi, "'")
+      // `&amp;` por último: antes dele, um `&amp;lt;` viraria `<` de verdade.
+      .replace(/&amp;/gi, "&")
+      // Espaço horizontal colapsa, quebra de linha não — ela é o que separa a
+      // primeira frase do resto.
+      .replace(/[^\S\n]+/g, " ")
+  );
+}
+
+/**
+ * Primeira linha com texto, para o trecho da lista.
+ *
+ * MEDIDO NA TELA: a lista de conversas mostrava `<p>Olá, Renan, tudo bem?</p>`
+ * — a marcação crua, tag por tag. Nove dos dezesseis e-mails do banco são
+ * `corpo_formato = 'html'`, e os nove têm tag no corpo, então a prévia saía
+ * assim para todos eles.
+ *
+ * O `html` é PARÂMETRO e não adivinhação: dois corpos `texto` do banco trazem
+ * `<+5547997875257>` — o telefone da assinatura entre sinais de menor e maior.
+ * Um limpa-tags cego apagaria o número. Quem sabe o formato é a coluna
+ * `corpo_formato`, então é ela que decide.
+ */
+export function trecho(texto: string, limite = 120, html = false): string {
+  const { corpo } = separarCitacao(html ? textoDeHtml(texto) : texto);
   const linha = corpo
     .split("\n")
     .map((l) => l.trim())

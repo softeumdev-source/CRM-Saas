@@ -7,7 +7,7 @@ import { PdfSignViewer } from "@/components/PdfSignViewer";
 import type { CampoAssinatura } from "@/components/PdfFieldEditor";
 import type { DocumentosAssinados, EnvelopePublico } from "@/lib/types";
 import { mensagemDoErro } from "@/lib/erros";
-import { Modal } from "@/components/ui";
+import { Modal, Segmentado } from "@/components/ui";
 import {
   FileSignature,
   CheckCircle2,
@@ -120,20 +120,21 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   const painelAssinatura = (
     <>
-      <div className="flex items-center gap-2 bg-recuo p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setModoAssinatura("digitada")}
-          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-cartao text-acento" : "text-tinta-suave"}`}
-        >
-          Digitar nome
-        </button>
-        <button
-          onClick={() => setModoAssinatura("desenhada")}
-          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-cartao text-acento" : "text-tinta-suave"}`}
-        >
-          Desenhar assinatura
-        </button>
-      </div>
+      {/* A QUARTA COPIA A MAO DO CONTROLE DE SEGMENTO, e a unica numa tela que
+          o CLIENTE ve. Diferia do `Segmentado` em coisas pequenas e visiveis:
+          sem `aria-pressed`, sem alvo de 44px no toque, sem transicao de cor, e
+          sem `whitespace-nowrap` — "Desenhar assinatura" quebrava em duas linhas
+          no celular e desalinhava as duas opcoes do trilho. */}
+      <Segmentado
+        rotulo="Como assinar"
+        valor={modoAssinatura}
+        aoTrocar={setModoAssinatura}
+        className="w-fit"
+        itens={[
+          { chave: "digitada", rotulo: "Digitar nome" },
+          { chave: "desenhada", rotulo: "Desenhar assinatura" },
+        ]}
+      />
 
       {modoAssinatura === "digitada" ? (
         <input
@@ -147,11 +148,11 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       )}
 
       <div>
-        <label htmlFor="page-1" className="flex items-center gap-2 text-rotulo font-medium text-tinta-suave mb-1">
+        <label htmlFor="assinar-email-faturamento" className="flex items-center gap-2 text-rotulo font-medium text-tinta-suave mb-1">
           <Mail className="h-3.5 w-3.5 text-acento" />
           E-mail de faturamento
         </label>
-        <input id="page-1"
+        <input id="assinar-email-faturamento"
           type="email"
           value={emailFaturamento}
           onChange={(e) => setEmailFaturamento(e.target.value)}
@@ -160,8 +161,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         />
       </div>
 
-      <label htmlFor="page-2" className="flex items-start gap-2 text-rotulo text-tinta-suave">
-        <input id="page-2" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="foco mt-0.5" />
+      <label htmlFor="assinar-aceite" className="flex items-start gap-2 text-rotulo text-tinta-suave">
+        <input id="assinar-aceite" type="checkbox" checked={aceite} onChange={(e) => setAceite(e.target.checked)} className="foco mt-0.5" />
         <span>
           Declaro que li e concordo com os termos das propostas Comercial e Técnica acima, e que esta
           assinatura eletrônica tem validade jurídica nos termos do art. 10, §2º da Medida Provisória

@@ -37,7 +37,7 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     setLoading(false);
     if (error) {
-      setErro("E-mail ou senha invalidos.");
+      setErro("E-mail ou senha inválidos.");
       return;
     }
     router.push(searchParams.get("next") || "/");
@@ -61,15 +61,15 @@ function LoginForm() {
             CRM Softeum
           </h1>
           <p className="text-rotulo text-tinta-suave mt-1">
-            Gestao comercial &amp; funil de vendas
+            Gestão comercial &amp; funil de vendas
           </p>
         </div>
 
-        <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
+        <div className="surge bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
           {recuperado ? (
             <div className="text-center space-y-3">
               <p className="text-corpo text-tinta-suave">
-                Enviamos um link de redefinicao de senha para <strong>{email}</strong>.
+                Enviamos um link de redefinição de senha para <strong>{email}</strong>.
               </p>
               <button
                 onClick={() => {
@@ -84,36 +84,35 @@ function LoginForm() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="page-1" className="text-rotulo font-medium text-tinta-suave block mb-1">
+                <label htmlFor="login-email" className="text-rotulo font-medium text-tinta-suave block mb-1">
                   E-mail
                 </label>
                 <div className="relative">
                   <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-tinta-fraca" />
-                  <input id="page-1"
+                  <input id="login-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="você@softeum.com.br"
-                    className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl"
+                    className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl text-tinta placeholder:text-tinta-fraca hover:border-fio-forte transition-[border-color] duration-150 ease-out"
                   />
                 </div>
               </div>
 
               {!modoRecuperar && (
                 <div>
-                  <label htmlFor="page-2" className="text-rotulo font-medium text-tinta-suave block mb-1">
+                  <label htmlFor="login-senha" className="text-rotulo font-medium text-tinta-suave block mb-1">
                     Senha
                   </label>
                   <div className="relative">
                     <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-tinta-fraca" />
-                    <input id="page-2"
+                    <input id="login-senha"
                       type="password"
                       required
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
-                      placeholder="********"
-                      className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl"
+                      className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl text-tinta placeholder:text-tinta-fraca hover:border-fio-forte transition-[border-color] duration-150 ease-out"
                     />
                   </div>
                 </div>
@@ -131,16 +130,24 @@ function LoginForm() {
                 className="foco w-full py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl transition-colors duration-150 ease-out disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {modoRecuperar ? "Enviar link de redefinicao" : "Entrar"}
+                {modoRecuperar ? "Enviar link de redefinição" : "Entrar"}
               </button>
 
-              <button
-                type="button"
-                onClick={() => setModoRecuperar((v) => !v)}
-                className="foco w-full text-rotulo font-medium text-acento hover:underline"
-              >
-                {modoRecuperar ? "Voltar ao login" : "Esqueci minha senha"}
-              </button>
+              {/* Era outro controle de LARGURA TOTAL logo embaixo do "Entrar", no
+                  acento — duas barras da mesma cor, uma sobre a outra, no unico
+                  ponto de decisao da tela. Entrar e a acao; recuperar a senha e
+                  a saida de emergencia, e saida de emergencia nao disputa
+                  atencao com a porta da frente. Vira um link discreto, do
+                  tamanho do proprio texto e centralizado. */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setModoRecuperar((v) => !v)}
+                  className="foco rounded-lg px-2 py-1 text-rotulo font-medium text-tinta-suave hover:text-tinta hover:underline"
+                >
+                  {modoRecuperar ? "Voltar ao login" : "Esqueci minha senha"}
+                </button>
+              </div>
             </form>
           )}
         </div>

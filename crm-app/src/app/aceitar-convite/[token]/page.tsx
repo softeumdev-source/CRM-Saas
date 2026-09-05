@@ -58,7 +58,7 @@ export default function AceitarConvitePage({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-recuo px-4">
-      <div className="w-full max-w-md bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
+      <div className="surge w-full max-w-md bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
         <div className="flex items-center gap-2 mb-2">
           <UserPlus className="h-5 w-5 text-acento" />
           <h1 className="text-titulo font-semibold text-tinta">
@@ -70,27 +70,27 @@ export default function AceitarConvitePage({
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="page-1" className="text-rotulo font-medium text-tinta-suave block mb-1">
+            <label htmlFor="convite-senha" className="text-rotulo font-medium text-tinta-suave block mb-1">
               Senha
             </label>
-            <input id="page-1"
+            <input id="convite-senha"
               type="password"
               required
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl text-tinta placeholder:text-tinta-fraca hover:border-fio-forte transition-[border-color] duration-150 ease-out"
             />
           </div>
           <div>
-            <label htmlFor="page-2" className="text-rotulo font-medium text-tinta-suave block mb-1">
+            <label htmlFor="convite-confirmar" className="text-rotulo font-medium text-tinta-suave block mb-1">
               Confirmar senha
             </label>
-            <input id="page-2"
+            <input id="convite-confirmar"
               type="password"
               required
               value={confirmar}
               onChange={(e) => setConfirmar(e.target.value)}
-              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl"
+              className="foco w-full px-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl text-tinta placeholder:text-tinta-fraca hover:border-fio-forte transition-[border-color] duration-150 ease-out"
             />
           </div>
           {erro && (

@@ -117,16 +117,22 @@ export function HorarioDeAtendimento({ inicial }: { inicial: Preferencias | null
         <Rotulo className="flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-acento" /> Horário de atendimento
         </Rotulo>
-        <p className="text-rotulo text-tinta-suave mt-1">
+        {/* Medido nesta largura: sem teto de medida esta frase saía com 178
+            caracteres por linha (1071px). O olho perde o começo da linha
+            seguinte muito antes disso — 70ch é onde a leitura corrida para de
+            escorregar. O cartão continua largo; só o texto tem medida. */}
+        <p className="text-rotulo text-tinta-suave mt-1 max-w-[70ch]">
           É o que o botão <strong>Sugerir horários</strong> usa no card. A agenda do Google sabe o
           que está ocupado; só isto aqui diz o que é horário de trabalho — sem ele, domingo às 3h da
           manhã seria um horário livre como qualquer outro.
         </p>
       </div>
 
-      <div>
-        <span className="text-rotulo font-medium text-tinta">Dias de atendimento</span>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
+      <fieldset>
+        <legend className="text-rotulo font-semibold tracking-wide uppercase text-tinta-fraca mb-2">
+          Dias de atendimento
+        </legend>
+        <div className="flex flex-wrap gap-1.5">
           {DIAS.map((d) => {
             const ativo = prefs.dias_semana.includes(d.valor);
             return (
@@ -149,94 +155,131 @@ export function HorarioDeAtendimento({ inicial }: { inicial: Preferencias | null
             );
           })}
         </div>
-      </div>
+      </fieldset>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Campo rotulo="Começa às">
-          {(p) => (
-            <Entrada
-              {...p}
-              type="time"
-              value={paraCampo(prefs.hora_inicio)}
-              onChange={(e) => mexer({ hora_inicio: e.target.value })}
-            />
-          )}
-        </Campo>
-        <Campo rotulo="Termina às">
-          {(p) => (
-            <Entrada
-              {...p}
-              type="time"
-              value={paraCampo(prefs.hora_fim)}
-              onChange={(e) => mexer({ hora_fim: e.target.value })}
-            />
-          )}
-        </Campo>
+      {/* ERAM SETE CAMPOS NUMA GRADE DE DUAS COLUNAS FRACIONARIAS, dentro de um
+          cartao que ocupa a pagina inteira. Medido no navegador a 1790px: cada
+          coluna dava 799px, entao o campo com o numero `30` tinha OITOCENTOS
+          PIXELS de largura, e o setimo campo sobrava sozinho numa fileira com
+          metade vazia ao lado.
+          O conserto e de duas partes, e nenhuma delas apaga campo:
+          1. Cada controle passa a ter a largura do que ele guarda — uma hora
+             cabe em 160px, um numero de ate tres digitos em 128px. Largura de
+             campo e promessa: 800px prometem um texto longo que nunca vem.
+          2. Os sete viram TRES GRUPOS com nome, porque e o que eles sao de
+             verdade: o expediente, a pausa e as regras da sugestao. Proximidade
+             e significado — um par junto le como par, e uma grade plana de sete
+             nao dizia qual campo tinha a ver com qual. */}
+      <fieldset>
+        <legend className="text-rotulo font-semibold tracking-wide uppercase text-tinta-fraca mb-2">
+          Expediente
+        </legend>
+        <div className="flex flex-wrap gap-3">
+          <Campo rotulo="Começa às" className="w-40">
+            {(p) => (
+              <Entrada
+                {...p}
+                type="time"
+                value={paraCampo(prefs.hora_inicio)}
+                onChange={(e) => mexer({ hora_inicio: e.target.value })}
+              />
+            )}
+          </Campo>
+          <Campo rotulo="Termina às" className="w-40">
+            {(p) => (
+              <Entrada
+                {...p}
+                type="time"
+                value={paraCampo(prefs.hora_fim)}
+                onChange={(e) => mexer({ hora_fim: e.target.value })}
+              />
+            )}
+          </Campo>
+        </div>
+      </fieldset>
 
-        <Campo rotulo="Pausa começa às" dica="Deixe os dois vazios para não ter pausa.">
-          {(p) => (
-            <Entrada
-              {...p}
-              type="time"
-              value={paraCampo(prefs.almoco_inicio)}
-              onChange={(e) => mexer({ almoco_inicio: e.target.value || null })}
-            />
-          )}
-        </Campo>
-        <Campo rotulo="Pausa termina às">
-          {(p) => (
-            <Entrada
-              {...p}
-              type="time"
-              value={paraCampo(prefs.almoco_fim)}
-              onChange={(e) => mexer({ almoco_fim: e.target.value || null })}
-            />
-          )}
-        </Campo>
+      <fieldset>
+        {/* A dica e sobre O PAR, nao sobre um campo: "deixe os DOIS vazios". Como
+            `dica` de um campo so ela mentia de leve, e ainda quebrava em duas
+            linhas embaixo de uma coluna de 160px, deixando a fileira torta. */}
+        <legend className="text-rotulo font-semibold tracking-wide uppercase text-tinta-fraca mb-2">
+          Pausa <span className="font-medium normal-case tracking-normal">— deixe os dois vazios para não ter pausa</span>
+        </legend>
+        <div className="flex flex-wrap gap-3">
+          <Campo rotulo="Começa às" className="w-40">
+            {(p) => (
+              <Entrada
+                {...p}
+                type="time"
+                value={paraCampo(prefs.almoco_inicio)}
+                onChange={(e) => mexer({ almoco_inicio: e.target.value || null })}
+              />
+            )}
+          </Campo>
+          <Campo rotulo="Termina às" className="w-40">
+            {(p) => (
+              <Entrada
+                {...p}
+                type="time"
+                value={paraCampo(prefs.almoco_fim)}
+                onChange={(e) => mexer({ almoco_fim: e.target.value || null })}
+              />
+            )}
+          </Campo>
+        </div>
+      </fieldset>
 
-        <Campo rotulo="Duração da reunião (min)">
-          {(p) => (
-            <Entrada
-              {...p}
-              type="number"
-              min={5}
-              max={480}
-              value={prefs.duracao_minutos}
-              onChange={(e) => mexer({ duracao_minutos: Number(e.target.value) })}
-            />
-          )}
-        </Campo>
-        <Campo
-          rotulo="Antecedência mínima (h)"
-          dica="Nada é sugerido antes disso a partir de agora."
-        >
-          {(p) => (
-            <Entrada
-              {...p}
-              type="number"
-              min={0}
-              max={168}
-              value={prefs.antecedencia_horas}
-              onChange={(e) => mexer({ antecedencia_horas: Number(e.target.value) })}
-            />
-          )}
-        </Campo>
-        <Campo
-          rotulo="Folga entre compromissos (min)"
-          dica="Respiro antes e depois do que já está na agenda."
-        >
-          {(p) => (
-            <Entrada
-              {...p}
-              type="number"
-              min={0}
-              max={120}
-              value={prefs.intervalo_minutos}
-              onChange={(e) => mexer({ intervalo_minutos: Number(e.target.value) })}
-            />
-          )}
-        </Campo>
-      </div>
+      <fieldset>
+        <legend className="text-rotulo font-semibold tracking-wide uppercase text-tinta-fraca mb-2">
+          O que o botão sugere
+        </legend>
+        <div className="flex flex-wrap gap-3">
+          <Campo rotulo="Duração da reunião (min)" className="w-44">
+            {(p) => (
+              <Entrada
+                {...p}
+                type="number"
+                min={5}
+                max={480}
+                value={prefs.duracao_minutos}
+                onChange={(e) => mexer({ duracao_minutos: Number(e.target.value) })}
+              />
+            )}
+          </Campo>
+          <Campo
+            rotulo="Antecedência mínima (h)"
+            className="w-44"
+            dica="Nada é sugerido antes disso a partir de agora."
+          >
+            {(p) => (
+              <Entrada
+                {...p}
+                type="number"
+                min={0}
+                max={168}
+                value={prefs.antecedencia_horas}
+                onChange={(e) => mexer({ antecedencia_horas: Number(e.target.value) })}
+              />
+            )}
+          </Campo>
+          <Campo
+            rotulo="Folga entre compromissos (min)"
+            className="w-56"
+            dica="Respiro antes e depois do que já está na agenda."
+          >
+            {(p) => (
+              <Entrada
+                {...p}
+                type="number"
+                min={0}
+                max={120}
+                value={prefs.intervalo_minutos}
+                onChange={(e) => mexer({ intervalo_minutos: Number(e.target.value) })}
+              />
+            )}
+          </Campo>
+        </div>
+      </fieldset>
 
       {erro && (
         <Alerta tom="risco" titulo="A configuração não foi salva">

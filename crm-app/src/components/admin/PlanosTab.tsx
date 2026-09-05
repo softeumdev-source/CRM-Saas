@@ -5,8 +5,7 @@ import { Plus, Edit3, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Plano } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { Alerta, AreaTexto, Botao, Campo, Entrada, Modal } from "@/components/ui";
-import { Confirmar } from "@/components/ui";
+import { Alerta, AreaTexto, Botao, Campo, Confirmar, Entrada, Modal, Surge } from "@/components/ui";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
 /**
@@ -120,26 +119,56 @@ export function PlanosTab({ planosIniciais, tenantId }: { planosIniciais: Plano[
         </Botao>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {planos.map((p) => (
-          <div key={p.id} className="bg-superficie rounded-2xl p-6 border border-fio shadow-cartao space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="text-titulo font-medium text-tinta">{p.nome}</h4>
-                <p className="text-rotulo text-tinta-suave mt-0.5">{p.descricao}</p>
+      {/* MEDIDO NO BANCO: o tenant tem ONZE planos ativos, do Starter (R$ 229)
+          ao Enterprise 4 (R$ 17.990) — nao quatro. Nenhuma contagem de coluna
+          divide onze, entao "fechar a fileira" nao e o criterio aqui.
+          O criterio e a largura do conteudo. Em `lg:grid-cols-3` cada cartao
+          ganhava 537px a 1700px para guardar um preco e tres linhas curtas: o
+          cartao ficava vazio por dentro. Em quatro, 398px — que ainda cabe
+          "R$ 17.990,00 /mes min." numa linha so, conferido no navegador — e a
+          escada inteira de preco cabe em tres fileiras em vez de quatro. Numa
+          tabela de precos e a escada que se le. */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {planos.map((p, i) => (
+          <Surge
+            key={p.id}
+            indice={i}
+            className="bg-superficie rounded-2xl p-6 border border-fio shadow-cartao flex flex-col gap-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h4 className="text-rotulo font-semibold text-tinta-suave">{p.nome}</h4>
+                {/* MEDIDO NO BANCO: os ONZE planos tem `descricao` vazia. O
+                    `<p>` saia mesmo assim e reservava uma linha em branco
+                    embaixo de cada nome, onze vezes. */}
+                {p.descricao ? (
+                  <p className="text-rotulo text-tinta-suave mt-0.5">{p.descricao}</p>
+                ) : null}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <Botao variante="sutil" tamanho="sm" onClick={() => abrirEdicao(p)} aria-label={`Editar o plano ${p.nome}`} icone={Edit3} />
                 <Botao variante="sutil" tamanho="sm" onClick={() => setExcluindo(p)} aria-label={`Excluir o plano ${p.nome}`} icone={Trash2} />
               </div>
             </div>
-            <div className="py-2 border-y border-fio text-rotulo space-y-1">
-              <div className="flex justify-between"><span className="text-tinta-suave">Franquia</span><strong>{p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</strong></div>
-              <div className="flex justify-between"><span className="text-tinta-suave">Mensalidade (mín)</span><strong className="text-acento">{formatarMoeda((p.valor_plataforma_base || 0) + (p.valor_uso_base || 0))}</strong></div>
-              <div className="flex justify-between"><span className="text-tinta-suave">Excedente/pedido</span><strong>{formatarMoeda(p.valor_excedente_pedido)}</strong></div>
-              <div className="flex justify-between"><span className="text-tinta-suave">Setup</span><strong>{formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))}</strong></div>
+
+            {/* A MENSALIDADE ERA A UNICA LINHA TINGIDA DE ACENTO no cartao, e o
+                acento neste sistema quer dizer ACAO — algo acontece quando voce
+                clica. Nada acontece: e um numero.
+                Ela sobe para o topo em vez de perder a cor, porque e o numero
+                que o vendedor procura: "Starter" nao diz preco nenhum. Nenhuma
+                informacao saiu — a mensalidade continua na tela, so que grande
+                em vez de pintada, e as outras tres linhas seguem embaixo. */}
+            <p className="text-titulo font-semibold text-tinta tabular leading-none">
+              {formatarMoeda((p.valor_plataforma_base || 0) + (p.valor_uso_base || 0))}
+              <span className="text-rotulo font-medium text-tinta-fraca"> /mês mín.</span>
+            </p>
+
+            <div className="py-2 border-t border-fio text-rotulo space-y-1 mt-auto">
+              <div className="flex justify-between gap-2"><span className="text-tinta-suave">Franquia</span><strong className="tabular">{p.franquia_pedidos.toLocaleString("pt-BR")} pedidos/mês</strong></div>
+              <div className="flex justify-between gap-2"><span className="text-tinta-suave">Excedente/pedido</span><strong className="tabular">{formatarMoeda(p.valor_excedente_pedido)}</strong></div>
+              <div className="flex justify-between gap-2"><span className="text-tinta-suave">Setup</span><strong className="tabular">{formatarMoeda((p.valor_setup_plataforma || 0) + (p.valor_setup_erp || 0) + (p.valor_setup_catalogo || 0))}</strong></div>
             </div>
-          </div>
+          </Surge>
         ))}
       </div>
 

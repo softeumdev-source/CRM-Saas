@@ -283,7 +283,9 @@ function LinhaDaThread({
           {formatarDataHora(new Date(thread.ultimaEm).toISOString())}
         </span>
       </div>
-      <p className="mt-0.5 line-clamp-1 text-rotulo text-tinta-suave">{trecho(ultima.corpo)}</p>
+      <p className="mt-0.5 line-clamp-1 text-rotulo text-tinta-suave">
+        {trecho(ultima.corpo, 120, ultima.corpo_formato === "html")}
+      </p>
       {temAnexo && (
         <span className="mt-1 inline-flex items-center gap-1 text-rotulo text-tinta-fraca">
           <Paperclip className="h-3 w-3" aria-hidden /> anexo
@@ -326,7 +328,7 @@ function MensagemDeEmail({
       >
         <span className="shrink-0 text-corpo font-medium text-tinta">{quem}</span>
         <span className="min-w-0 flex-1 truncate text-rotulo text-tinta-suave">
-          {trecho(mensagem.corpo, 90)}
+          {trecho(mensagem.corpo, 90, mensagem.corpo_formato === "html")}
         </span>
         <span className="shrink-0 text-rotulo text-tinta-fraca tabular">{quando}</span>
       </button>
@@ -356,13 +358,17 @@ function MensagemDeEmail({
           não estilo: 'html' só existe para o que NÓS escrevemos (template, IA,
           humano). Conteúdo que vem de fora entra sempre como 'texto' e é
           escapado pelo React. */}
+      {/* `max-w-[70ch]`: o painel da direita cresce com a janela, e sem teto de
+          medida o e-mail saia com 130 caracteres por linha numa tela larga.
+          Isso e o dobro do que o olho segue sem perder a volta da linha — e o
+          texto de um e-mail e a coisa que mais se le nesta tela. */}
       {mensagem.corpo_formato === "html" ? (
         <div
-          className="text-corpo text-tinta [&_a]:text-acento [&_a]:underline"
+          className="max-w-[70ch] text-corpo text-tinta [&_a]:text-acento [&_a]:underline"
           dangerouslySetInnerHTML={{ __html: corpo }}
         />
       ) : (
-        <p className="whitespace-pre-wrap text-corpo text-tinta">{corpo}</p>
+        <p className="max-w-[70ch] whitespace-pre-wrap text-corpo text-tinta">{corpo}</p>
       )}
 
       {citacao && (

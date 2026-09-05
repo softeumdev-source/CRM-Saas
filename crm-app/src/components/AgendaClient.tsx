@@ -181,7 +181,13 @@ export function AgendaClient({
   const eventos = google.estado === "conectada" ? google.eventos : [];
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 flex flex-col flex-1 min-h-0 gap-4">
+    // `max-w-pagina` e nao `max-w-6xl`: era a unica tela do sistema com um
+    // container proprio. Medido a 1790px, `6xl` dava 1102px de grade e 150px
+    // por coluna de dia — e "Softeum x Casa do Parafuso — apresentacao da
+    // plataforma" precisa de 350px, entao aparecia UM TERCO do titulo. No
+    // container da pagina cada coluna vai a ~228px pelo mesmo aluguel de tela
+    // que o board e a Lista ja pagam.
+    <div className="max-w-pagina mx-auto w-full px-4 sm:px-6 py-6 flex flex-col flex-1 min-h-0 gap-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-titulo font-semibold text-tinta flex items-center gap-2">
