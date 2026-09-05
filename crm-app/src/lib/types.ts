@@ -163,10 +163,6 @@ export const SELECT_ATIVIDADES_CARD = "atividades_pendentes:atividades(id, titul
 /** Select padrão de um negócio com tudo que o pipeline mostra. */
 export const SELECT_NEGOCIO_COMPLETO = `*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*), etapa:etapas_pipeline(*), ${SELECT_ATIVIDADES_CARD}`;
 
-/** Select da agenda: a atividade com o negócio e o contato para ligar/mandar mensagem. */
-export const SELECT_AGENDA =
-  "*, negocio:negocios(id, titulo, responsavel_id, contato:contatos(nome, empresa, telefone, whatsapp), responsavel:usuarios!negocios_responsavel_id_fkey(id, nome))";
-
 /**
  * Abas da tela de negócio. Fica aqui, e não no componente, porque a page
  * (server) valida a query string.

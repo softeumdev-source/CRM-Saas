@@ -48,7 +48,8 @@ export async function GET(request: Request) {
     } satisfies RespostaDaAgenda);
   }
 
-  const pedido = Number(new URL(request.url).searchParams.get("dias"));
+  const params = new URL(request.url).searchParams;
+  const pedido = Number(params.get("dias"));
   const dias = Number.isFinite(pedido) && pedido > 0 ? Math.min(pedido, DIAS_MAXIMO) : DIAS_PADRAO;
 
   // A janela começa na MEIA-NOITE de hoje, não em "agora": às 16h a pessoa
@@ -56,6 +57,20 @@ export async function GET(request: Request) {
   // igual a agora apagaria a primeira metade do dia toda tarde.
   const de = new Date();
   de.setHours(0, 0, 0, 0);
+
+  // `?de=AAAA-MM-DD` existe para a visão de SEMANA poder andar para trás e para
+  // frente. Sem ele, a janela sempre começava hoje — e uma grade semanal que
+  // começa numa quarta-feira não é uma semana, é uma fatia. O valor é lido como
+  // hora LOCAL (`T00:00:00` sem fuso): `new Date("2026-09-06")` seria
+  // interpretado como UTC e, no Brasil, cairia no dia 5.
+  const inicioPedido = params.get("de");
+  if (inicioPedido && /^\d{4}-\d{2}-\d{2}$/.test(inicioPedido)) {
+    const escolhido = new Date(`${inicioPedido}T00:00:00`);
+    if (!Number.isNaN(escolhido.getTime())) {
+      de.setTime(escolhido.getTime());
+    }
+  }
+
   const ate = new Date(de.getTime() + dias * 86_400_000);
 
   try {

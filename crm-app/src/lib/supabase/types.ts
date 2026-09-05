@@ -1063,6 +1063,7 @@ export type Database = {
       }
       notificacoes: {
         Row: {
+          chave: string | null
           corpo: string | null
           criado_em: string | null
           id: string
@@ -1073,6 +1074,7 @@ export type Database = {
           usuario_id: string | null
         }
         Insert: {
+          chave?: string | null
           corpo?: string | null
           criado_em?: string | null
           id?: string
@@ -1083,6 +1085,7 @@ export type Database = {
           usuario_id?: string | null
         }
         Update: {
+          chave?: string | null
           corpo?: string | null
           criado_em?: string | null
           id?: string
@@ -1910,7 +1913,10 @@ export type Database = {
       }
       obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
       pipelines_do_meu_papel: { Args: never; Returns: string[] }
-      processar_cadencias: { Args: never; Returns: number }
+      processar_cadencias: {
+        Args: { p_inscricao_id?: string }
+        Returns: number
+      }
       processar_lembretes: { Args: never; Returns: number }
       registrar_assinatura: {
         Args: {

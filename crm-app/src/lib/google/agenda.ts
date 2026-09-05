@@ -154,14 +154,3 @@ export function normalizarEventos(itens: EventoBruto[]): EventoDaAgenda[] {
 
   return eventos;
 }
-
-/** Duração em "1h30", "45min" — curto o bastante para caber na calha da hora. */
-export function duracaoCurta(inicio: string, fim: string): string | null {
-  const minutos = Math.round((new Date(fim).getTime() - new Date(inicio).getTime()) / 60_000);
-  if (!Number.isFinite(minutos) || minutos <= 0) return null;
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  if (h && m) return `${h}h${String(m).padStart(2, "0")}`;
-  if (h) return `${h}h`;
-  return `${m}min`;
-}

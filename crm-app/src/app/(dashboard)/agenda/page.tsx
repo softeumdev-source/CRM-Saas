@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { AgendaClient, type AtividadeAgenda } from "@/components/AgendaClient";
+import { AgendaClient } from "@/components/AgendaClient";
 import type { NegocioAgendavel } from "@/components/agenda/tipos";
-import { SELECT_AGENDA } from "@/lib/types";
 import { quemAssina } from "@/lib/gmail/caixa";
 
 /**
@@ -17,13 +16,10 @@ export default async function AgendaPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: atividades }, { data: usuarioAtual }, { data: negocios }] = await Promise.all([
-    supabase
-      .from("atividades")
-      .select(SELECT_AGENDA)
-      .not("data_agendada", "is", null)
-      .or("concluida.is.null,concluida.is.false")
-      .order("data_agendada", { ascending: true }),
+  // As atividades do CRM saíram desta consulta junto com a lista: a Agenda
+  // mostra a agenda do Google, e o próximo passo do negócio vive no card dele,
+  // que é onde ele é trabalhado.
+  const [{ data: usuarioAtual }, { data: negocios }] = await Promise.all([
     supabase.from("usuarios").select("*").eq("id", user!.id).single(),
     // Só negócio ABERTO: agendar reunião para um negócio já fechado é quase
     // sempre engano, e a lista fica curta o bastante para ser útil. A RLS já
@@ -43,8 +39,6 @@ export default async function AgendaPage() {
 
   return (
     <AgendaClient
-      atividadesIniciais={(atividades as unknown as AtividadeAgenda[]) || []}
-      usuarioAtual={usuarioAtual!}
       negociosAgendaveis={(negocios as unknown as NegocioAgendavel[]) || []}
       vendedor={vendedor}
     />
