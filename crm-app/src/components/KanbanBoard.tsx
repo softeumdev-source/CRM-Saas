@@ -182,7 +182,7 @@ export function KanbanBoard({
                     <p className="text-rotulo text-tinta-fraca font-medium">Nenhum negócio nesta etapa</p>
                   </div>
                 ) : (
-                  doEtapa.map((negocio) => (
+                  doEtapa.map((negocio, i) => (
                     <div
                       key={negocio.id}
                       draggable
@@ -199,12 +199,18 @@ export function KanbanBoard({
                         arrastando === negocio.id ? "opacity-40" : ""
                       }`}
                     >
+                      {/* L2: o card entra de baixo, em cascata de 40ms.
+                          O teto de 8 e proposital: numa coluna com 20 cards,
+                          o vigesimo esperaria 800ms para aparecer — e a pessoa
+                          leria isso como lentidao, nao como movimento. */}
+                      <CardQueSurge atraso={Math.min(i, 8) * 40}>
                       <LeadCard
                         negocio={negocio}
                         variante={variante}
                         cadencia={cadencias?.[negocio.id]}
                         aprovacao={aprovacoes?.[negocio.id]}
                       />
+                      </CardQueSurge>
                     </div>
                   ))
                 )}
@@ -224,6 +230,21 @@ export function KanbanBoard({
         })}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * A casca que faz o card entrar de baixo (movimento L2 do `DESIGN.md`).
+ *
+ * Sem observador e sem estado: a animacao roda ao montar e termina visivel.
+ * A versao com `IntersectionObserver` deixava as colunas do board VAZIAS num
+ * print — card abaixo da dobra nunca recebia o sinal.
+ */
+function CardQueSurge({ atraso, children }: { atraso: number; children: React.ReactNode }) {
+  return (
+    <div className="surge" style={{ "--atraso": `${atraso}ms` } as React.CSSProperties}>
+      {children}
     </div>
   );
 }

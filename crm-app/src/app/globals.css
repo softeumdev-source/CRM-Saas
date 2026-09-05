@@ -23,24 +23,24 @@
 :root {
   /* Superficies, do fundo para a frente. Nenhuma e branco puro (craft R7):
      sem degrau entre fundo e cartao, o cartao some. */
-  --cor-fundo: #f5f6f8;
+  --cor-fundo: #fafafa;
   --cor-superficie: #ffffff;
-  --cor-recuo: #f0f2f5;
-  --cor-fio: #e2e6eb;
-  --cor-fio-forte: #ccd3db;
+  --cor-recuo: #f4f4f5;
+  --cor-fio: #e8e8ea;
+  --cor-fio-forte: #d4d4d8;
 
   /* Tinta. Tres niveis bastam para hierarquia — e e a COR que cria hierarquia
      aqui, nao o peso: o projeto tinha 372 usos de peso e nenhum `font-normal`,
      entao o negrito parou de significar qualquer coisa (craft R9). */
-  --cor-tinta: #191d27;
-  --cor-tinta-suave: #58616f;
+  --cor-tinta: #18181b;
+  --cor-tinta-suave: #52525b;
   /* Duas correcoes, e a segunda so apareceu porque a primeira foi incompleta.
      Nasceu #868f9c e reprovava nas TRES superficies (3.02 / 3.27 / 2.92 contra
      o minimo de 4.5:1). Virou #666f7c — e ai o balao de mensagem enviada, que
      usa `bg-acento-fraco`, deu 4.49:1. A medicao tinha olhado so as superficies
      e esquecido os cinco fundos TINGIDOS, que sao fundo de balao, de selo e de
      caixa de aviso. Agora sao os OITO pares, e o pior e 4.55:1. */
-  --cor-tinta-fraca: #656e7b;
+  --cor-tinta-fraca: #63636d;
 
   /* Acao e semantica. Cada uma tem um par forte/fraco: o forte para texto e
      preenchimento solido, o fraco para fundo de selo e caixa de aviso. */
@@ -212,10 +212,10 @@ b {
   --text-corpo-lg--line-height: 1.5;
   --text-titulo: 1.25rem;
   --text-titulo--line-height: 1.3;
-  --text-titulo--letter-spacing: -0.01em;
+  --text-titulo--letter-spacing: -0.022em;
   --text-display: 1.75rem;
   --text-display--line-height: 1.15;
-  --text-display--letter-spacing: -0.02em;
+  --text-display--letter-spacing: -0.022em;
 
   --color-grafico-1: var(--grafico-1);
   --color-grafico-2: var(--grafico-2);
@@ -241,13 +241,28 @@ b {
   /* Apontava para --font-geist-sans e --font-geist-mono, que nunca existiram
      em lugar nenhum do projeto: a Inter era baixada pelo layout.tsx em
      --font-inter e jamais chegava a ser aplicada. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* 510 e 590, e nao 500 e 600. Sao os pesos do Linear, e existem DE VERDADE
+     porque a Inter aqui vem do `next/font/google` sem `weight` declarado, ou
+     seja, na versao variavel. 510 da o "levemente destacado" sem o volume do
+     medium; 590 da autoridade sem o peso do bold.
+     Redefinidos aqui, `font-medium` e `font-semibold` mudam no app inteiro sem
+     tocar em um unico componente. */
+  --font-weight-medium: 510;
+  --font-weight-semibold: 590;
+
+  --font-sans: var(--font-inter), "SF Pro Display", -apple-system, system-ui,
+    "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
   background: var(--cor-fundo);
   color: var(--cor-tinta);
+  /* AS FEATURES SAO A IDENTIDADE, nao enfeite. `cv01` troca o `a` de dois
+     andares pelo de um andar; `ss03` ajusta letras para um desenho mais
+     geometrico. E o que separa "usei Inter" de "desenhei com Inter" — e muda a
+     cara do app inteiro sem mover UM PIXEL de layout. */
+  font-feature-settings: "cv01", "ss03";
 }
 
 /* Numero em coluna alinha por algarismo. Sem isto, valor de negocio e
@@ -272,6 +287,63 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--cor-fio-forte);
   border-radius: 999px;
+}
+
+/* ---------------------------------------------------------------------------
+   MOVIMENTO L2
+
+   Duas entradas e uma barra que reage a rolagem. `IntersectionObserver` + CSS,
+   SEM GSAP e SEM LENIS: zero dependencia nova, e nada que possa travar a
+   rolagem de um board com 25 cards.
+
+   `translateY` e `opacity` so — nunca propriedade de layout, que forcaria
+   reflow a cada quadro (craft R12).
+   --------------------------------------------------------------------------- */
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes trocar-de-aba {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ANIMA AO MONTAR, e NAO ao entrar na tela. A diferenca importa e eu paguei
+   por ela: a primeira versao deixava o elemento em `opacity: 0` esperando um
+   `IntersectionObserver`, e no render de prova AS COLUNAS DO BOARD SAIRAM
+   VAZIAS — card abaixo da dobra, ou dentro da coluna que rola por dentro,
+   nunca recebia o sinal. Num print, numa impressao ou num leitor que nao roda
+   o observador, o board ficava em branco.
+
+   Conteudo nao pode depender de animacao para existir. `both` segura o estado
+   inicial durante o atraso (no maximo 320ms) e termina visivel, sempre. Sob
+   `prefers-reduced-motion` a regra inteira nao se aplica e o elemento nasce
+   no lugar final. */
+@utility surge {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: surgir 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--atraso, 0ms);
+  }
+}
+
+/* A troca de aba nao e navegacao, e revelacao: 160ms e o suficiente para o olho
+   entender que o conteudo trocou sem que a pessoa espere por isso. */
+@utility entra-aba {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: trocar-de-aba 160ms ease-out both;
+  }
+}
+
+/* A barra do topo so ganha peso quando ha conteudo passando por baixo dela.
+   Parada no topo da pagina ela e so um cabecalho; rolando, ela flutua. */
+@utility barra-rolada {
+  transition: box-shadow 150ms ease-out, border-color 150ms ease-out;
+  &[data-rolado="1"] {
+    border-color: var(--cor-fio-forte);
+    box-shadow: var(--sombra-cartao);
+  }
 }
 
 /* Movimento e fisica, nao enfeite (craft R12). Quem pede menos movimento

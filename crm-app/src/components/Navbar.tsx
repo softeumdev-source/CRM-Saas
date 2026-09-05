@@ -8,6 +8,7 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { Usuario, Notificacao } from "@/lib/types";
 import { iniciais } from "@/lib/types";
 import { formatarDataHora } from "@/lib/atividades";
+import { useRolou } from "@/lib/movimento";
 import {
   Kanban,
   ListFilter,
@@ -28,6 +29,9 @@ type UsuarioComTenant = Usuario & { tenant: { nome: string; cor_primaria: string
 export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   const pathname = usePathname();
   const router = useRouter();
+  // L2: parada no topo a barra e so um cabecalho; com conteudo passando por
+  // baixo, ela flutua. Sentinela de 1px, nao ouvinte de `scroll`.
+  const rolou = useRolou();
   const [loggingOut, setLoggingOut] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -139,7 +143,10 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
   }
 
   return (
-    <header className="bg-superficie border-b border-fio sticky top-0 z-30 shadow-cartao">
+    <header
+      data-rolado={rolou ? "1" : "0"}
+      className="barra-rolada bg-superficie border-b border-fio sticky top-0 z-30"
+    >
       <div className="max-w-pagina mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center">

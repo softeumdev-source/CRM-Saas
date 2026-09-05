@@ -132,7 +132,10 @@ export function PainelDaAba({
       // O painel recebe foco ao ser alcancado por link direto; -1 permite isso
       // sem coloca-lo na ordem de Tab.
       tabIndex={-1}
-      className="foco outline-none"
+      // L2: 160ms para o olho entender que o conteudo trocou, sem esperar.
+      // A `key` reinicia a animacao a cada troca; sem ela o CSS nao redispara.
+      key={chave}
+      className="entra-aba foco outline-none"
     >
       {children}
     </div>
