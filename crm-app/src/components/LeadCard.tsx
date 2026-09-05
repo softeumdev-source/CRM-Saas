@@ -3,9 +3,11 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  Bell,
   CalendarClock,
   ChevronRight,
   CircleAlert,
+  Clock,
   Mail,
   MessageCircle,
 } from "lucide-react";
@@ -13,7 +15,7 @@ import type { NegocioComRelacoes } from "@/lib/types";
 import { temPendencia } from "@/lib/board";
 import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
 import { formatarMoeda, iniciais } from "@/lib/types";
-import { Selo } from "@/components/ui";
+import { Ponto, Selo } from "@/components/ui";
 import {
   descreverPrazo,
   diasSemContato,
@@ -118,15 +120,6 @@ export function LeadCard({
       ? "Nenhuma atividade registrada"
       : `${dias} ${dias === 1 ? "dia" : "dias"} sem contato`;
 
-  /** Hoje ou amanhã — quando a HORA do compromisso ainda muda o dia de alguém. */
-  const ehIminente = (() => {
-    const prazo = proxima ? descreverPrazo(proxima.data_agendada) : "";
-    return prazo === "hoje" || prazo === "amanhã";
-  })();
-  /** Só o relógio de `formatarDataHora`, que devolve "01/09, 16:44". */
-  const horaDe = (iso: string | null | undefined) =>
-    formatarDataHora(iso).split(", ").pop() ?? "";
-
   // Uma resposta nao lida manda no card: e a coisa mais urgente que pode
   // acontecer com um lead, e ganha do atraso e do "trabalhado hoje".
   //
@@ -168,57 +161,40 @@ export function LeadCard({
         borda,
       ].join(" ")}
     >
-      {/* SAÍRAM TRÊS SINAIS DESTA LINHA, e a conta é a razão.
-          O card carregava SEIS avisos de estado ao mesmo tempo: a bolinha, o
-          sino, o selo de prioridade, a cor da borda e DUAS linhas de tempo.
-          Com seis, nenhum manda — é o craft R4 e o Rams #4 (o produto tem que
-          se explicar) na mesma imagem.
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <Ponto
+              tom={comAtividadeHoje ? "ok" : dias === null || dias >= 7 ? "alerta" : "neutro"}
+            />
+            <h3 className="line-clamp-1 text-corpo font-medium text-tinta">
+              {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
+            </h3>
+            {proxima && (
+              <Bell
+                className={`h-3.5 w-3.5 shrink-0 ${proximaAtrasada ? "text-risco" : "text-acento"}`}
+                aria-hidden
+              />
+            )}
+          </div>
+          {negocio.contato?.nome ? (
+            <p className="mt-0.5 line-clamp-1 pl-3.5 text-rotulo text-tinta-suave">
+              {negocio.contato.nome}
+              {negocio.contato.cargo ? ` · ${negocio.contato.cargo}` : ""}
+            </p>
+          ) : null}
+        </div>
 
-          - A BOLINHA dizia o mesmo que a cor da borda, 2px ao lado dela.
-          - O SINO aparecia em todo card que tem próximo passo, ou seja, em
-            quase todos. Sinal que quase nunca varia não é sinal.
-          - O SELO "Média" estava em 100% dos cards: medido, os 25 negócios do
-            banco têm `prioridade = 'media'`. E em ÂMBAR, que em todo o resto
-            do app quer dizer "atenção" — um alarme permanente que treina a
-            pessoa a ignorar a cor justo quando ela importar. "Alta" fica,
-            porque essa é rara e é notícia de verdade.
-
-          Sobra a borda, que já fazia o trabalho sozinha.
-
-          E o VALOR sobe para cá. Ele estava numa faixa `bg-recuo rounded-xl`
-          no meio do card, que no screenshot lê como um CAMPO DE FORMULÁRIO
-          desabilitado — e sem valor dizia "Valor a definir" exatamente onde um
-          `placeholder` ficaria. O card prometia uma edição que não existe
-          (Rams #6, honestidade). Aqui em cima, alinhado à direita do nome, ele
-          é o que é: um atributo do negócio. */}
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="line-clamp-1 text-corpo font-medium text-tinta">
-          {negocio.contato?.empresa || negocio.contato?.nome || negocio.titulo}
-        </h3>
-        {variante === "vendas" ? (
-          negocio.valor ? (
-            <span className="shrink-0 text-corpo font-medium text-tinta tabular">
-              {formatarMoeda(negocio.valor)}
-            </span>
-          ) : (
-            <span className="shrink-0 text-rotulo text-tinta-fraca">a definir</span>
-          )
+        {/* "baixa" nao aparece: um selo cinza em todo card era parte do ruido
+            que deixava o board denso. Alta e media continuam. */}
+        {negocio.prioridade === "alta" || negocio.prioridade === "media" ? (
+          <Selo tom={negocio.prioridade === "alta" ? "risco" : "alerta"}>
+            {negocio.prioridade === "alta" ? "Alta" : "Média"}
+          </Selo>
         ) : null}
       </div>
 
-      {negocio.contato?.nome ? (
-        <p className="mt-0.5 flex items-center gap-1.5 text-rotulo text-tinta-suave">
-          <span className="line-clamp-1">
-            {negocio.contato.nome}
-            {negocio.contato.cargo ? ` · ${negocio.contato.cargo}` : ""}
-          </span>
-          {negocio.prioridade === "alta" ? (
-            <Selo tom="risco">Alta</Selo>
-          ) : null}
-        </p>
-      ) : null}
-
-      <div className="mt-2 space-y-1">
+      <div className="space-y-1 pl-3.5">
         {/* O sinal de resposta vem PRIMEIRO, acima de tudo. */}
         {respondeu && (
           <p className="flex items-center gap-1 text-rotulo font-medium text-info">
@@ -238,53 +214,20 @@ export function LeadCard({
           </p>
         )}
 
-        {/* UMA linha de tempo, e não duas.
-            Eram "18 dias sem contato" e "Atrasado: 01/09, 16:39 (há 4 dias)",
-            uma embaixo da outra, as duas sobre tempo, as duas em cor de aviso.
-            Agora o PRÓXIMO PASSO é a frase — é o que se resolve com um clique —
-            e o tempo sem contato vira o complemento dela, em tinta suave.
-            Quem não tem próximo passo continua tendo a linha, dizendo isso. */}
-        <p
-          className={`flex items-start gap-1 text-rotulo ${
-            proximaAtrasada ? "text-risco" : "text-tinta-suave"
-          }`}
-          title={
-            proxima
-              ? `${proxima.titulo || "Próximo passo"} — ${formatarDataHora(proxima.data_agendada)}`
-              : undefined
-          }
-        >
-          {proximaAtrasada ? (
-            <AlertTriangle className="mt-px h-3 w-3 shrink-0" aria-hidden />
-          ) : (
-            <CalendarClock className="mt-px h-3 w-3 shrink-0" aria-hidden />
-          )}
-          <span className="min-w-0">
-            {proxima ? (
-              <span className={proximaAtrasada ? "font-medium" : "text-tinta"}>
-                {proximaAtrasada ? "Atrasado " : "Próximo "}
-                {descreverPrazo(proxima.data_agendada)}
-                {/* A HORA só quando ela é acionável: hoje e amanhã, quando a
-                    pessoa está montando o dia. Para "em 12 dias" ou "há 4
-                    dias" o relógio não muda nada e só empurrava a linha para
-                    uma segunda — o que, medido na coluna de 288px, comia toda
-                    a altura que a limpeza do card tinha economizado. A data
-                    exata continua no `title`. */}
-                {ehIminente ? `, ${horaDe(proxima.data_agendada)}` : ""}
-              </span>
-            ) : (
-              <span className="text-tinta-suave">Sem próximo passo</span>
-            )}
-            {/* O tempo sem contato só entra quando ele MESMO é a notícia: não
-                há passo atrasado gritando por cima, e faz uma semana ou mais.
-                Antes vinha sempre, inclusive colado a um "Atrasado há 4 dias"
-                — dois fatos sobre tempo na mesma linha, dizendo quase o
-                mesmo. */}
-            {!proximaAtrasada && (dias === null || dias >= 7) ? (
-              <span className="text-tinta-fraca"> · {statusContato.toLowerCase()}</span>
-            ) : null}
-          </span>
+        <p className="flex items-center gap-1 text-rotulo text-tinta-suave">
+          <Clock className="h-3 w-3 shrink-0" aria-hidden /> {statusContato}
         </p>
+
+        {proxima && (
+          <p
+            className={`flex items-center gap-1 text-rotulo ${proximaAtrasada ? "font-medium text-risco" : "text-tinta-suave"}`}
+            title={proxima.titulo || undefined}
+          >
+            <CalendarClock className="h-3 w-3 shrink-0" aria-hidden />
+            {proximaAtrasada ? "Atrasado: " : "Próximo: "}
+            {formatarDataHora(proxima.data_agendada)} ({descreverPrazo(proxima.data_agendada)})
+          </p>
+        )}
 
         {/* Lead parado em nutricao TEM proximo passo: a data em que o sistema o
             devolve. Sem isto ele aparecia como "sem proximo passo", em ambar,
@@ -304,12 +247,9 @@ export function LeadCard({
             a mesma pergunta com mais precisao — ou o trilho da cadencia (o
             proximo passo EXISTE, e o proximo toque) ou "Fora de cadencia".
             Deixar os dois punha dois ambares seguidos dizendo quase o mesmo. */}
-        {/* O "Falta CNPJ" morava dentro da faixa cinza do valor. Com a faixa
-            fora, ele vem para cá, junto dos outros avisos — que é onde um
-            aviso pertence. */}
-        {variante === "vendas" && semCnpj && (
+        {variante === "vendas" && !emNutricao && !proxima && !comAtividadeHoje && (
           <p className="flex items-center gap-1 text-rotulo font-medium text-alerta">
-            <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden /> Falta CNPJ para a proposta
+            <CircleAlert className="h-3 w-3 shrink-0" aria-hidden /> Sem próximo passo agendado
           </p>
         )}
       </div>
@@ -322,13 +262,32 @@ export function LeadCard({
           a superficie e o tingido, entao quem recua e o branco. Sem isto, um
           `bg-recuo` cinza ficaria boiando sobre o azul palido. */}
       {variante === "vendas" ? (
-        /* A faixa do valor SAIU. Ela existia para distinguir o card de vendas
-           do card do SDR com o board desfocado — mas fazia isso desenhando uma
-           caixa cinza no meio do card, que lê como campo de formulário. A
-           distinção continua existindo e é melhor: o card de vendas tem VALOR
-           no canto superior direito, o do SDR tem o trilho da cadência. Forma
-           diferente, sem inventar uma moldura para isso. */
-        null
+        <div
+          className={`my-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
+            respondeu ? "bg-superficie" : "bg-recuo"
+          }`}
+        >
+          {/* Sem valor, a faixa NÃO grita "R$ 0,00".
+              O elemento mais forte do card era um zero — e zero aqui não é o
+              preço, é "ainda não foi precificado". A FAIXA fica, porque é ela
+              que distingue o card de vendas do card do SDR quando se olha o
+              board borrado; o que muda é o que ela diz. Mesmo raciocínio que já
+              tinha tirado o "R$ 0,00" da coluna do SDR.
+              E `font-medium`: o tamanho (`text-corpo-lg`) já dá o destaque, e o
+              DESIGN.md pede hierarquia por cor e tamanho antes de peso. */}
+          {negocio.valor ? (
+            <span className="text-corpo-lg font-medium text-tinta tabular">
+              {formatarMoeda(negocio.valor)}
+            </span>
+          ) : (
+            <span className="text-rotulo text-tinta-suave">Valor a definir</span>
+          )}
+          {semCnpj && (
+            <Selo tom="alerta" icone={AlertTriangle}>
+              Falta CNPJ
+            </Selo>
+          )}
+        </div>
       ) : cadencia ? (
         <div className="my-3 space-y-1.5">
           <div
@@ -387,19 +346,21 @@ export function LeadCard({
             {negocio.responsavel?.nome.split(" ")[0] || "Sem dono"}
           </span>
         </div>
-        {/* A PROBABILIDADE SAIU DOS DOIS BOARDS.
-            O comentário que estava aqui já dizia o motivo — "é copiada da
-            etapa em todo insert e em todo movimento, e nunca editada por
-            negócio, ou seja, todos os cards de uma coluna mostravam o MESMO
-            número" — e mesmo assim ela tinha sido removida só do board do SDR.
-            No print do board de vendas os quatro cards da coluna diziam "70%",
-            os dois da seguinte "70%": um número diferente por coluna, igual
-            dentro dela. Isso é a etapa dita de novo, e a etapa é o nome no topo
-            da coluna. */}
-        <ChevronRight
-          className="h-4 w-4 shrink-0 text-tinta-fraca transition-transform duration-150 ease-out group-hover:translate-x-0.5"
-          aria-hidden
-        />
+        <div className="flex items-center gap-1">
+          {/* A probabilidade e copiada da etapa em todo insert e em todo
+              movimento, e nunca editada por negocio — ou seja, todos os cards
+              de uma coluna mostravam o MESMO numero. No board do SDR ela nao
+              diz nada, entao sai. */}
+          {variante === "vendas" && (
+            <span className="text-rotulo text-tinta-fraca tabular">
+              {negocio.probabilidade ?? 0}%
+            </span>
+          )}
+          <ChevronRight
+            className="h-4 w-4 text-tinta-fraca transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </div>
       </div>
     </Link>
   );
