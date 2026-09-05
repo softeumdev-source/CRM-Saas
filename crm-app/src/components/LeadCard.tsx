@@ -12,6 +12,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import type { NegocioComRelacoes } from "@/lib/types";
+import { temPendencia } from "@/lib/board";
 import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
 import { formatarMoeda, iniciais } from "@/lib/types";
 import { Ponto, Selo } from "@/components/ui";
@@ -74,6 +75,10 @@ export function LeadCard({
   const paraAprovar = aprovacao?.email ?? 0;
   const paraMandar = aprovacao?.whatsapp ?? 0;
   const pendentes = paraAprovar + paraMandar;
+  // O MESMO predicado que o filtro "Precisa aprovação" do board usa, e por
+  // isso importado em vez de reescrito aqui: um card com a borda âmbar que o
+  // filtro não encontra é pior do que não ter filtro nenhum.
+  const temAlgoPendente = temPendencia(aprovacao);
   const IconePendente = paraAprovar > 0 ? Mail : MessageCircle;
   const textoPendente =
     paraAprovar > 0 && paraMandar > 0
@@ -98,7 +103,7 @@ export function LeadCard({
    */
   const destino = respondeu
     ? `/negocios/${negocio.id}?tab=email`
-    : pendentes > 0
+    : temAlgoPendente
       ? `/negocios/${negocio.id}?tab=sequencia`
       : `/negocios/${negocio.id}`;
   const IconeCanal = negocio.ultima_resposta_canal === "whatsapp" ? MessageCircle : Mail;
@@ -119,7 +124,7 @@ export function LeadCard({
   // acontecer com um lead, e ganha do atraso e do "trabalhado hoje".
   const borda = respondeu
     ? "border-info hover:border-info"
-    : pendentes > 0
+    : temAlgoPendente
       ? "border-alerta hover:border-alerta"
       : comAtividadeHoje
         ? "border-ok/40 hover:border-ok"
@@ -192,7 +197,7 @@ export function LeadCard({
         {/* Logo abaixo da resposta: é a segunda coisa mais urgente do card, e
             a única que a pessoa resolve com um clique. Ficava invisível daqui —
             só aparecia depois de abrir o negócio e ir até a aba certa. */}
-        {pendentes > 0 && (
+        {temAlgoPendente && (
           <p className="flex items-center gap-1 text-rotulo font-medium text-alerta">
             <IconePendente className="h-3 w-3 shrink-0" aria-hidden />
             {textoPendente}

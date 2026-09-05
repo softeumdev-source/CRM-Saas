@@ -50,6 +50,17 @@ export type ResumoDeAprovacao = {
   whatsapp: number;
 };
 
+/**
+ * Há algo esperando uma pessoa neste negócio?
+ *
+ * Mora junto com o tipo, e não repetido em cada tela, porque o CARD e o FILTRO
+ * do board têm que concordar: um card com a borda âmbar que o filtro "Precisa
+ * aprovação" não encontra é pior do que não ter filtro nenhum.
+ */
+export function temPendencia(a: ResumoDeAprovacao | undefined): boolean {
+  return !!a && a.email + a.whatsapp > 0;
+}
+
 export type DadosDoBoard = {
   pipeline: Pipeline | null;
   etapas: EtapaPipeline[];

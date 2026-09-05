@@ -6,6 +6,7 @@ import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { Vazio } from "@/components/ui/Cartao";
 import { NewLeadModal } from "@/components/NewLeadModal";
 import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
@@ -17,6 +18,7 @@ import {
   contarPorEtapa,
   mapaDeAprovacoes,
   mapaDeCadencias,
+  temPendencia,
   type ResumoCadencia,
   type ResumoDeAprovacao,
 } from "@/lib/board";
@@ -24,16 +26,23 @@ import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 
-type Foco = "todos" | "respondeu" | "atencao" | "atrasados" | "sem_agenda";
+type Foco = "todos" | "respondeu" | "aprovacao" | "atencao" | "atrasados" | "sem_agenda";
 
 /**
- * "Responderam" vem logo depois de "Todos" porque é o filtro mais urgente da
- * lista: os outros três falam do que NÓS deixamos de fazer; este fala de gente
- * esperando do outro lado.
+ * A ordem é por urgência, e os dois primeiros filtros são os que têm alguém do
+ * outro lado: "Responderam" é o cliente esperando NOSSA resposta, "Precisa
+ * aprovação" é a mensagem já escrita esperando UM CLIQUE. Os três seguintes
+ * falam do que nós deixamos de fazer, que é menos urgente e menos concreto.
+ *
+ * "Precisa aprovação" vale nos DOIS boards, e não só no do SDR: um lead
+ * entregue ao vendedor pode chegar com toque ainda na fila, o card já mostra a
+ * borda âmbar lá, e esconder o chip deixaria o vendedor vendo o aviso sem meio
+ * de filtrar por ele.
  */
 const FOCOS: { chave: Foco; label: string }[] = [
   { chave: "todos", label: "Todos" },
   { chave: "respondeu", label: "Responderam" },
+  { chave: "aprovacao", label: "Precisa aprovação" },
   { chave: "atencao", label: "Sem atividade hoje" },
   { chave: "atrasados", label: "Atrasados" },
   { chave: "sem_agenda", label: "Sem próximo passo" },
@@ -98,8 +107,15 @@ export function KanbanPageClient({
       buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
       contarPorEtapa(supabase, pipelineId),
       ehSdr ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
-      // Nos dois boards: aprovar um e-mail tem que apagar o aviso do card sem
-      // F5, e é este refetch que faz isso.
+      // Nos dois boards. E é preciso dizer o que este refetch NÃO faz: eu
+      // escrevi aqui antes que "aprovar apaga o aviso do card sem F5", e isso
+      // é falso. `useSincronizacao` assina `negocios` e `contatos`; aprovar é
+      // um UPDATE em `mensagens`, e não há gatilho ligando as duas. O aviso só
+      // some quando OUTRO evento dispara este recarregamento.
+      //
+      // Assinar `mensagens` no realtime resolveria, e é decisão à parte: a
+      // tabela não tem recorte de funil, então todo board receberia todo tique
+      // de toda mensagem do tenant.
       buscarAprovacoesDoBoard(supabase),
     ]);
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
@@ -207,6 +223,7 @@ export function KanbanPageClient({
       if (foco !== "todos") {
         const proxima = proximaAtividade(n.atividades_pendentes);
         if (foco === "respondeu" && (n.respostas_nao_lidas ?? 0) === 0) return false;
+        if (foco === "aprovacao" && !temPendencia(aprovacoes[n.id])) return false;
         if (foco === "atencao" && temAtividadeHoje(n)) return false;
         if (foco === "atrasados" && !estaAtrasada(proxima?.data_agendada)) return false;
         if (foco === "sem_agenda" && proxima) return false;
@@ -221,7 +238,10 @@ export function KanbanPageClient({
       const campos = [c?.empresa, c?.nome, c?.email, c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp, n.titulo];
       return campos.some((v) => v && String(v).toLowerCase().includes(termo));
     });
-  }, [negocios, busca, foco, responsavel]);
+    // `aprovacoes` PRECISA estar aqui: sem ela a lista não recalcularia quando
+    // alguém aprovasse um e-mail, e o card ficaria no filtro depois de sair da
+    // fila.
+  }, [negocios, busca, foco, responsavel, aprovacoes]);
 
   const resumo = useMemo(() => {
     const abertos = filtrados.filter((n) => n.ganho === null || n.ganho === undefined);
@@ -249,6 +269,12 @@ export function KanbanPageClient({
     [negocios],
   );
 
+  /** Mesma regra, mesmo motivo: sobre o board inteiro, não sobre o recorte. */
+  const totalPendentes = useMemo(
+    () => negocios.filter((n) => temPendencia(aprovacoes[n.id])).length,
+    [negocios, aprovacoes],
+  );
+
   // Contagem por etapa do que está carregado, sem os filtros de tela — é o
   // outro lado da conta do "ver mais" no cabeçalho da coluna.
   const carregadosPorEtapa = useMemo(() => {
@@ -265,6 +291,12 @@ export function KanbanPageClient({
   };
 
   const filtroAtivo = foco !== "todos" || busca.trim() !== "" || (usuarioAtual.role === "admin" && responsavel !== "todos");
+
+  const limparFiltros = () => {
+    setBusca("");
+    setFoco("todos");
+    if (usuarioAtual.role === "admin") setResponsavel("todos");
+  };
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -381,6 +413,21 @@ export function KanbanPageClient({
                     {totalResponderam}
                   </span>
                 )}
+                {/* Âmbar, e não o azul do vizinho: azul neste board quer dizer
+                    "o cliente respondeu". Fila nossa é outra coisa, e a mesma
+                    cor faria os dois avisos se confundirem.
+
+                    O par `-fraco` + texto colorido é a convenção do projeto
+                    para pílula colorida (LeadsTab, VendedoresTab), e é a que
+                    passa contraste nos dois temas. O selo azul ao lado usa
+                    `text-white`, que no tema escuro fica apertado — não mexi
+                    nele aqui para não trocar uma cor que você já está olhando,
+                    mas fica anotado. */}
+                {f.chave === "aprovacao" && totalPendentes > 0 && (
+                  <span className="rounded-full bg-alerta-fraco px-1.5 text-[0.625rem] font-bold text-alerta tabular">
+                    {totalPendentes}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -400,11 +447,7 @@ export function KanbanPageClient({
 
           {filtroAtivo && (
             <button
-              onClick={() => {
-                setBusca("");
-                setFoco("todos");
-                if (usuarioAtual.role === "admin") setResponsavel("todos");
-              }}
+              onClick={limparFiltros}
               className="flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
             >
               <X className="h-3.5 w-3.5" /> Limpar filtros
@@ -420,6 +463,42 @@ export function KanbanPageClient({
         )}
       </div>
 
+      {/* Com filtro ligado e nenhum card, TODAS as colunas diziam "Nenhum
+          negócio nesta etapa" e nada explicava que a culpa era do filtro. Pior
+          no filtro novo: fila zerada é VITÓRIA, e ler seis vezes "nenhum
+          negócio" parece erro.
+
+          O `Vazio` já existe e já é usado assim no admin — a diferença aqui é
+          que a frase muda com o motivo, porque "não achei nada" e "não há nada
+          a fazer" são notícias opostas. */}
+      {filtroAtivo && filtrados.length === 0 ? (
+        <div className="flex-1 min-h-0 overflow-auto">
+          <Vazio
+            icone={foco === "aprovacao" || foco === "respondeu" ? CheckCircle2 : Search}
+            titulo={
+              foco === "aprovacao"
+                ? "Fila zerada"
+                : foco === "respondeu"
+                  ? "Ninguém esperando"
+                  : "Nada com esses filtros"
+            }
+            acao={
+              <button
+                onClick={limparFiltros}
+                className="flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
+              >
+                <X className="h-3.5 w-3.5" /> Limpar filtros
+              </button>
+            }
+          >
+            {foco === "aprovacao"
+              ? "Nenhuma mensagem esperando aprovação neste funil. Quando a cadência gerar o próximo toque, ele aparece aqui."
+              : foco === "respondeu"
+                ? "Nenhuma resposta por ler neste funil."
+                : "Nenhum card combina com a busca e os filtros ativos."}
+          </Vazio>
+        </div>
+      ) : (
       <KanbanBoard
         etapas={etapas}
         negocios={filtrados}
@@ -433,6 +512,7 @@ export function KanbanPageClient({
         onNovoNegocio={abrirNovoNegocio}
         onMoverNegocio={moverNegocio}
       />
+      )}
 
       {modalAberto && (
         <NewLeadModal
