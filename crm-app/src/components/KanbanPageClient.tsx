@@ -107,15 +107,22 @@ export function KanbanPageClient({
       buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
       contarPorEtapa(supabase, pipelineId),
       ehSdr ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
-      // Nos dois boards. E é preciso dizer o que este refetch NÃO faz: eu
-      // escrevi aqui antes que "aprovar apaga o aviso do card sem F5", e isso
-      // é falso. `useSincronizacao` assina `negocios` e `contatos`; aprovar é
-      // um UPDATE em `mensagens`, e não há gatilho ligando as duas. O aviso só
-      // some quando OUTRO evento dispara este recarregamento.
+      // Nos dois boards — e agora o aviso do card aparece e some NA HORA,
+      // porque a notícia chega por `negocios`, que este canal já assina.
       //
-      // Assinar `mensagens` no realtime resolveria, e é decisão à parte: a
-      // tabela não tem recorte de funil, então todo board receberia todo tique
-      // de toda mensagem do tenant.
+      // Isto NÃO era verdade até hoje, e a correção não está aqui: está no
+      // gatilho `trg_mensagens_fila_mudou`, que toca `negocios.atualizado_em`
+      // quando uma mensagem entra ou sai de 'aguardando_aprovacao'. Sem ele o
+      // aviso só sumia na recarga de segurança de 45s, e o aviso de um toque
+      // NOVO — gerado pela cadência de 5 em 5 minutos — demorava o mesmo tanto
+      // para acender.
+      //
+      // Assinar `mensagens` aqui teria sido uma linha, e foi o primeiro caminho
+      // que eu tentei. Mas `mensagens` não tem recorte de funil: o board do SDR
+      // passaria a recarregar a cada tique do funil de Vendas. O gatilho reusa
+      // o canal que JÁ é recortado — e é o mesmo desenho que
+      // `mensagens_sinalizar_resposta` usa desde sempre para o selo azul de
+      // "o cliente respondeu".
       buscarAprovacoesDoBoard(supabase),
     ]);
     if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
