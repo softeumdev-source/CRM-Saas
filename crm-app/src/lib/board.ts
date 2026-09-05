@@ -120,11 +120,26 @@ export async function carregarBoard(
       buscarAprovacoesDoBoard(supabase),
     ]);
 
+  const totaisPorEtapa = Object.fromEntries((totais || []).map((t) => [t.etapa_id, Number(t.total)]));
+
   return {
     pipeline,
-    etapas,
+    // ─────────────────────────────────────────────────────────────────────
+    // AQUI, E SÓ AQUI, AS COLUNAS SOMEM.
+    //
+    // O filtro é do KANBAN, não das etapas. `carregarEtapas` continua devolvendo
+    // tudo, e precisa continuar: é ela que alimenta a prop `entrega` da tela do
+    // negócio, o seletor de etapa dentro do card, a lista, o admin e o
+    // "mover de funil". Filtrar lá derrubaria o botão "Agendar e entregar ao
+    // vendedor" — a etapa de entrega do SDR é justamente uma das escondidas.
+    //
+    // A conta usa `totaisPorEtapa`, que é a contagem REAL da etapa, e não os
+    // cards carregados: uma coluna com mais de `porEtapa` negócios, ou um
+    // negócio filtrado na tela, não pode fazer a coluna sumir com card dentro.
+    // ─────────────────────────────────────────────────────────────────────
+    etapas: etapas.filter((e) => !e.oculta_quando_vazia || (totaisPorEtapa[e.id] ?? 0) > 0),
     negocios: (negocios as unknown as NegocioComRelacoes[]) || [],
-    totaisPorEtapa: Object.fromEntries((totais || []).map((t) => [t.etapa_id, Number(t.total)])),
+    totaisPorEtapa,
     porEtapa,
     responsaveis: responsaveis || [],
     usuarioAtual: usuarioAtual!,

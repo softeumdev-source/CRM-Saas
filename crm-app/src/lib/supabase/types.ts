@@ -560,6 +560,7 @@ export type Database = {
           funcao: string | null
           id: string
           nome: string
+          oculta_quando_vazia: boolean
           ordem: number
           pipeline_id: string | null
           probabilidade: number | null
@@ -571,6 +572,7 @@ export type Database = {
           funcao?: string | null
           id?: string
           nome: string
+          oculta_quando_vazia?: boolean
           ordem: number
           pipeline_id?: string | null
           probabilidade?: number | null
@@ -582,6 +584,7 @@ export type Database = {
           funcao?: string | null
           id?: string
           nome?: string
+          oculta_quando_vazia?: boolean
           ordem?: number
           pipeline_id?: string | null
           probabilidade?: number | null
