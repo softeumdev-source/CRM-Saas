@@ -5,6 +5,7 @@ import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 import { emailBase } from "@/lib/resend";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
+import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
@@ -295,6 +296,10 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           const tenantId =
             (envelopeRow?.proposta as { negocio?: { tenant_id?: string } } | null)?.negocio?.tenant_id ?? null;
 
+          // Mesma fonte do cabecalho — `enviarDoTenant` le a caixa por dentro,
+          // e o corpo precisa do nome antes disso.
+          const assinatura = await quemAssina(admin, tenantId);
+
           const destinatarios = new Set<string>();
           for (const sig of todosSig || []) {
             if (sig.email) destinatarios.add(sig.email);
@@ -344,7 +349,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
                   </tr>
                 </table>
                 <p style="font-size:12px; color:#64748b;">Os documentos incluem o certificado de conclusão com os dados de todos os signatários.</p>
-              `),
+              `, { assinatura }),
             });
           }
         }

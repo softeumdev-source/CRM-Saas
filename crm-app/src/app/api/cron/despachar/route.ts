@@ -155,7 +155,7 @@ export async function GET(request: Request) {
                   nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                   para: m.destino!,
                   assunto,
-                  html: emailBase(m.corpo),
+                  html: emailBase(m.corpo, { assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE }),
                   emRespostaA: t?.emRespostaA ?? null,
                   referencias: t?.referencias ?? null,
                 },

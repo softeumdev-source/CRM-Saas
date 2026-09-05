@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailBase } from "@/lib/resend";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
+import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
@@ -131,6 +132,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   }
 
   const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+  // Quem assina o corpo tem que ser quem assina o cabecalho — e o cabecalho
+  // sai da caixa, la dentro do `enviarDoTenant`. Entao o nome vem da mesma
+  // fonte, uma pergunta antes de montar o HTML.
+  const assinatura = await quemAssina(admin, usuarioAtual?.tenant_id);
 
   let algumEmailEnviado = false;
   let emailErro: string | null = null;
@@ -163,7 +168,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
         </p>
         <p style="font-size:12px; color:#64748b;">Se o botão não funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
-      `),
+      `, { assinatura }),
     });
     if (resultado.enviado) algumEmailEnviado = true;
     if (resultado.erro && !emailErro) emailErro = resultado.erro;
@@ -180,7 +185,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         <p style="text-align:center; margin: 28px 0;">
           <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
         </p>
-      `),
+      `, { assinatura }),
     });
   }
 

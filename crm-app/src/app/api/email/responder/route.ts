@@ -10,7 +10,7 @@ import {
 } from "@/lib/gmail/caixa";
 import { enviarPeloGmail, type AnexoParaEnviar } from "@/lib/gmail/enviar";
 import { htmlDeTexto } from "@/lib/gmail/corpo";
-import { emailBase } from "@/lib/resend";
+import { emailBase, assinaturaEmTexto } from "@/lib/resend";
 import { ANEXOS_POR_MENSAGEM } from "@/lib/anexos";
 
 /**
@@ -326,6 +326,9 @@ export async function POST(request: Request) {
     await admin.from("anexos").update({ mensagem_id: linha.id }).in("id", anexoIds);
   }
 
+  // Uma leitura so: o cabecalho e a assinatura tem que dizer o mesmo nome.
+  const quemAssinaAqui = caixa.nome ?? NOME_PADRAO_DO_REMETENTE;
+
   let enviado: { id: string; threadId: string; messageId: string } | null = null;
   let erroEnvio: string | null = null;
   try {
@@ -335,11 +338,15 @@ export async function POST(request: Request) {
         de: caixa.email,
         // Quem está falando é quem CLICOU, não o dono do negócio: um admin
         // respondendo em nome de outra pessoa assinaria com o nome errado.
-        nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
+        nomeDeExibicao: quemAssinaAqui,
         para: destino,
         assunto,
-        html: emailBase(htmlDeTexto(texto)),
-        texto: texto.trim(),
+        html: emailBase(htmlDeTexto(texto), { assinatura: quemAssinaAqui }),
+        // A parte de texto puro NAO herda a assinatura do HTML: quando o
+        // chamador manda `texto`, `montarMime` usa esse texto e nao deriva nada
+        // do HTML. Sem esta linha, quem le em texto puro recebe a mensagem sem
+        // assinatura nenhuma.
+        texto: texto.trim() + assinaturaEmTexto(quemAssinaAqui),
         emRespostaA: contexto?.emRespostaA ?? null,
         referencias: contexto?.referencias ?? null,
         anexos: anexosParaEnviar,

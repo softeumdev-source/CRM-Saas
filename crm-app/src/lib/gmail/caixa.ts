@@ -94,6 +94,24 @@ export async function caixasDeSaida(
  */
 export const NOME_PADRAO_DO_REMETENTE = "Softeum";
 
+/**
+ * O nome que assina, para quem precisa dele ANTES de montar o corpo.
+ *
+ * `enviarDoTenant` resolve a caixa por dentro, o que basta para o cabeçalho.
+ * Mas a assinatura vai no CORPO, e o corpo é montado no chamador — que então
+ * precisa do nome uma pergunta antes. Uma consulta a mais numa rota que já
+ * gera PDF e sobe arquivo é troco; ler o nome de outro lugar seria voltar a ter
+ * duas fontes para a mesma pessoa.
+ */
+export async function quemAssina(
+  supabase: SupabaseClient<Database>,
+  tenantId: string | null | undefined,
+): Promise<string> {
+  if (!tenantId) return NOME_PADRAO_DO_REMETENTE;
+  const caixa = (await caixasDeSaida(supabase, [tenantId])).get(tenantId);
+  return caixa?.nome || NOME_PADRAO_DO_REMETENTE;
+}
+
 export type ContextoDeThread = {
   threadId: string | null;
   /** `Message-ID` da última mensagem, para o `In-Reply-To`. */
