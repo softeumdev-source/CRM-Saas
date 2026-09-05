@@ -7,6 +7,7 @@ import { PdfSignViewer } from "@/components/PdfSignViewer";
 import type { CampoAssinatura } from "@/components/PdfFieldEditor";
 import type { DocumentosAssinados, EnvelopePublico } from "@/lib/types";
 import { mensagemDoErro } from "@/lib/erros";
+import { Modal } from "@/components/ui";
 import {
   FileSignature,
   CheckCircle2,
@@ -15,7 +16,6 @@ import {
   ShieldCheck,
   Building2,
   Mail,
-  X,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -102,7 +102,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   if (erro && !dados) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-recuo p-4">
-        <div className="bg-superficie rounded-2xl border border-fio p-8 max-w-md text-center shadow-lg">
+        <div className="bg-superficie rounded-2xl border border-fio p-8 max-w-md text-center shadow-cartao">
           <ShieldCheck className="h-10 w-10 text-risco mx-auto mb-3" />
           <p className="text-corpo font-semibold text-tinta">{erro}</p>
         </div>
@@ -123,13 +123,13 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       <div className="flex items-center gap-2 bg-recuo p-1 rounded-xl w-fit">
         <button
           onClick={() => setModoAssinatura("digitada")}
-          className={`px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
+          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "digitada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
         >
           Digitar nome
         </button>
         <button
           onClick={() => setModoAssinatura("desenhada")}
-          className={`px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
+          className={`foco px-3 py-1.5 text-rotulo font-medium rounded-lg ${modoAssinatura === "desenhada" ? "bg-superficie shadow-xs text-acento" : "text-tinta-suave"}`}
         >
           Desenhar assinatura
         </button>
@@ -139,7 +139,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         <input
           value={nomeDigitado}
           onChange={(e) => setNomeDigitado(e.target.value)}
-          className="w-full px-4 py-3 text-display border-b-2 border-fio-forte focus:border-acento outline-hidden"
+          className="foco w-full px-4 py-3 text-display border-b-2 border-fio-forte"
           style={{ fontFamily: "cursive" }}
         />
       ) : (
@@ -156,7 +156,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           value={emailFaturamento}
           onChange={(e) => setEmailFaturamento(e.target.value)}
           placeholder="email@empresa.com.br"
-          className="w-full px-3 py-2 text-corpo border border-fio-forte rounded-xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
+          className="foco w-full px-3 py-2 text-corpo border border-fio-forte rounded-xl"
         />
       </div>
 
@@ -174,7 +174,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       <button
         onClick={handleAssinar}
         disabled={!aceite || enviando}
-        className="w-full py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+        className="foco w-full py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
         Assinar documento
@@ -184,17 +184,20 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   return (
     <div className="min-h-screen bg-recuo">
-      <header className="bg-superficie text-white px-6 py-4 flex items-center gap-3">
+      {/* Era `bg-superficie text-white`: no tema claro a superficie E branca,
+          entao "SOFTEUM · Assinatura Eletronica" ficava branco no branco —
+          invisivel na PRIMEIRA tela que o cliente ve para assinar. */}
+      <header className="bg-superficie border-b border-fio px-6 py-4 flex items-center gap-3">
         <FileSignature className="h-5 w-5 text-acento" />
         <div>
-          <p className="font-semibold text-corpo">SOFTEUM · Assinatura Eletrônica</p>
+          <p className="font-semibold text-corpo text-tinta">SOFTEUM · Assinatura Eletrônica</p>
           <p className="text-rotulo text-tinta-fraca">Proposta {dados.proposta.numero} · v{dados.proposta.versao}</p>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
         {concluido ? (
-          <div className="bg-superficie rounded-2xl border border-ok/40 shadow-lg p-10 text-center">
+          <div className="bg-superficie rounded-2xl border border-ok/40 shadow-cartao p-10 text-center">
             <CheckCircle2 className="h-14 w-14 text-ok mx-auto mb-4" />
             <h1 className="text-titulo font-semibold text-tinta">Assinatura registrada com sucesso!</h1>
             <p className="text-corpo text-tinta-suave mt-2">
@@ -208,7 +211,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     href={docsAssinados.comercial}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl"
                   >
                     <FileText className="h-4 w-4" /> Proposta Comercial
                   </a>
@@ -216,7 +219,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     href={docsAssinados.tecnica}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-white bg-superficie hover:bg-recuo rounded-xl shadow-md"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-corpo font-semibold text-tinta bg-superficie hover:bg-recuo rounded-xl border border-fio"
                   >
                     <FileText className="h-4 w-4" /> Proposta Técnica
                   </a>
@@ -263,7 +266,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                   />
                 ) : (
                   <div className="rounded-xl overflow-hidden border border-fio">
-                    <iframe src={comercialUrl} className="w-full h-[500px]" title="Proposta Comercial" />
+                    <iframe src={comercialUrl} className="w-full h-125" title="Proposta Comercial" />
                   </div>
                 )}
               </div>
@@ -280,7 +283,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
             <div className="bg-superficie rounded-2xl border border-fio shadow-xs overflow-hidden">
               <button
                 onClick={() => setTecnicaAberta(!tecnicaAberta)}
-                className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-recuo transition-colors"
+                className="foco w-full flex items-center justify-between px-6 py-4 text-left hover:bg-recuo transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-tinta-fraca" />
@@ -312,7 +315,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                     />
                   ) : (
                     <div className="rounded-xl overflow-hidden border border-fio">
-                      <iframe src={tecnicaUrl} className="w-full h-[500px]" title="Proposta Técnica" />
+                      <iframe src={tecnicaUrl} className="w-full h-125" title="Proposta Técnica" />
                     </div>
                   )}
                 </div>
@@ -322,22 +325,17 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         )}
       </main>
 
-      {modalAssinatura && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-superficie rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 relative">
-            <button onClick={() => setModalAssinatura(false)} className="absolute top-4 right-4 text-tinta-fraca hover:text-tinta">
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              <FileSignature className="h-5 w-5 text-acento" />
-              <h2 className="font-semibold text-corpo text-tinta">Assinar como {dados.signatario.nome}</h2>
-            </div>
-
-            {painelAssinatura}
-          </div>
-        </div>
-      )}
+      {/* Era um modal escrito a mao: `bg-black/50` cru no lugar do veu, sem
+          Escape, sem foco preso e sem `aria-modal`. Quem assina aqui e o
+          CLIENTE, e essa e a tela em que ele decide — o `Modal` do sistema traz
+          as tres coisas de graca. */}
+      <Modal
+        aberto={modalAssinatura}
+        aoFechar={() => setModalAssinatura(false)}
+        titulo={`Assinar como ${dados.signatario.nome}`}
+      >
+        {painelAssinatura}
+      </Modal>
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
       <button
         type="button"
         onClick={limpar}
-        className="flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-risco"
+        className="foco flex items-center gap-1.5 text-rotulo font-medium text-tinta-suave hover:text-risco"
       >
         <Eraser className="h-3.5 w-3.5" />
         Limpar assinatura

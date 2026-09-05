@@ -343,9 +343,9 @@ export function MensagensTab({
                       className={[
                         "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-rotulo font-semibold",
                         "transition-colors duration-150 ease-out",
-                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento",
+                        "foco",
                         link
-                          ? "bg-acento text-white hover:bg-acento/90"
+                          ? "bg-acento-solido text-acento-tinta hover:bg-acento-solido-hover"
                           : "bg-recuo text-tinta-fraca pointer-events-none",
                       ].join(" ")}
                     >
@@ -556,7 +556,7 @@ export function MensagensTab({
         ) : (
           <div className="space-y-3">
             <div className="flex items-end gap-2 flex-wrap">
-              <div className="min-w-[240px]">
+              <div className="min-w-60">
                 <label className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">
                   Inscrever este lead em
                 </label>

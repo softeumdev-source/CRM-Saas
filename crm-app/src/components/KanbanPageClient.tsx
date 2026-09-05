@@ -404,7 +404,7 @@ export function KanbanPageClient({
       }
     >
       <div
-        className={`max-w-[1700px] mx-auto w-full px-4 sm:px-6 ${
+        className={`max-w-pagina mx-auto w-full px-4 sm:px-6 ${
           maximizado ? "pt-3 space-y-2.5" : "pt-5 space-y-3"
         }`}
       >
@@ -438,7 +438,7 @@ export function KanbanPageClient({
             </button>
             <button
               onClick={() => abrirNovoNegocio(etapas[0]?.id || "")}
-              className="flex items-center gap-2 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md active:scale-[0.98] transition-colors duration-150 ease-out"
+              className="foco flex items-center gap-2 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl active:scale-98 transition-colors duration-150 ease-out"
             >
               <Plus className="h-4 w-4" />
               <span>{ehSdr ? "Novo Lead" : "Novo Negócio"}</span>
@@ -510,13 +510,13 @@ export function KanbanPageClient({
         )}
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[240px] max-w-md">
+          <div className="relative flex-1 min-w-60 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tinta-fraca" />
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar por empresa, nome, e-mail, telefone ou CNPJ..."
-              className="w-full pl-10 pr-4 py-2 text-corpo bg-superficie border border-fio rounded-xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
+              className="foco w-full pl-10 pr-4 py-2 text-corpo bg-superficie border border-fio rounded-xl"
             />
           </div>
 
@@ -541,7 +541,7 @@ export function KanbanPageClient({
                     esperando: um "(0)" permanente seria ruído, e o zero é
                     justamente o estado em que não há nada a fazer. */}
                 {f.chave === "respondeu" && totalResponderam > 0 && (
-                  <span className="rounded-full bg-info px-1.5 text-[0.625rem] font-bold text-white tabular">
+                  <span className="rounded-full bg-info-fraco px-1.5 text-rotulo font-medium text-info tabular">
                     {totalResponderam}
                   </span>
                 )}
@@ -551,12 +551,11 @@ export function KanbanPageClient({
 
                     O par `-fraco` + texto colorido é a convenção do projeto
                     para pílula colorida (LeadsTab, VendedoresTab), e é a que
-                    passa contraste nos dois temas. O selo azul ao lado usa
-                    `text-white`, que no tema escuro fica apertado — não mexi
-                    nele aqui para não trocar uma cor que você já está olhando,
-                    mas fica anotado. */}
+                    passa contraste nos dois temas. O selo azul ao lado era
+                    `bg-info text-white` e ficava apertado no escuro; hoje usa o
+                    mesmo par, `bg-info-fraco text-info`. */}
                 {f.chave === "aprovacao" && totalPendentes > 0 && (
-                  <span className="rounded-full bg-alerta-fraco px-1.5 text-[0.625rem] font-bold text-alerta tabular">
+                  <span className="rounded-full bg-alerta-fraco px-1.5 text-rotulo font-medium text-alerta tabular">
                     {totalPendentes}
                   </span>
                 )}
@@ -580,7 +579,7 @@ export function KanbanPageClient({
           {filtroAtivo && (
             <button
               onClick={limparFiltros}
-              className="flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
+              className="foco flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
             >
               <X className="h-3.5 w-3.5" /> Limpar filtros
             </button>
@@ -617,7 +616,7 @@ export function KanbanPageClient({
             acao={
               <button
                 onClick={limparFiltros}
-                className="flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
+                className="foco flex items-center gap-1 px-3 py-2 text-rotulo font-semibold text-tinta-suave hover:text-risco rounded-xl"
               >
                 <X className="h-3.5 w-3.5" /> Limpar filtros
               </button>

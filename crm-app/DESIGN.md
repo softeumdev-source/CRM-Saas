@@ -41,6 +41,7 @@ O tema escuro é a redefinição desses tokens num só lugar. **Cada `dark:` apa
 | Ação | `text-acento`, `bg-acento-fraco` |
 | Estado | `ok` · `alerta` · `risco` · `info`, cada um com par `-fraco` |
 | Preenchimento sólido (botão) | `bg-acento-solido` + `text-acento-tinta` |
+| Véu atrás do modal | `bg-veu` |
 
 O par sólido existe porque no escuro o acento **clareia** — texto branco sobre roxo claro perde contraste, então o botão inverte (fundo claro, tinta escura) em vez de ficar ilegível.
 
@@ -101,9 +102,19 @@ Os tokens de raio **não** foram redefinidos de propósito: sobrescrever `--radi
 
 A escala de 4px do Tailwind. **Sem valor arbitrário** (`h-4.5`, `mt-[13px]`). O vão *dentro* de um grupo tem que ser visivelmente menor que o vão *entre* grupos — se forem iguais, o agrupamento some.
 
+Sobraram três famílias de valor entre colchetes, e as três são deliberadas, não descuido:
+
+- `transition-[background-color,color]` — é o **oposto** de descuido: nomear a propriedade é a regra de movimento logo abaixo.
+- unidade que não é pixel — `max-w-[62ch]` (medida de leitura), `max-h-[90vh]`, `grid-cols-[1.4fr_1fr]`. A escala de 4px não fala essas línguas.
+- `rounded-[10px]` do quadrado interno da logo: é o raio **concêntrico** (12px do `rounded-xl` de fora menos os 2px do `p-0.5`). Usar 8px abriria meia-lua em cada canto.
+
+Duas larguras são token, e não número solto: `max-w-pagina` (1700px, a largura do app) e `max-w-leitura` (1100px, para tela em que se lê e se decide). A primeira estava escrita à mão em seis arquivos.
+
 ### Todo estado é desenhado
 
 Todo elemento interativo tem `hover`, `focus-visible`, `active` e `disabled`. O anel de foco é a utilidade **`foco`** — uma classe, em vez de quatro `focus-visible:outline-*` copiadas (e esquecidas em 24 dos 30 inputs).
+
+Medido: dos 92 `<button>` do app, **23** tinham anel de foco. Hoje são os 92. E não sobrou nenhum `focus-visible:outline-*` à mão — havia três em que a classe da COR tinha sumido na migração de paleta, ou seja, um anel de 2px na cor do texto, e ninguém tinha percebido. `outline-hidden`/`outline-none` só existe onde `foco` entra logo em seguida como substituto.
 
 Toda superfície assíncrona tem **carregando**, **vazio** e **erro** desenhados. Use `Vazio`, que obriga a dizer o que fazer a seguir em vez de só "nenhum resultado".
 

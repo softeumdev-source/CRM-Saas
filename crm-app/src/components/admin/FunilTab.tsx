@@ -97,7 +97,7 @@ export function FunilTab({
                         href={`/negocios/${n.id}`}
                         className="text-rotulo p-1.5 bg-superficie rounded-lg border border-fio/60 flex items-center justify-between hover:border-acento transition-colors"
                       >
-                        <span className="font-medium text-tinta truncate max-w-[130px]">
+                        <span className="font-medium text-tinta truncate max-w-32">
                           {n.contato?.empresa || n.contato?.nome}
                         </span>
                         <span className="font-medium text-tinta-suave">{formatarMoeda(n.valor)}</span>

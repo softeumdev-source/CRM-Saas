@@ -326,7 +326,7 @@ function Chip({
       <button
         onClick={aoRemover}
         aria-label={`Remover ${nome}`}
-        className="foco relative -mr-1 shrink-0 rounded-md p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-risco pointer-coarse:after:absolute pointer-coarse:after:left-1/2 pointer-coarse:after:top-1/2 pointer-coarse:after:h-11 pointer-coarse:after:w-11 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:content-['']"
+        className="foco relative -mr-1 shrink-0 rounded-lg p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-risco pointer-coarse:after:absolute pointer-coarse:after:left-1/2 pointer-coarse:after:top-1/2 pointer-coarse:after:h-11 pointer-coarse:after:w-11 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:content-['']"
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>

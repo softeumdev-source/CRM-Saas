@@ -84,6 +84,12 @@
   --grafico-5: #4644c2;
   --grafico-6: #372daa;
 
+  /* O veu do modal. Era `bg-[rgb(12_15_20/0.55)]` escrito dentro do
+     componente — um valor arbitrario, e o UNICO lugar do app onde uma cor
+     nascia fora dos tokens. No escuro ele tambem precisa ser mais denso: o
+     mesmo alfa sobre um fundo ja escuro quase nao separa o modal do resto. */
+  --cor-veu: rgb(12 15 20 / 0.55);
+
   /* Sombra so para o que flutua (craft R10); estrutura e feita de fio.
      Baixa opacidade e duas camadas: sombra de alfa alto le como adesivo. */
   --sombra-cartao: 0 1px 2px rgb(16 20 28 / 0.04);
@@ -157,6 +163,8 @@ b {
     --grafico-6: #484bb2;
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.30);
     --sombra-flutuante: 0 4px 6px -2px rgb(0 0 0 / 0.35), 0 12px 24px -6px rgb(0 0 0 / 0.45);
+
+    --cor-veu: rgb(4 6 10 / 0.68);
   }
 }
 
@@ -215,8 +223,18 @@ b {
   --color-grafico-4: var(--grafico-4);
   --color-grafico-5: var(--grafico-5);
   --color-grafico-6: var(--grafico-6);
+  --color-veu: var(--cor-veu);
   --shadow-cartao: var(--sombra-cartao);
   --shadow-flutuante: var(--sombra-flutuante);
+
+  /* A largura da pagina. Estava escrita como `max-w-[1700px]` em SEIS
+     arquivos — navbar, os dois boards, lista, admin e o cabecalho do card.
+     Seis lugares para mudar quando a medida mudar, e nenhum deles sabia dos
+     outros. Como `--container-*`, o Tailwind gera `max-w-pagina` sozinho. */
+  --container-pagina: 1700px;
+  /* A largura de LEITURA, deliberadamente menor que a da pagina: telas em que
+     se le e se decide (a quarentena) nao querem 1700px de linha. */
+  --container-leitura: 1100px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

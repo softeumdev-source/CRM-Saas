@@ -137,7 +137,7 @@ export function Modal({
       style={{ isolation: "isolate" }}
     >
       <div
-        className="absolute inset-0 bg-[rgb(12_15_20/0.55)] backdrop-blur-xs"
+        className="absolute inset-0 bg-veu backdrop-blur-xs"
         onClick={aoFechar}
         aria-hidden
       />

@@ -138,7 +138,7 @@ export function HorarioDeAtendimento({ inicial }: { inicial: Preferencias | null
                 className={[
                   "rounded-lg px-3 py-1.5 text-rotulo font-medium border",
                   "transition-colors duration-150 ease-out",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento",
+                  "foco",
                   ativo
                     ? "border-acento bg-acento-fraco text-acento"
                     : "border-fio bg-superficie text-tinta-suave hover:bg-recuo",

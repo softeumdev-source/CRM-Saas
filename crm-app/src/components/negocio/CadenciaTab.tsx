@@ -473,9 +473,9 @@ export function CadenciaTab({
                   key={t}
                   type="button"
                   onClick={() => setTipo(t)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium rounded-xl border transition-colors duration-150 ease-out ${
+                  className={`foco flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium rounded-xl border transition-colors duration-150 ease-out ${
                     ativo
-                      ? "bg-acento-solido text-acento-tinta border-acento shadow-md"
+                      ? "bg-acento-solido text-acento-tinta border-acento"
                       : "bg-recuo text-tinta-suave border-fio hover:border-fio-forte"
                   }`}
                 >
@@ -500,10 +500,8 @@ export function CadenciaTab({
                 placeholder={
                   "Anote aqui tudo que importa:\n• Com quem falou e qual o cargo\n• Dores e prioridades levantadas\n• Objeções, concorrentes e preço discutido\n• O que ficou combinado e o prazo"
                 }
-                className={`w-full px-3.5 py-2.5 text-corpo leading-relaxed rounded-xl border bg-recuo resize-y min-h-[240px] outline-hidden focus:ring-1 ${
-                  tocouTexto && textoInvalido
-                    ? "border-risco focus:border-risco focus:ring-risco"
-                    : "border-fio focus:border-acento focus:ring-acento"
+                className={`foco w-full px-3.5 py-2.5 text-corpo leading-relaxed rounded-xl border bg-recuo resize-y min-h-60 ${
+                  tocouTexto && textoInvalido ? "border-risco" : "border-fio"
                 }`}
               />
               {tocouTexto && textoInvalido ? (
@@ -561,7 +559,7 @@ export function CadenciaTab({
                         key={p.rotulo}
                         type="button"
                         onClick={() => aplicarPreset(i)}
-                        className="px-2.5 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg hover:bg-acento-fraco"
+                        className="foco px-2.5 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg hover:bg-acento-fraco"
                       >
                         {p.rotulo}
                       </button>
@@ -616,7 +614,7 @@ export function CadenciaTab({
           <button
             type="submit"
             disabled={salvando}
-            className="px-5 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+            className="foco px-5 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Registrar atividade
@@ -624,7 +622,7 @@ export function CadenciaTab({
           <button
             type="button"
             onClick={limparFormulario}
-            className="px-3 py-2.5 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl"
+            className="foco px-3 py-2.5 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl"
           >
             Limpar
           </button>
@@ -661,8 +659,8 @@ export function CadenciaTab({
                   }`}
                 >
                   <div
-                    className={`h-8 w-8 rounded-full text-white flex items-center justify-center shrink-0 ${
-                      atrasada ? "bg-risco-solido" : "bg-acento-solido"
+                    className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                      atrasada ? "bg-risco-solido text-risco-tinta" : "bg-acento-solido text-acento-tinta"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -751,7 +749,7 @@ export function CadenciaTab({
                                   href={a.google_meet_link}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-rotulo font-medium text-acento hover:underline focus-visible:outline-2 focus-visible:outline-offset-2  rounded"
+                                  className="foco rounded-lg text-rotulo font-medium text-acento hover:underline"
                                 >
                                   abrir o Meet
                                 </a>
@@ -763,7 +761,7 @@ export function CadenciaTab({
                               {aoEntregarComReuniao && !a.concluida && (
                                 <button
                                   onClick={() => void entregar(a.id, !!a.google_meet_link)}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg transition-colors duration-150 ease-out"
+                                  className="foco inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg transition-colors duration-150 ease-out"
                                 >
                                   <ArrowLeftRight className="h-3 w-3" /> Entregar ao vendedor
                                 </button>
@@ -773,7 +771,7 @@ export function CadenciaTab({
                             <button
                               onClick={() => void criarConviteGoogle(a.id)}
                               disabled={agendandoGoogle === a.id}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg transition-colors duration-150 ease-out disabled:opacity-60 ${
+                              className={`foco inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg transition-colors duration-150 ease-out disabled:opacity-60 ${
                                 aoEntregarComReuniao
                                   ? "text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover"
                                   : "text-acento bg-acento-fraco hover:bg-acento-fraco"
@@ -811,7 +809,7 @@ export function CadenciaTab({
                           <button
                             key={p.rotulo}
                             onClick={() => setNovaData(paraInputDataHora(dataDoPreset(p)))}
-                            className="px-2 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg"
+                            className="foco px-2 py-1 text-rotulo font-medium text-acento bg-superficie border border-fio rounded-lg"
                           >
                             {p.rotulo}
                           </button>
@@ -819,13 +817,13 @@ export function CadenciaTab({
                         <button
                           onClick={() => reagendar(a.id)}
                           disabled={!novaData}
-                          className="px-2.5 py-1.5 text-rotulo font-medium text-acento-tinta bg-acento-solido rounded-lg disabled:opacity-50"
+                          className="foco px-2.5 py-1.5 text-rotulo font-medium text-acento-tinta bg-acento-solido rounded-lg disabled:opacity-50"
                         >
                           Salvar
                         </button>
                         <button
                           onClick={() => setReagendando(null)}
-                          className="px-2 py-1.5 text-rotulo font-medium text-tinta-suave"
+                          className="foco px-2 py-1.5 text-rotulo font-medium text-tinta-suave"
                         >
                           Cancelar
                         </button>
@@ -843,7 +841,7 @@ export function CadenciaTab({
                       <button
                         onClick={() => confirmarAgenda(a.id)}
                         title="Cliente confirmou a agenda"
-                        className="text-rotulo font-medium text-acento hover:bg-acento-fraco px-2 py-1.5 rounded-lg"
+                        className="foco text-rotulo font-medium text-acento hover:bg-acento-fraco px-2 py-1.5 rounded-lg"
                       >
                         Confirmar
                       </button>
@@ -869,14 +867,14 @@ export function CadenciaTab({
                     )}
                     <button
                       onClick={() => marcarConcluida(a.id)}
-                      className="text-rotulo font-medium text-ok hover:bg-ok-fraco px-2 py-1.5 rounded-lg"
+                      className="foco text-rotulo font-medium text-ok hover:bg-ok-fraco px-2 py-1.5 rounded-lg"
                     >
                       Concluir
                     </button>
                     <button
                       onClick={() => setExcluindo(a)}
                       title="Excluir"
-                      className="text-tinta-fraca hover:text-risco p-1.5 rounded-lg"
+                      className="foco text-tinta-fraca hover:text-risco p-1.5 rounded-lg"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -926,8 +924,8 @@ export function CadenciaTab({
             return (
               <div key={a.id} className="relative pl-9">
                 <div
-                  className={`absolute left-1 top-1 h-5 w-5 rounded-full text-white flex items-center justify-center ring-4 ring-superficie ${
-                    a.concluida ? "bg-ok" : "bg-tinta-fraca"
+                  className={`absolute left-1 top-1 h-5 w-5 rounded-full flex items-center justify-center ring-4 ring-superficie ${
+                    a.concluida ? "bg-ok-solido text-ok-tinta" : "bg-tinta-fraca text-superficie"
                   }`}
                 >
                   {a.concluida ? <CheckCircle2 className="h-3 w-3" /> : <Icon className="h-3 w-3" />}

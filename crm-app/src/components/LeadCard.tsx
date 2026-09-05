@@ -319,7 +319,7 @@ export function LeadCard({
       <div className="flex items-center justify-between border-t border-fio pt-2.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <span
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-acento-fraco text-[0.625rem] font-semibold text-acento"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-acento-fraco text-rotulo font-medium text-acento"
             aria-hidden
           >
             {negocio.responsavel ? iniciais(negocio.responsavel.nome) : "—"}

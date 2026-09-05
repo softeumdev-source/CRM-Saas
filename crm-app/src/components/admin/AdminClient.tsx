@@ -119,7 +119,7 @@ export function AdminClient({
     // eyebrow, um título de 28px, um parágrafo de duas linhas e o trilho de 8
     // abas espremido ao lado. Agora o título fica sobre o fundo da página e as
     // abas ganham a própria linha, que é o que elas são: navegação.
-    <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-6">
+    <div className="max-w-pagina mx-auto px-4 sm:px-6 py-6">
       <header className="mb-5">
         <h1 className="text-titulo font-semibold text-tinta">Administração</h1>
         {/* `text-display` era gasto aqui numa frase estática. Ele existe para

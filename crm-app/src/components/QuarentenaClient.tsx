@@ -86,7 +86,7 @@ export function QuarentenaClient({
   const lista = verResolvidas ? resolvidas : pendentes;
 
   return (
-    <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
+    <div className="max-w-leitura mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
       {/* O número é o maior tipo da tela, e nada compete com ele: quantas
           conversas o CRM está segurando sem saber de quem são. */}
       <header className="flex flex-wrap items-end justify-between gap-4">

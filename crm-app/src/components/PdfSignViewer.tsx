@@ -6,11 +6,23 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { CampoAssinatura } from "./PdfFieldEditor";
 import { mensagemDoErro } from "@/lib/erros";
 
+/**
+ * As quatro cores dos campos de assinatura.
+ *
+ * `bg`/`border`/`text` continuam em hex fixo, e isso É intencional: elas são
+ * desenhadas POR CIMA DA PÁGINA DO PDF, que é branca sempre. Trocá-las pelos
+ * tokens faria o tema escuro do CRM repintar marcações sobre um documento que
+ * não mudou de cor — e os valores aqui já são os do tema claro.
+ *
+ * O `pulse`, sim, era classe de paleta (`ring-indigo-400`, `ring-emerald-400`…),
+ * que é o que o `DESIGN.md` proíbe. Vira token, e cada anel passa a bater com o
+ * papel do campo em vez de com um número da escala do Tailwind.
+ */
 const CORES = [
-  { bg: "rgba(79,70,229,0.15)", border: "#4f46e5", text: "#4f46e5", pulse: "ring-indigo-400" },
-  { bg: "rgba(16,185,129,0.15)", border: "#10b981", text: "#10b981", pulse: "ring-emerald-400" },
-  { bg: "rgba(245,158,11,0.15)", border: "#f59e0b", text: "#f59e0b", pulse: "ring-amber-400" },
-  { bg: "rgba(239,68,68,0.15)", border: "#ef4444", text: "#ef4444", pulse: "ring-rose-400" },
+  { bg: "rgba(79,70,229,0.15)", border: "#4f46e5", text: "#4f46e5", pulse: "ring-acento" },
+  { bg: "rgba(16,185,129,0.15)", border: "#10b981", text: "#10b981", pulse: "ring-ok" },
+  { bg: "rgba(245,158,11,0.15)", border: "#f59e0b", text: "#f59e0b", pulse: "ring-alerta" },
+  { bg: "rgba(239,68,68,0.15)", border: "#ef4444", text: "#ef4444", pulse: "ring-risco" },
 ];
 
 export function PdfSignViewer({
@@ -133,13 +145,13 @@ export function PdfSignViewer({
     return (
       <div className="space-y-3">
         <div className="rounded-xl overflow-hidden border border-fio bg-recuo">
-          <iframe src={pdfUrl} className="w-full h-[500px]" title="Proposta" />
+          <iframe src={pdfUrl} className="w-full h-125" title="Proposta" />
         </div>
         <a
           href={pdfUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md"
+          className="flex items-center justify-center gap-2 w-full px-4 py-3 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl"
         >
           <FileSignature className="h-4 w-4" /> Abrir proposta em tela cheia
         </a>
@@ -156,7 +168,7 @@ export function PdfSignViewer({
         <button
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
           disabled={paginaAtual <= 1}
-          className="p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
+          className="foco p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -166,7 +178,7 @@ export function PdfSignViewer({
         <button
           onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
           disabled={paginaAtual >= totalPaginas}
-          className="p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
+          className="foco p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -188,7 +200,7 @@ export function PdfSignViewer({
               borderColor: "#94a3b8",
             }}
           >
-            <span className="text-[8px] font-semibold text-tinta-fraca">Outro signatário</span>
+            <span className="truncate px-1 text-rotulo font-medium text-tinta-fraca">Outro signatário</span>
           </div>
         ))}
 
@@ -196,7 +208,7 @@ export function PdfSignViewer({
           <div
             key={campo.id}
             onClick={() => !assinado && onCampoClick(campo)}
-            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-colors duration-150 ease-out ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-[1.02]"} ${!assinado ? "animate-pulse ring-2 " + cor.pulse : ""}`}
+            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-colors duration-150 ease-out ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-102"} ${!assinado ? "animate-pulse ring-2 " + cor.pulse : ""}`}
             style={{
               left: `${campo.x * 100}%`,
               top: `${campo.y * 100}%`,

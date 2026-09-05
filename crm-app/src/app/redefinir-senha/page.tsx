@@ -37,7 +37,7 @@ export default function RedefinirSenhaPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-recuo px-4">
-      <div className="w-full max-w-md bg-superficie rounded-2xl border border-fio shadow-xl p-6">
+      <div className="w-full max-w-md bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
         <div className="flex items-center gap-2 mb-4">
           <KeyRound className="h-5 w-5 text-acento" />
           <h1 className="text-titulo font-semibold text-tinta">
@@ -77,7 +77,7 @@ export default function RedefinirSenhaPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+            className="foco w-full py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Salvar nova senha

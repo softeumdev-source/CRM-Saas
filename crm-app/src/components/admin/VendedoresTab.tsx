@@ -382,7 +382,7 @@ function MetaMensal({ usuario }: { usuario: Usuario }) {
         step={1000}
         value={meta}
         onChange={(e) => setMeta(e.target.value)}
-        className="w-28 rounded-lg border border-fio bg-recuo px-2 py-1.5 text-rotulo font-medium text-tinta transition-[border-color] duration-150 ease-out hover:border-fio-forte focus-visible:outline-2 focus-visible:outline-offset-2 "
+        className="foco w-28 rounded-lg border border-fio bg-recuo px-2 py-1.5 text-rotulo font-medium text-tinta transition-[border-color] duration-150 ease-out hover:border-fio-forte"
       />
       {alterada && (
         <Botao tamanho="sm" variante="primario" carregando={salvando} onClick={salvar}>

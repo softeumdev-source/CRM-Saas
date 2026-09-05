@@ -48,7 +48,11 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-recuo px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <div className="h-12 w-12 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center shadow-md mb-3">
+          <div className="h-12 w-12 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center mb-3">
+            {/* 10px NAO e valor arbitrario solto: e o raio CONCENTRICO do
+                quadrado interno — 12px do `rounded-xl` de fora menos os 2px do
+                `p-0.5`. Usar `rounded-lg` (8px) aqui abriria uma meia-lua de
+                folga em cada canto. */}
             <div className="h-full w-full bg-superficie rounded-[10px] flex items-center justify-center">
               <TrendingUp className="h-6 w-6 text-acento" />
             </div>
@@ -61,7 +65,7 @@ function LoginForm() {
           </p>
         </div>
 
-        <div className="bg-superficie rounded-2xl border border-fio shadow-xl p-6">
+        <div className="bg-superficie rounded-2xl border border-fio shadow-cartao p-6">
           {recuperado ? (
             <div className="text-center space-y-3">
               <p className="text-corpo text-tinta-suave">
@@ -72,7 +76,7 @@ function LoginForm() {
                   setRecuperado(false);
                   setModoRecuperar(false);
                 }}
-                className="text-rotulo font-semibold text-acento hover:underline"
+                className="foco text-rotulo font-semibold text-acento hover:underline"
               >
                 Voltar ao login
               </button>
@@ -91,7 +95,7 @@ function LoginForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="você@softeum.com.br"
-                    className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl focus:outline-hidden focus:ring-2 focus:ring-acento/30"
+                    className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl"
                   />
                 </div>
               </div>
@@ -109,7 +113,7 @@ function LoginForm() {
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
                       placeholder="********"
-                      className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio rounded-xl focus:outline-hidden focus:ring-2 focus:ring-acento/30"
+                      className="w-full pl-9 pr-3 py-2.5 text-corpo bg-recuo border border-fio foco rounded-xl"
                     />
                   </div>
                 </div>
@@ -124,7 +128,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md transition-colors duration-150 ease-out disabled:opacity-60 flex items-center justify-center gap-2"
+                className="foco w-full py-2.5 text-corpo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl transition-colors duration-150 ease-out disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {modoRecuperar ? "Enviar link de redefinicao" : "Entrar"}
@@ -133,7 +137,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setModoRecuperar((v) => !v)}
-                className="w-full text-rotulo font-medium text-acento hover:underline"
+                className="foco w-full text-rotulo font-medium text-acento hover:underline"
               >
                 {modoRecuperar ? "Voltar ao login" : "Esqueci minha senha"}
               </button>

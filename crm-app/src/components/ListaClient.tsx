@@ -110,7 +110,7 @@ export function ListaClient({
   }, [negocios, busca, etapaFiltro, ordem]);
 
   return (
-    <div className="max-w-[1700px] mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
+    <div className="max-w-pagina mx-auto w-full px-4 sm:px-6 py-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-titulo font-semibold text-tinta">
@@ -265,7 +265,7 @@ export function ListaClient({
             <button
               onClick={() => void carregarMais()}
               disabled={carregando}
-              className="px-4 py-2 text-rotulo font-semibold text-tinta-suave hover:text-acento bg-recuo border border-fio rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
+              className="foco px-4 py-2 text-rotulo font-semibold text-tinta-suave hover:text-acento bg-recuo border border-fio rounded-xl transition-colors duration-150 ease-out disabled:opacity-60"
             >
               {carregando ? "Carregando…" : `Carregar mais ${Math.min(lote, total - carregados)}`}
             </button>

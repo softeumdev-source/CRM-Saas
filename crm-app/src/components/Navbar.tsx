@@ -140,9 +140,13 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
 
   return (
     <header className="bg-superficie border-b border-fio sticky top-0 z-30 shadow-xs">
-      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+      <div className="max-w-pagina mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center shadow-md">
+          <div className="h-10 w-10 rounded-xl bg-acento-solido p-0.5 flex items-center justify-center">
+            {/* 10px NAO e valor arbitrario solto: e o raio CONCENTRICO do
+                quadrado interno — 12px do `rounded-xl` de fora menos os 2px do
+                `p-0.5`. Usar `rounded-lg` (8px) aqui abriria uma meia-lua de
+                folga em cada canto. */}
             <div className="h-full w-full bg-superficie rounded-[10px] flex items-center justify-center">
               <TrendingUp className="h-5 w-5 text-acento" />
             </div>
@@ -174,7 +178,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
                 {/* Só aparece quando há o que decidir. Um "0" permanente vira
                     ruído e a pessoa para de ver o número quando ele importa. */}
                 {l.contador ? (
-                  <span className="h-4 min-w-4 px-1 rounded-full bg-acento-solido text-acento-tinta text-[9px] font-semibold flex items-center justify-center tabular">
+                  <span className="h-5 min-w-5 px-1 rounded-full bg-acento-solido text-acento-tinta text-rotulo font-medium flex items-center justify-center tabular">
                     {l.contador}
                   </span>
                 ) : null}
@@ -187,24 +191,24 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
           <div className="relative">
             <button
               onClick={marcarLidas}
-              className="relative p-2 text-tinta-fraca hover:text-acento hover:bg-recuo rounded-xl transition-colors"
+              className="foco relative p-2 text-tinta-fraca hover:text-acento hover:bg-recuo rounded-xl transition-colors"
             >
               <Bell className="h-4.5 w-4.5" />
               {naoLidas > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-risco-solido text-risco-tinta text-[9px] font-semibold flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 h-5 min-w-5 px-1 rounded-full bg-risco-solido text-risco-tinta text-rotulo font-medium flex items-center justify-center">
                   {naoLidas}
                 </span>
               )}
             </button>
             {showNotifs && (
-              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-xl z-40">
+              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-flutuante z-40">
                 <div className="p-3 border-b border-fio flex items-center justify-between gap-2">
                   <span className="text-rotulo font-semibold text-tinta-suave">Notificações</span>
                   {notificacoes.length > 0 && (
                     <button
                       onClick={limparNotificacoes}
                       disabled={limpando}
-                      className="flex items-center gap-1 text-rotulo font-medium text-tinta-fraca hover:text-risco disabled:opacity-50"
+                      className="foco flex items-center gap-1 text-rotulo font-medium text-tinta-fraca hover:text-risco disabled:opacity-50"
                     >
                       {limpando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                       Limpar
@@ -248,7 +252,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               onClick={handleLogout}
               disabled={loggingOut}
               title="Sair"
-              className="p-2 text-tinta-fraca hover:text-risco hover:bg-recuo rounded-xl transition-colors"
+              className="foco p-2 text-tinta-fraca hover:text-risco hover:bg-recuo rounded-xl transition-colors"
             >
               {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
             </button>
@@ -272,7 +276,7 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               <span>{l.label}</span>
               {l.contador ? (
                 <span
-                  className={`h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center tabular ${
+                  className={`h-5 min-w-5 px-1 rounded-full text-rotulo font-medium flex items-center justify-center tabular ${
                     active ? "bg-superficie text-acento" : "bg-acento-solido text-acento-tinta"
                   }`}
                 >

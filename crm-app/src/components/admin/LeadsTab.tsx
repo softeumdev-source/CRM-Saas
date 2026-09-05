@@ -554,7 +554,7 @@ export function LeadsTab({
             </Alerta>
           </div>
         )}
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-105 overflow-y-auto">
           <table className="w-full text-left text-rotulo">
             <thead className="sticky top-0 bg-superficie">
               <tr className="border-b border-fio text-tinta-fraca uppercase text-rotulo">
@@ -686,7 +686,7 @@ export function LeadsTab({
             </Alerta>
           </div>
         )}
-        <div className="max-h-[420px] overflow-y-auto">
+        <div className="max-h-105 overflow-y-auto">
           <table className="w-full text-left text-rotulo">
             <thead className="sticky top-0 bg-superficie">
               <tr className="border-b border-fio text-tinta-fraca uppercase text-rotulo">

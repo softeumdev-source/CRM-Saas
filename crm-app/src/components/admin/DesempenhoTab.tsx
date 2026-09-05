@@ -222,9 +222,9 @@ export function DesempenhoTab({
                 {/* Trilho recessivo, um degrau da superfície. Barra de 20px
                     (o teto da spec é 24), ponta arredondada só na extremidade
                     do dado e reta na linha de base. */}
-                <div className="flex-1 h-5 bg-recuo rounded-r-[4px]">
+                <div className="flex-1 h-5 bg-recuo rounded-r-sm">
                   <div
-                    className="h-full rounded-r-[4px]"
+                    className="h-full rounded-r-sm"
                     style={{
                       width: `${(f.alcancaram / topoFunil) * 100}%`,
                       background: `var(--grafico-${Math.min(i + 1, 6)})`,
@@ -238,11 +238,11 @@ export function DesempenhoTab({
                 </span>
               </div>
               {f.conversaoParaProxima !== null && (
-                <div className="flex items-center gap-1.5 pl-[13px] h-4">
+                <div className="flex items-center gap-1.5 pl-4 h-4">
                   {/* O degrau entre etapas é a história do funil, então fica —
                       mas recessivo: um fio vertical e um número pequeno, não
                       mais uma linha colorida competindo com as barras. */}
-                  <span aria-hidden className="w-px h-full bg-fio ml-[3px]" />
+                  <span aria-hidden className="w-px h-full bg-fio" />
                   <span className="text-rotulo text-tinta-fraca tabular ml-1.5">
                     {formatarPct(f.conversaoParaProxima)} avançam
                   </span>
@@ -269,9 +269,9 @@ export function DesempenhoTab({
             {motivosPerda.map(([motivo, count]) => (
               <div key={motivo} className="flex items-center gap-3 py-1">
                 <span className="text-rotulo text-tinta-suave w-48 shrink-0 truncate" title={motivo}>{motivo}</span>
-                <div className="flex-1 h-5 bg-recuo rounded-r-[4px]">
+                <div className="flex-1 h-5 bg-recuo rounded-r-sm">
                   <div
-                    className="h-full bg-grafico-3 rounded-r-[4px]"
+                    className="h-full bg-grafico-3 rounded-r-sm"
                     style={{ width: `${(count / maxMotivo) * 100}%`, minWidth: count > 0 ? "0.25rem" : 0 }}
                   />
                 </div>

@@ -82,7 +82,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
           placeholder="Buscar por empresa, nome, CNPJ, e-mail, nº da proposta ou signatário..."
-          className="w-full pl-10 pr-4 py-2.5 text-corpo bg-superficie border border-fio rounded-2xl focus:border-acento focus:ring-1 focus:ring-acento outline-hidden"
+          className="foco w-full pl-10 pr-4 py-2.5 text-corpo bg-superficie border border-fio rounded-2xl"
         />
       </div>
 
@@ -160,7 +160,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                     <button
                       type="button"
                       onClick={() => void abrirPdf(assinadoComercial)}
-                      className="flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
+                      className="foco flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar comercial assinada
                     </button>
@@ -169,7 +169,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                     <button
                       type="button"
                       onClick={() => void abrirPdf(assinadoTecnica)}
-                      className="flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
+                      className="foco flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar técnica assinada
                     </button>

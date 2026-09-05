@@ -53,7 +53,7 @@ export function KanbanBoard({
     /**
      * O board vive no MESMO contêiner do cabeçalho e dos filtros.
      *
-     * Eles estão em `max-w-[1700px] mx-auto`, como a Navbar; o board não tinha
+     * Eles estão em `max-w-pagina mx-auto`, como a Navbar; o board não tinha
      * contêiner nenhum, então numa tela larga a página inteira ficava
      * centralizada e só as colunas começavam coladas na esquerda. Era isso que
      * se via como "não alinhado".
@@ -67,7 +67,7 @@ export function KanbanBoard({
      * O respiro lateral vai na fileira e não no contêiner: assim ele ROLA junto,
      * e a última coluna não termina colada na borda.
      */
-    <div className="mx-auto w-full max-w-[1700px] flex-1 min-h-0 flex flex-col">
+    <div className="mx-auto w-full max-w-pagina flex-1 min-h-0 flex flex-col">
       <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4">
         <div className="mx-auto flex h-full w-max gap-4 px-4 sm:px-6">
         {etapas.map((etapa) => {

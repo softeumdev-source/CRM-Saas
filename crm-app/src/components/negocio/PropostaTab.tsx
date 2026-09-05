@@ -500,14 +500,14 @@ export function PropostaTab({
               <button
                 onClick={() => decidirDesconto(true)}
                 disabled={decidindo}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-lg disabled:opacity-60"
+                className="foco flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-lg disabled:opacity-60"
               >
                 {decidindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
               </button>
               <button
                 onClick={() => decidirDesconto(false)}
                 disabled={decidindo}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-risco-tinta bg-risco-solido hover:bg-risco-solido-hover rounded-lg disabled:opacity-60"
+                className="foco flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-risco-tinta bg-risco-solido hover:bg-risco-solido-hover rounded-lg disabled:opacity-60"
               >
                 <ThumbsDown className="h-3.5 w-3.5" /> Recusar
               </button>
@@ -561,7 +561,7 @@ export function PropostaTab({
             <button
               onClick={solicitarDesconto}
               disabled={enviandoSolic}
-              className="flex items-center gap-1.5 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg disabled:opacity-60"
+              className="foco flex items-center gap-1.5 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg disabled:opacity-60"
             >
               {enviandoSolic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BadgePercent className="h-3.5 w-3.5" />}
               Solicitar aprovação de desconto
@@ -575,7 +575,7 @@ export function PropostaTab({
           onClick={handleGerar}
           disabled={gerando || !temCnpj || abaixoDoMinimo}
           title={abaixoDoMinimo ? "Valor abaixo do mínimo — solicite aprovação de desconto." : undefined}
-          className="w-full py-2.5 text-corpo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60"
+          className="foco w-full py-2.5 text-corpo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl flex items-center justify-center gap-2 disabled:opacity-60"
         >
           {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
           Gerar proposta (Comercial + Técnica)
@@ -623,22 +623,22 @@ export function PropostaTab({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-rotulo font-medium uppercase tracking-wider text-tinta-fraca">Arquivos:</span>
                     {p.pdf_comercial_path && (
-                      <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="text-rotulo flex items-center gap-1 text-tinta-suave hover:text-acento font-medium">
+                      <button onClick={() => baixarPdf(p.pdf_comercial_path)} className="foco text-rotulo flex items-center gap-1 text-tinta-suave hover:text-acento font-medium">
                         <Eye className="h-3 w-3" /> Comercial
                       </button>
                     )}
                     {p.pdf_tecnica_path && (
-                      <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="text-rotulo flex items-center gap-1 text-tinta-suave hover:text-acento font-medium">
+                      <button onClick={() => baixarPdf(p.pdf_tecnica_path)} className="foco text-rotulo flex items-center gap-1 text-tinta-suave hover:text-acento font-medium">
                         <Eye className="h-3 w-3" /> Técnica
                       </button>
                     )}
                     {p.pdf_assinado_comercial_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
+                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
                         <Download className="h-3 w-3" /> Assinado (comercial)
                       </button>
                     )}
                     {p.pdf_assinado_tecnica_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
+                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
                         <Download className="h-3 w-3" /> Assinado (técnica)
                       </button>
                     )}
@@ -646,13 +646,13 @@ export function PropostaTab({
                       <>
                         <button
                           onClick={() => abrirEnvio(p.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg"
+                          className="foco flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg"
                         >
                           <Send className="h-3.5 w-3.5" /> Enviar para assinatura
                         </button>
                         <button
                           onClick={() => setExcluindoProposta(p)}
-                          className="flex items-center gap-1 px-2 py-1.5 text-rotulo font-medium text-tinta-fraca hover:text-risco"
+                          className="foco flex items-center gap-1 px-2 py-1.5 text-rotulo font-medium text-tinta-fraca hover:text-risco"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -698,7 +698,7 @@ export function PropostaTab({
                             <button
                               onClick={() => setSignatarios((prev) => prev.filter((x) => x.chave !== s.chave))}
                               aria-label={`Remover signatário ${s.nome || "sem nome"}`}
-                              className="text-tinta-fraca hover:text-risco"
+                              className="foco text-tinta-fraca hover:text-risco"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -707,7 +707,7 @@ export function PropostaTab({
                       ))}
                       <button
                         onClick={() => setSignatarios((prev) => [...prev, novoSignatario()])}
-                        className="text-rotulo font-medium text-acento flex items-center gap-1"
+                        className="foco text-rotulo font-medium text-acento flex items-center gap-1"
                       >
                         <Plus className="h-3 w-3" /> Adicionar signatário
                       </button>
@@ -730,7 +730,7 @@ export function PropostaTab({
                             <button
                               onClick={() => setCopias((prev) => prev.filter((x) => x.chave !== c.chave))}
                               aria-label={`Remover cópia ${c.valor || "sem e-mail"}`}
-                              className="text-tinta-fraca hover:text-risco"
+                              className="foco text-tinta-fraca hover:text-risco"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -738,7 +738,7 @@ export function PropostaTab({
                         ))}
                         <button
                           onClick={() => setCopias((prev) => [...prev, novaCopia()])}
-                          className="text-rotulo font-medium text-acento flex items-center gap-1"
+                          className="foco text-rotulo font-medium text-acento flex items-center gap-1"
                         >
                           <Plus className="h-3 w-3" /> Adicionar cópia
                         </button>
@@ -749,11 +749,11 @@ export function PropostaTab({
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           onClick={avancarParaEditor}
-                          className="flex items-center gap-1.5 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg"
+                          className="foco flex items-center gap-1.5 px-4 py-2 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-lg"
                         >
                           <FileSignature className="h-3.5 w-3.5" /> Preparar documento
                         </button>
-                        <button onClick={() => { setEditandoEnvioId(null); setEtapaEnvio(null); }} className="px-3 py-2 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-lg">
+                        <button onClick={() => { setEditandoEnvioId(null); setEtapaEnvio(null); }} className="foco px-3 py-2 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-lg">
                           Cancelar
                         </button>
                       </div>
@@ -767,7 +767,7 @@ export function PropostaTab({
                         <p className="text-rotulo font-medium text-tinta-suave">Posicione os campos de assinatura no documento</p>
                         <button
                           onClick={() => setEtapaEnvio("signatarios")}
-                          className="ml-auto text-rotulo text-tinta-suave hover:text-acento font-medium"
+                          className="foco ml-auto text-rotulo text-tinta-suave hover:text-acento font-medium"
                         >
                           Voltar
                         </button>
@@ -848,7 +848,7 @@ export function PropostaTab({
                         <code className="flex-1 truncate bg-superficie px-2 py-1 rounded-lg border border-fio">
                           {ultimoResultado.linkAssinatura}
                         </code>
-                        <button onClick={() => copiarLink(ultimoResultado!.linkAssinatura)} className="text-acento hover:text-acento">
+                        <button onClick={() => copiarLink(ultimoResultado!.linkAssinatura)} className="foco text-acento hover:text-acento">
                           {linkCopiado === ultimoResultado.linkAssinatura ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </button>
                       </div>

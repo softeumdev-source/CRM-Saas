@@ -186,7 +186,7 @@ export function PdfFieldEditor({
               <button
                 key={s.ordem}
                 onClick={() => setSignatarioSelecionado(s.ordem)}
-                className={`w-full text-left px-3 py-2 rounded-lg mb-1 text-rotulo font-medium border transition-colors duration-150 ease-out ${selecionado ? cor.label + " border-2" : "bg-superficie border-fio text-tinta-suave"}`}
+                className={`foco w-full text-left px-3 py-2 rounded-lg mb-1 text-rotulo font-medium border transition-colors duration-150 ease-out ${selecionado ? cor.label + " border-2" : "bg-superficie border-fio text-tinta-suave"}`}
               >
                 <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ backgroundColor: cor.border }} />
                 {s.nome || s.email}
@@ -197,7 +197,7 @@ export function PdfFieldEditor({
 
         <div className="bg-recuo rounded-xl p-3 border border-fio">
           <p className="text-rotulo font-semibold uppercase text-tinta-fraca mb-2">Campos</p>
-          <button onClick={adicionarCampo} className="w-full flex items-center gap-2 px-3 py-2 text-rotulo font-semibold text-acento bg-acento-fraco hover:bg-acento-fraco rounded-lg border border-fio">
+          <button onClick={adicionarCampo} className="foco w-full flex items-center gap-2 px-3 py-2 text-rotulo font-semibold text-acento bg-acento-fraco hover:bg-acento-fraco rounded-lg border border-fio">
             <FileSignature className="h-4 w-4" /> Assinatura
           </button>
           <p className="text-rotulo text-tinta-fraca mt-2 leading-relaxed">
@@ -216,7 +216,7 @@ export function PdfFieldEditor({
                 <span className="font-medium truncate" style={{ color: cor.text }}>
                   Pag.{c.pagina} · {sig?.nome || "?"}
                 </span>
-                <button onClick={() => removerCampo(c.id)} className="text-tinta-fraca hover:text-risco shrink-0">
+                <button onClick={() => removerCampo(c.id)} className="foco text-tinta-fraca hover:text-risco shrink-0">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -228,12 +228,12 @@ export function PdfFieldEditor({
           <button
             onClick={() => onSalvar(campos)}
             disabled={campos.length === 0 || enviando}
-            className="w-full py-2.5 text-rotulo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+            className="foco w-full py-2.5 text-rotulo font-semibold text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Enviar para assinatura
           </button>
-          <button onClick={onCancelar} className="w-full py-2 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl">
+          <button onClick={onCancelar} className="foco w-full py-2 text-rotulo font-medium text-tinta-suave hover:bg-recuo rounded-xl">
             Cancelar
           </button>
         </div>
@@ -246,17 +246,17 @@ export function PdfFieldEditor({
             <button
               onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
               disabled={paginaAtual <= 1}
-              className="p-1 rounded-lg hover:bg-fio disabled:opacity-30"
+              className="foco p-1 rounded-lg hover:bg-fio disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-rotulo font-semibold text-tinta-suave min-w-[80px] text-center">
+            <span className="text-rotulo font-semibold text-tinta-suave min-w-20 text-center">
               Pagina {paginaAtual} / {totalPaginas}
             </span>
             <button
               onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
               disabled={paginaAtual >= totalPaginas}
-              className="p-1 rounded-lg hover:bg-fio disabled:opacity-30"
+              className="foco p-1 rounded-lg hover:bg-fio disabled:opacity-30"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -293,12 +293,12 @@ export function PdfFieldEditor({
                 }}
               >
                 <FileSignature className="h-3.5 w-3.5" style={{ color: cor.text }} />
-                <span className="text-[9px] font-semibold truncate" style={{ color: cor.text }}>
+                <span className="text-rotulo font-medium truncate" style={{ color: cor.text }}>
                   {sig?.nome?.split(" ")[0] || "Assinar"}
                 </span>
                 <button
                   onClick={(e) => { e.stopPropagation(); removerCampo(campo.id); }}
-                  className="absolute -top-2 -right-2 bg-superficie rounded-full p-0.5 shadow-md border border-fio opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="foco absolute -top-2 -right-2 bg-superficie rounded-full p-0.5 shadow-flutuante border border-fio opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 className="h-2.5 w-2.5 text-risco" />
                 </button>

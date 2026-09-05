@@ -508,7 +508,7 @@ export function NegocioDetailClient({
                   );
                   setEntregando(true);
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out"
+                className="foco flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-acento bg-acento-fraco hover:bg-acento-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <ArrowRightLeft className="h-3.5 w-3.5" /> Entregar ao vendedor
               </button>
@@ -516,7 +516,7 @@ export function NegocioDetailClient({
             {podeFechar.ganho && (
               <button
                 onClick={() => { setMotivoPerda(''); setEncerrando(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-ok bg-ok-fraco hover:bg-ok-fraco rounded-xl transition-colors duration-150 ease-out"
+                className="foco flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-ok bg-ok-fraco hover:bg-ok-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <Trophy className="h-3.5 w-3.5" /> Ganhei
               </button>
@@ -524,7 +524,7 @@ export function NegocioDetailClient({
             {podeFechar.perda && (
               <button
                 onClick={() => { setMotivoPerda(''); setEncerrando(false); }}
-                className="flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-risco bg-risco-fraco hover:bg-risco-fraco rounded-xl transition-colors duration-150 ease-out"
+                className="foco flex items-center gap-1.5 px-3 py-2 text-rotulo font-medium text-risco bg-risco-fraco hover:bg-risco-fraco rounded-xl transition-colors duration-150 ease-out"
               >
                 <XCircle className="h-3.5 w-3.5" /> {entrega ? "Descartar" : "Perdi"}
               </button>
@@ -563,7 +563,7 @@ export function NegocioDetailClient({
           ) : (
             <button
               onClick={() => setAba("cadencia")}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-alerta-fraco text-alerta hover:bg-alerta-fraco"
+              className="foco inline-flex items-center gap-1.5 px-2.5 py-1 text-rotulo font-medium rounded-lg bg-alerta-fraco text-alerta hover:bg-alerta-fraco"
             >
               <Clock className="h-3 w-3" /> Sem próximo passo — agendar
             </button>
@@ -586,7 +586,7 @@ export function NegocioDetailClient({
             <select
               value={negocio.etapa_id || ""}
               onChange={(e) => mudarEtapa(e.target.value)}
-              className="w-full mt-1 text-corpo font-medium bg-transparent focus:outline-hidden"
+              className="foco w-full mt-1 rounded-lg text-corpo font-medium bg-transparent"
             >
               {etapasParaEscolher(etapas, negocio.etapa_id).map((et) => (
                 <option key={et.id} value={et.id}>{et.nome}</option>
@@ -601,7 +601,7 @@ export function NegocioDetailClient({
                 const resp = responsaveis.find((v) => v.id === e.target.value) || null;
                 atualizarNegocio({ responsavel_id: e.target.value || null, responsavel: resp });
               }}
-              className="w-full mt-1 text-corpo font-medium bg-transparent focus:outline-hidden"
+              className="foco w-full mt-1 rounded-lg text-corpo font-medium bg-transparent"
             >
               <option value="">Sem dono (pool)</option>
               {responsaveis.map((v) => (
@@ -629,7 +629,7 @@ export function NegocioDetailClient({
                     retomar_em: e.target.value ? new Date(`${e.target.value}T09:00`).toISOString() : null,
                   })
                 }
-                className="mt-1 w-full max-w-xs px-3 py-2 text-corpo font-medium rounded-xl bg-superficie border border-info/40 focus-visible:outline-2 focus-visible:outline-offset-2 "
+                className="foco mt-1 w-full max-w-xs px-3 py-2 text-corpo font-medium rounded-xl bg-superficie border border-info/40"
               />
               <p className="mt-1.5 text-rotulo text-info">
                 {negocio.retomar_em

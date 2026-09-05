@@ -165,12 +165,12 @@ export function VistaDeEmail({
   }
 
   return (
-    <div className="flex min-h-[32rem] overflow-hidden rounded-2xl border border-fio bg-superficie">
+    <div className="flex min-h-128 overflow-hidden rounded-2xl border border-fio bg-superficie">
       {/* ------------------------------------------------------------------ */}
       {/* Coluna esquerda: as conversas                                       */}
       {/* ------------------------------------------------------------------ */}
       <div
-        className={`w-full shrink-0 flex-col border-fio md:flex md:w-[19rem] md:border-r ${
+        className={`w-full shrink-0 flex-col border-fio md:flex md:w-76 md:border-r ${
           selecionada && aberta ? "hidden" : "flex"
         }`}
       >
@@ -370,7 +370,7 @@ function MensagemDeEmail({
           <button
             onClick={() => setMostrarCitacao((v) => !v)}
             aria-expanded={mostrarCitacao}
-            className="foco rounded-md bg-recuo px-2 py-0.5 text-rotulo font-medium text-tinta-fraca hover:text-tinta"
+            className="foco rounded-lg bg-recuo px-2 py-0.5 text-rotulo font-medium text-tinta-fraca hover:text-tinta"
             title={mostrarCitacao ? "Esconder o histórico citado" : "Mostrar o histórico citado"}
           >
             ···
@@ -388,7 +388,7 @@ function MensagemDeEmail({
       {!abertaPorPadrao && (
         <button
           onClick={() => setAberta(false)}
-          className="foco mt-2 inline-flex items-center gap-1 rounded-md text-rotulo font-medium text-tinta-fraca hover:text-tinta"
+          className="foco mt-2 inline-flex items-center gap-1 rounded-lg text-rotulo font-medium text-tinta-fraca hover:text-tinta"
         >
           <ChevronDown className="h-3 w-3 rotate-180" aria-hidden /> recolher
         </button>
