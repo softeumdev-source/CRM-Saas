@@ -335,7 +335,11 @@ export async function POST(request: Request) {
         nomeDeExibicao: quemAssinaAqui,
         para: destino,
         assunto,
-        html: emailBase(htmlDeTexto(texto), { assinatura: quemAssinaAqui }),
+        // `comoCarta`: aqui uma PESSOA digitou o texto e esta respondendo o
+        // cliente dentro da conversa dele. Sair com tarja, card e logo faria
+        // uma resposta de gente parecer disparo de sistema — e e o que joga a
+        // mensagem para a aba de Promocoes.
+        html: emailBase(htmlDeTexto(texto), { comoCarta: true, assinatura: quemAssinaAqui }),
         // A parte de texto puro NAO herda a assinatura do HTML: quando o
         // chamador manda `texto`, `montarMime` usa esse texto e nao deriva nada
         // do HTML. Sem esta linha, quem le em texto puro recebe a mensagem sem

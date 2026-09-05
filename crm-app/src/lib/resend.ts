@@ -167,17 +167,40 @@ function iconeDaLinha(arquivo: string): string {
  * — com `middle`, o alinhamento sai exato mesmo assim.
  */
 function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
+  // O NÚMERO não muda nunca; o que muda é ele ser ou não um `href`. Em teste de
+  // entregabilidade cada domínio linkado a mais é um sinal a mais para o filtro
+  // pesar, e o que queremos medir é a reputação de UM domínio: o nosso. Quem lê
+  // continua vendo o WhatsApp, e no celular o cliente de e-mail reconhece o
+  // número sozinho.
+  const whatsapp = (estilo: string) =>
+    opcoes?.whatsappComoTexto
+      ? `WhatsApp ${WHATSAPP_LEGIVEL}`
+      : `<a href="https://wa.me/${WHATSAPP_E164}"${estilo}>WhatsApp ${WHATSAPP_LEGIVEL}</a>`;
+
+  // A assinatura de QUEM ESCREVE À MÃO: quatro linhas, nenhuma imagem, nenhuma
+  // tabela, nenhuma cor declarada. Ninguém abre o Gmail e monta uma tabela com
+  // a logo da empresa para responder um cliente — e o classificador de
+  // Promoções sabe disso melhor do que nós.
+  //
+  // Não declarar cor NÃO é descuido: sem `color`, o cliente usa a dele e o tema
+  // escuro do Gmail inverte o texto junto com o resto da mensagem. É o defeito
+  // que o card branco daqui de baixo existe para contornar, e que some sozinho
+  // quando não há card nenhum.
+  if (opcoes?.comoCarta) {
+    return `
+      <div style="margin-top:22px;">
+        ${escaparHtml(nome)}<br />
+        ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
+        <a href="${SITE}">${SITE_LEGIVEL}</a><br />
+        ${whatsapp("")}
+      </div>`;
+  }
+
   const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
     ? `<td width="58" valign="middle" style="width:58px; padding:20px 14px 0 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
     : "";
-  // O NÚMERO não muda; o que sai é o `href`. Em teste de entregabilidade cada
-  // domínio linkado a mais é um sinal a mais para o filtro pesar, e o que
-  // queremos medir é a reputação de UM domínio: o nosso. Quem lê continua vendo
-  // o WhatsApp, e no celular o próprio cliente de e-mail reconhece o número.
-  const whatsapp = opcoes?.whatsappComoTexto
-    ? `<span style="color:#475569;">WhatsApp ${WHATSAPP_LEGIVEL}</span>`
-    : `<a href="https://wa.me/${WHATSAPP_E164}" style="color:#475569; text-decoration:none;">WhatsApp ${WHATSAPP_LEGIVEL}</a>`;
+
   return `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin-top:28px; border-top:1px solid #e2e8f0;">
         <tr>${celulaDaLogo}
@@ -185,7 +208,7 @@ function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
             <strong style="color:#0f172a; font-size:14px;">${escaparHtml(nome)}</strong><br />
             ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
             ${iconeDaLinha("icone-site.png")}<a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
-            ${iconeDaLinha("icone-whatsapp.png")}${whatsapp}
+            ${iconeDaLinha("icone-whatsapp.png")}${whatsapp(' style="color:#475569; text-decoration:none;"')}
           </td>
         </tr>
       </table>`;
@@ -225,17 +248,46 @@ export type OpcoesDoEmail = {
    * link, que é um toque de um clique e vale dinheiro.
    */
   whatsappComoTexto?: boolean;
+  /**
+   * O e-mail sai como CARTA: sem tarja, sem card, sem rodapé e sem imagem
+   * nenhuma. Só o texto e uma assinatura de quatro linhas.
+   *
+   * O motivo é medido, não estético. O primeiro teste de entregabilidade caiu
+   * na aba de Promoções do Gmail — não em spam: o Gmail acreditou que era
+   * correspondência comercial legítima, e correspondência comercial legítima é
+   * exatamente o que ele tira da caixa principal. O relatório mediu 20,9% de
+   * imagem, e o que sai daqui no modo padrão é uma tarja com gradiente, a
+   * palavra SOFTEUM em caixa alta, um card com borda arredondada e um rodapé
+   * centralizado com o nome da empresa. É a forma de uma newsletter.
+   *
+   * Um vendedor escrevendo para um prospect manda TEXTO. Então prospecção e
+   * resposta manual entram aqui, e só elas: proposta, convite de vendedor e
+   * aviso de assinatura continuam com a marca, porque ali o e-mail é
+   * transacional e esperado, e a tarja ajuda a reconhecer o remetente.
+   */
+  comoCarta?: boolean;
 };
 
 export function emailBase(conteudo: string, opcoes?: OpcoesDoEmail): string {
   const nome = (opcoes?.assinatura || "").trim();
+  const assinatura = nome ? assinaturaEmHtml(nome, opcoes) : "";
+
+  // A carta: fonte, tamanho e entrelinha, e mais nada. Sem `background`, sem
+  // `max-width`, sem borda — é o que o Gmail produz quando uma PESSOA digita.
+  if (opcoes?.comoCarta) {
+    return `
+  <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:14px; line-height:1.6;">
+    ${conteudo}${assinatura}
+  </div>`;
+  }
+
   return `
   <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px;">
     <div style="background-color:#312e81; background-image: linear-gradient(135deg, #0f172a, #312e81); padding: 20px 24px; border-radius: 16px 16px 0 0;">
       <span style="color:#fff; font-weight:800; font-size:18px; letter-spacing: 0.5px;">SOFTEUM</span>
     </div>
     <div style="background:#fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; padding: 24px; color:#1e293b;">
-      ${conteudo}${nome ? assinaturaEmHtml(nome, opcoes) : ""}
+      ${conteudo}${assinatura}
     </div>
     <p style="text-align:center; color:#94a3b8; font-size:11px; margin-top:16px;">
       Softeum Tecnologia

@@ -158,7 +158,14 @@ export async function GET(request: Request) {
                   para: m.destino!,
                   copia: m.copia,
                   assunto: m.assunto || "Softeum",
+                  // `comoCarta`: prospeccao sai como TEXTO, sem tarja, sem
+                  // card e sem imagem. Medido no MailReach — a versao com a
+                  // marca caiu na aba de Promocoes do Gmail, com 20,9% de
+                  // imagem. Nao foi para spam: o Gmail acreditou que era
+                  // correspondencia comercial legitima, e e exatamente isso que
+                  // ele tira da caixa principal.
                   html: emailBase(m.corpo, {
+                    comoCarta: true,
                     assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                     whatsappComoTexto: m.assinatura_sem_link_whatsapp,
                   }),
