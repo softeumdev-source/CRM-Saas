@@ -166,11 +166,18 @@ function iconeDaLinha(arquivo: string): string {
  * abaixo da linha que separa a assinatura do corpo, não parte da centralização
  * — com `middle`, o alinhamento sai exato mesmo assim.
  */
-function assinaturaEmHtml(nome: string): string {
+function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
   const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
     ? `<td width="58" valign="middle" style="width:58px; padding:20px 14px 0 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
     : "";
+  // O NÚMERO não muda; o que sai é o `href`. Em teste de entregabilidade cada
+  // domínio linkado a mais é um sinal a mais para o filtro pesar, e o que
+  // queremos medir é a reputação de UM domínio: o nosso. Quem lê continua vendo
+  // o WhatsApp, e no celular o próprio cliente de e-mail reconhece o número.
+  const whatsapp = opcoes?.whatsappComoTexto
+    ? `<span style="color:#475569;">WhatsApp ${WHATSAPP_LEGIVEL}</span>`
+    : `<a href="https://wa.me/${WHATSAPP_E164}" style="color:#475569; text-decoration:none;">WhatsApp ${WHATSAPP_LEGIVEL}</a>`;
   return `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin-top:28px; border-top:1px solid #e2e8f0;">
         <tr>${celulaDaLogo}
@@ -178,7 +185,7 @@ function assinaturaEmHtml(nome: string): string {
             <strong style="color:#0f172a; font-size:14px;">${escaparHtml(nome)}</strong><br />
             ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
             ${iconeDaLinha("icone-site.png")}<a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
-            ${iconeDaLinha("icone-whatsapp.png")}<a href="https://wa.me/${WHATSAPP_E164}" style="color:#475569; text-decoration:none;">WhatsApp ${WHATSAPP_LEGIVEL}</a>
+            ${iconeDaLinha("icone-whatsapp.png")}${whatsapp}
           </td>
         </tr>
       </table>`;
@@ -208,6 +215,16 @@ export type OpcoesDoEmail = {
    * esquecimento. Quem manda para CLIENTE opta por dentro, passando o nome.
    */
   assinatura?: string | null;
+  /**
+   * O WhatsApp da assinatura sai como TEXTO, sem `href`. Só o site fica linkado.
+   *
+   * Existe por mensagem, e não como decisão global, porque quem precisa disto é
+   * o e-mail de teste de entregabilidade — ele mede em quantas caixas a nossa
+   * mensagem cai na entrada, e um segundo domínio linkado (`wa.me`) entra na
+   * conta do filtro junto com o nosso. A campanha de verdade continua com o
+   * link, que é um toque de um clique e vale dinheiro.
+   */
+  whatsappComoTexto?: boolean;
 };
 
 export function emailBase(conteudo: string, opcoes?: OpcoesDoEmail): string {
@@ -218,7 +235,7 @@ export function emailBase(conteudo: string, opcoes?: OpcoesDoEmail): string {
       <span style="color:#fff; font-weight:800; font-size:18px; letter-spacing: 0.5px;">SOFTEUM</span>
     </div>
     <div style="background:#fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; padding: 24px; color:#1e293b;">
-      ${conteudo}${nome ? assinaturaEmHtml(nome) : ""}
+      ${conteudo}${nome ? assinaturaEmHtml(nome, opcoes) : ""}
     </div>
     <p style="text-align:center; color:#94a3b8; font-size:11px; margin-top:16px;">
       Softeum Tecnologia

@@ -673,10 +673,12 @@ export type Database = {
           agendada_para: string | null
           aprovada_em: string | null
           aprovada_por: string | null
+          assinatura_sem_link_whatsapp: boolean
           assunto: string | null
           automatica: boolean
           canal: string
           contato_id: string | null
+          copia: string[] | null
           corpo: string
           corpo_formato: string
           criado_em: string | null
@@ -709,10 +711,12 @@ export type Database = {
           agendada_para?: string | null
           aprovada_em?: string | null
           aprovada_por?: string | null
+          assinatura_sem_link_whatsapp?: boolean
           assunto?: string | null
           automatica?: boolean
           canal?: string
           contato_id?: string | null
+          copia?: string[] | null
           corpo: string
           corpo_formato?: string
           criado_em?: string | null
@@ -745,10 +749,12 @@ export type Database = {
           agendada_para?: string | null
           aprovada_em?: string | null
           aprovada_por?: string | null
+          assinatura_sem_link_whatsapp?: boolean
           assunto?: string | null
           automatica?: boolean
           canal?: string
           contato_id?: string | null
+          copia?: string[] | null
           corpo?: string
           corpo_formato?: string
           criado_em?: string | null
@@ -1853,6 +1859,7 @@ export type Database = {
         }
       }
       disparar_despacho: { Args: never; Returns: string }
+      disparar_reunioes: { Args: never; Returns: string }
       disparar_sync_gmail: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
       enviar_para_prospeccao: {
@@ -1935,10 +1942,12 @@ export type Database = {
           agendada_para: string | null
           aprovada_em: string | null
           aprovada_por: string | null
+          assinatura_sem_link_whatsapp: boolean
           assunto: string | null
           automatica: boolean
           canal: string
           contato_id: string | null
+          copia: string[] | null
           corpo: string
           corpo_formato: string
           criado_em: string | null

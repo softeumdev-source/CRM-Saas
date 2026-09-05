@@ -21,6 +21,15 @@ const MENSAGENS = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 /** Limite de linha do RFC 2045 para corpo codificado. */
 const COLUNAS_BASE64 = 76;
 
+/**
+ * Onde um cabeçalho longo dobra.
+ *
+ * O RFC 5322 manda 78 contando o `\r\n`; 76 deixa a folga e é o mesmo número do
+ * corpo em base64 acima, que não é coincidência: os dois limites vêm da mesma
+ * era de terminal de 80 colunas.
+ */
+const COLUNAS_CABECALHO = 76;
+
 export type AnexoParaEnviar = {
   nome: string;
   mime: string;
@@ -33,6 +42,14 @@ export type EmailParaEnviar = {
   /** Nome exibido: "William (Softeum)" ou "Softeum". */
   nomeDeExibicao?: string | null;
   para: string;
+  /**
+   * Quem vai em CÓPIA (`Cc`), e recebe de verdade.
+   *
+   * O Gmail lê os destinatários dos PRÓPRIOS cabeçalhos do `raw` que a gente
+   * monta — não existe um campo de envelope separado na API. Então escrever o
+   * `Cc:` aqui é literalmente o que faz a mensagem chegar nestes endereços.
+   */
+  copia?: string[] | null;
   assunto: string;
   html: string;
   /** Alternativa em texto puro. Sem ela, cliente sem HTML vê uma tela vazia. */
@@ -109,6 +126,39 @@ function base64EmLinhas(dados: Buffer): string {
 }
 
 /**
+ * Um cabeçalho de lista de endereços, DOBRADO como o RFC 5322 manda.
+ *
+ * Vinte e oito endereços numa linha só passam de 800 caracteres, e o RFC 5322
+ * limita a linha a 78. Na prática o Gmail engoliria a linha comprida — mas o
+ * primeiro uso disto é um teste de entregabilidade, e cabeçalho fora do padrão
+ * é exatamente o tipo de coisa que os filtros que estamos medindo cobram.
+ *
+ * A dobra é `CRLF` seguido de um ESPAÇO: quem lê remonta a linha colando as
+ * continuações, e é por isso que a continuação nunca pode começar colada na
+ * margem — ali começaria um cabeçalho novo.
+ *
+ * Endereço não se quebra no meio: um que sozinho passe do limite vai inteiro na
+ * própria linha, torto e correto, em vez de virar dois endereços inválidos.
+ */
+function cabecalhoDeLista(nome: string, enderecos: string[]): string {
+  const linhas: string[] = [];
+  let atual = `${nome}:`;
+
+  enderecos.forEach((endereco, i) => {
+    const pedaco = i < enderecos.length - 1 ? `${endereco},` : endereco;
+    if (atual.length + 1 + pedaco.length > COLUNAS_CABECALHO) {
+      linhas.push(atual);
+      atual = ` ${pedaco}`;
+    } else {
+      atual += ` ${pedaco}`;
+    }
+  });
+
+  linhas.push(atual);
+  return linhas.join("\r\n");
+}
+
+/**
  * Um `Message-ID` nosso.
  *
  * Precisa existir ANTES do envio, e ser gravado: é ele que a próxima resposta
@@ -141,6 +191,10 @@ export function montarMime(m: EmailParaEnviar, messageId: string): string {
 
   linhas.push(`From: ${enderecoComNome(m.de, m.nomeDeExibicao)}`);
   linhas.push(`To: ${m.para}`);
+  // Vazio some do cabeçalho: um `Cc:` sem ninguém é lixo no MIME de toda
+  // mensagem normal, que é a esmagadora maioria delas.
+  const copia = (m.copia || []).map((e) => e.trim()).filter(Boolean);
+  if (copia.length > 0) linhas.push(cabecalhoDeLista("Cc", copia));
   linhas.push(`Subject: ${codificarCabecalho(m.assunto)}`);
   linhas.push(`Message-ID: ${messageId}`);
   if (m.emRespostaA) linhas.push(`In-Reply-To: ${m.emRespostaA}`);

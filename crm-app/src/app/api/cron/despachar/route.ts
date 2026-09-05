@@ -143,6 +143,12 @@ export async function GET(request: Request) {
             // e o que `/api/email/responder` faz quando a PESSOA responde o
             // cliente pela caixa de entrada. O que nao pode e o robo responder
             // uma conversa que ninguem comecou.
+            //
+            // `copia` e `assinatura_sem_link_whatsapp` sao nulas e false em toda
+            // mensagem de cadencia, entao o caminho normal nao muda nada. Elas
+            // existem para o e-mail de teste de entregabilidade: um envio so,
+            // com as 28 caixas de semente do MailReach em Cc, e a assinatura
+            // linkando um dominio so — o nosso, que e o que esta sendo medido.
             try {
               const e = await enviarPeloGmail(
                 caixa.usuarioId,
@@ -150,8 +156,12 @@ export async function GET(request: Request) {
                   de: caixa.email,
                   nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                   para: m.destino!,
+                  copia: m.copia,
                   assunto: m.assunto || "Softeum",
-                  html: emailBase(m.corpo, { assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE }),
+                  html: emailBase(m.corpo, {
+                    assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
+                    whatsappComoTexto: m.assinatura_sem_link_whatsapp,
+                  }),
                   emRespostaA: null,
                   referencias: null,
                 },
