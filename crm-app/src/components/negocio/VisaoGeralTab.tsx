@@ -4,7 +4,21 @@ import { useState } from "react";
 import { Check, Loader2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes } from "@/lib/types";
-import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Rotulo, Selecao, Selo } from "@/components/ui";
+import { formatarDataHora, type AtividadeComUsuario } from "@/lib/atividades";
+import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
+
+/** O tipo cru vira uma palavra legivel quando a atividade nao tem titulo. */
+function rotuloDoTipo(tipo: string | null): string {
+  const mapa: Record<string, string> = {
+    ligacao: "Ligação",
+    email: "E-mail",
+    whatsapp: "WhatsApp",
+    reuniao: "Reunião",
+    nota: "Nota",
+    tarefa: "Tarefa",
+  };
+  return mapa[tipo ?? ""] ?? "Atividade";
+}
 
 /**
  * `AAAA-MM-DD` (ou um ISO completo) como `04/09/2026`, sem passar por `Date`.
@@ -42,11 +56,17 @@ type CamposDoContato = {
 
 export function VisaoGeralTab({
   negocio,
+  atividades = [],
   onAtualizarContato,
 }: {
   negocio: NegocioComRelacoes;
+  /** O histórico do negócio. Já vinha carregado na página e ia só para a aba
+      de Cadência — a "Visão Geral" não mostrava nada do que aconteceu. */
+  atividades?: AtividadeComUsuario[];
   onAtualizarContato: (campos: Partial<NonNullable<NegocioComRelacoes["contato"]>>) => void;
 }) {
+  /** Só o que já foi FEITO. O que está agendado é assunto da aba Atividades. */
+  const registradas = atividades.filter((a) => a.concluida !== false);
   const [nome, setNome] = useState(negocio.contato?.nome || "");
   const [empresa, setEmpresa] = useState(negocio.contato?.empresa || "");
   const [email, setEmail] = useState(negocio.contato?.email || "");
@@ -201,61 +221,88 @@ export function VisaoGeralTab({
         </Botao>
       </Cartao>
 
-      <Cartao className="flex flex-col gap-4">
-        <div>
+      {/* A COLUNA DA DIREITA ESTAVA DOIS TERÇOS VAZIA.
+          Renderizado e medido: o formulário à esquerda tem ~900px de altura e
+          este cartão terminava aos ~330px. O resto era branco.
+
+          E metade do que ele mostrava já estava no cabeçalho da página, três
+          centímetros acima: a probabilidade, o dono e o nome da empresa (que
+          vinha como subtítulo). Três leituras para descartar três repetições.
+
+          O que entra no lugar é o que uma aba chamada "Visão Geral" devia ter
+          desde sempre e não tinha: O QUE ACONTECEU com este negócio. Os dados
+          já estavam carregados na página e iam só para a aba de Cadência. */}
+      <div className="flex flex-col gap-4">
+        <Cartao className="flex flex-col gap-4">
           <Rotulo>Resumo do negócio</Rotulo>
-          <Apoio>{negocio.titulo}</Apoio>
-        </div>
 
-        {/* Saíram "Etapa" e "Valor", pelo MESMO motivo: os dois já estão no
-            cabeçalho da página, a etapa como campo e o valor como o número de
-            28px. Repetir aqui era dizer três vezes, na mesma tela, o que já
-            está três centímetros acima — e cada repetição custa uma leitura
-            antes de ser descartada.
+          <dl className="flex flex-col gap-2.5">
+            <Linha rotulo="Previsão de fechamento">
+              {dataCurta(negocio.data_fechamento_prevista) ?? (
+                <span className="text-tinta-fraca">Sem data</span>
+              )}
+            </Linha>
+            <Linha rotulo="Criado em">
+              {dataCurta(negocio.criado_em) ?? <span className="text-tinta-fraca">—</span>}
+            </Linha>
+            <Linha rotulo="Origem">
+              <span className="capitalize">{negocio.contato?.origem || "manual"}</span>
+            </Linha>
+          </dl>
 
-            A probabilidade desce para a lista junto com o resto. Sem a caixa
-            recuada: ela existia para fazer par com o valor, e sozinha era uma
-            moldura em volta de um dado que não pesa mais que os outros
-            quatro. */}
-        {/* Tudo aqui já vinha no `SELECT_NEGOCIO_COMPLETO` e não era mostrado em
-            lugar nenhum da tela — a previsão de fechamento, inclusive. */}
-        <dl className="flex flex-col gap-2.5">
-          <Linha rotulo="Probabilidade">
-            <span className="tabular">{negocio.probabilidade ?? 0}%</span>
-          </Linha>
-          <Linha rotulo="Dono">
-            {negocio.responsavel?.nome ?? <span className="text-tinta-fraca">Sem dono</span>}
-          </Linha>
-          <Linha rotulo="Previsão de fechamento">
-            {dataCurta(negocio.data_fechamento_prevista) ?? (
-              <span className="text-tinta-fraca">Sem data</span>
-            )}
-          </Linha>
-          <Linha rotulo="Criado em">
-            {dataCurta(negocio.criado_em) ?? <span className="text-tinta-fraca">—</span>}
-          </Linha>
-          <Linha rotulo="Origem">
-            <span className="capitalize">{negocio.contato?.origem || "manual"}</span>
-          </Linha>
-        </dl>
+          {negocio.motivo_perda ? (
+            <Alerta tom="risco" titulo="Motivo da perda">
+              {negocio.motivo_perda}
+            </Alerta>
+          ) : null}
 
-        {negocio.motivo_perda ? (
-          <Alerta tom="risco" titulo="Motivo da perda">
-            {negocio.motivo_perda}
-          </Alerta>
-        ) : null}
-
-        {negocio.contato?.tags && negocio.contato.tags.length > 0 ? (
-          <div>
-            <p className="mb-1.5 text-rotulo text-tinta-suave">Tags</p>
-            <div className="flex flex-wrap gap-1.5">
-              {negocio.contato.tags.map((tag) => (
-                <Selo key={tag}>{tag}</Selo>
-              ))}
+          {negocio.contato?.tags && negocio.contato.tags.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-rotulo text-tinta-suave">Tags</p>
+              <div className="flex flex-wrap gap-1.5">
+                {negocio.contato.tags.map((tag) => (
+                  <Selo key={tag}>{tag}</Selo>
+                ))}
+              </div>
             </div>
+          ) : null}
+        </Cartao>
+
+        <Cartao className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <Rotulo>O que aconteceu</Rotulo>
+            {registradas.length > 0 ? (
+              <span className="text-rotulo text-tinta-fraca tabular">
+                {registradas.length} {registradas.length === 1 ? "registro" : "registros"}
+              </span>
+            ) : null}
           </div>
-        ) : null}
-      </Cartao>
+
+          {registradas.length === 0 ? (
+            <Vazio titulo="Nada registrado ainda">
+              Cada ligação, e-mail ou reunião registrada na aba Atividades aparece aqui.
+            </Vazio>
+          ) : (
+            <ol className="flex flex-col gap-3">
+              {registradas.slice(0, 5).map((a) => (
+                <li key={a.id} className="flex gap-2.5">
+                  <span
+                    aria-hidden
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-fio-forte"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-corpo text-tinta">{a.titulo || rotuloDoTipo(a.tipo)}</p>
+                    <p className="text-rotulo text-tinta-fraca">
+                      {formatarDataHora(a.criado_em)}
+                      {a.usuario?.nome ? ` · ${a.usuario.nome.split(" ")[0]}` : ""}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Cartao>
+      </div>
     </div>
   );
 }

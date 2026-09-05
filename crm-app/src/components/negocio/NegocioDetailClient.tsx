@@ -363,6 +363,36 @@ export function NegocioDetailClient({
   const proximaAtrasada = estaAtrasada(proxima?.data_agendada);
   const fechado = negocio.ganho !== null && negocio.ganho !== undefined;
 
+  /**
+   * O `titulo` do negócio quase sempre É o nome da empresa.
+   *
+   * Medido nos dez negócios mais recentes: NOVE têm os dois iguais, ou um
+   * contido no outro — "Grupo ALAP" / "Grupo ALAP", "Sylvamo" / "Sylvamo do
+   * Brasil Ltda.", "Irani Pape e Embalagem" / "Irani Papel e Embalagem". O
+   * cabeçalho mostrava os dois em linhas seguidas, ou seja, escrevia a mesma
+   * palavra duas vezes.
+   *
+   * A comparação normaliza acento, caixa, pontuação e os sufixos societários,
+   * e depois pergunta se um contém o outro — é o que faz "Sylvamo" casar com
+   * "Sylvamo do Brasil Ltda." sem casar com um título de verdade como
+   * "Renovação anual 2027".
+   */
+  const tituloDiferenteDaEmpresa = (() => {
+    const limpar = (t: string) =>
+      t
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/\b(ltda|me|epp|eireli|s\/?a|sa|cia|comercio|industria)\b/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const titulo = limpar(negocio.titulo || "");
+    const empresa = limpar(negocio.contato?.empresa || negocio.contato?.nome || "");
+    if (!titulo) return false;
+    if (!empresa) return true;
+    return !titulo.includes(empresa) && !empresa.includes(titulo);
+  })();
+
   return (
     <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
       {/* `voltarPara`, e nao "/". Este link estava fixo no board do vendedor
@@ -382,8 +412,17 @@ export function NegocioDetailClient({
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <Building2 className="h-5 w-5 text-acento" />
-              <h1 className="text-titulo font-medium text-tinta">
+              <Building2 className="h-5 w-5 shrink-0 text-acento" aria-hidden />
+              {/* 28px, e não 20px.
+                  O cabeçalho não tinha UM elemento com permissão de ser
+                  grande. Eu tinha dado esse papel ao valor — e a medição no
+                  banco mostrou que isso não resolve: SEIS dos dez negócios têm
+                  `valor = 0`, então na maioria dos cards que se abre o número
+                  grande simplesmente não existe e a tela volta a não ter
+                  âncora nenhuma.
+                  A empresa existe em todos. Ela É o assunto de um negócio, e é
+                  o que a pessoa procura quando bate o olho. */}
+              <h1 className="text-display font-semibold text-tinta leading-tight">
                 {negocio.contato?.empresa || negocio.contato?.nome}
               </h1>
               {fechado && (
@@ -414,28 +453,36 @@ export function NegocioDetailClient({
                 </span>
               )}
             </div>
-            <p className="text-rotulo text-tinta-suave mt-1">{negocio.titulo}</p>
+            {/* UMA linha de apoio, e não três blocos empilhados.
+                O `negocios.titulo` só aparece quando diz algo que o nome da
+                empresa já não disse — e medido no banco, em NOVE dos dez
+                negócios ele é o próprio nome da empresa ("Grupo ALAP" /
+                "Grupo ALAP", "Procempa" / "Procempa"). O cabeçalho escrevia a
+                mesma palavra duas vezes, uma embaixo da outra.
 
-            {/* O VALOR sobe para cá, a 28px.
-                Ele estava lá embaixo, a 14px, dentro da quarta caixinha tingida
-                de uma grade de caixinhas tingidas todas do mesmo tamanho. Num
-                negócio, o preço é o assunto — e o cabeçalho inteiro não tinha
-                UM elemento com permissão de ser grande (craft R4): tudo entre
-                12 e 20px, e a hierarquia sumia.
-
-                Sem valor não aparece nada. Um "R$ 0,00" grande seria a maior
-                coisa da tela dizendo que o negócio não vale nada, quando o que
-                ele diz é "ainda não foi precificado" — a mesma lição que já
-                tinha tirado o zero do card do board. */}
-            {(negocio.valor ?? 0) > 0 && (
-              <p className="mt-2 text-display font-semibold text-tinta tabular leading-none">
-                {formatarMoeda(negocio.valor)}
-                <span className="text-corpo font-normal text-tinta-suave">
-                  {" "}
-                  /mês
+                O valor desce de 28px para cá: com 6 dos 10 negócios em zero,
+                pendurar a hierarquia da tela nele deixava a maioria dos cards
+                sem âncora nenhuma. Quem é grande agora é a empresa, que existe
+                sempre. E sem valor a linha DIZ isso, em vez de sumir — "a
+                definir" é um pendência, não um vazio. */}
+            <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-rotulo text-tinta-suave">
+              {(negocio.valor ?? 0) > 0 ? (
+                <span className="text-titulo font-medium text-tinta tabular">
+                  {formatarMoeda(negocio.valor)}
+                  <span className="text-rotulo font-normal text-tinta-suave"> /mês</span>
                 </span>
-              </p>
-            )}
+              ) : (
+                <span className="text-corpo text-tinta-fraca">Valor a definir</span>
+              )}
+              <span aria-hidden>·</span>
+              <span className="tabular">{negocio.probabilidade ?? 0}% de chance</span>
+              {tituloDiferenteDaEmpresa ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="min-w-0 truncate">{negocio.titulo}</span>
+                </>
+              ) : null}
+            </p>
             {/* Os dados do contato deixam de ser texto e viram AÇÃO. Antes
                 eram três spans: para falar com o cliente era preciso
                 selecionar, copiar e trocar de aplicativo.
@@ -708,6 +755,11 @@ export function NegocioDetailClient({
       {aba === "geral" && (
         <VisaoGeralTab
           negocio={negocio}
+          /* As atividades já estavam carregadas aqui e iam só para a aba de
+             Cadência. A "Visão Geral" não mostrava NADA do que aconteceu com o
+             negócio — era um formulário de cadastro à esquerda e uma coluna
+             dois terços vazia à direita. */
+          atividades={atividades}
           onAtualizarContato={(campos) => setNegocio((prev) => ({ ...prev, contato: { ...prev.contato!, ...campos } }))}
         />
       )}
