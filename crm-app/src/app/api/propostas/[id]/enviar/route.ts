@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailBase } from "@/lib/resend";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
-import { nomeDeExibicao } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 
@@ -135,10 +134,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   let algumEmailEnviado = false;
   let emailErro: string | null = null;
-  // Quem o cliente ve como remetente: o dono do negocio, pela caixa comercial.
-  const assinaturaDe = nomeDeExibicao(
-    (negocio?.responsavel as { nome?: string; email?: string } | null) ?? null,
-  );
   for (const sig of signatariosCriados) {
     const token = sig.token;
     const [upComercial, upTecnica] = await Promise.all([
@@ -159,7 +154,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const linkAssinatura = `${origin}/assinar/${token}`;
     const resultado = await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
       para: sig.email,
-      nomeDeExibicao: assinaturaDe,
       assunto: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
       html: emailBase(`
         <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
@@ -179,7 +173,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   for (const email of copias) {
     await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
       para: email,
-      nomeDeExibicao: assinaturaDe,
       assunto: `Cópia: Proposta Softeum ${proposta.numero}`,
       html: emailBase(`
         <h2 style="margin-top:0;">Cópia da proposta enviada para assinatura</h2>

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { temGoogleConfigurado } from "@/lib/google/config";
-import { assuntoDeResposta, caixasDeSaida, nomeDeExibicao, threadsDosNegocios } from "@/lib/gmail/caixa";
+import {
+  NOME_PADRAO_DO_REMETENTE,
+  assuntoDeResposta,
+  caixasDeSaida,
+  threadsDosNegocios,
+} from "@/lib/gmail/caixa";
 import { enviarPeloGmail, type AnexoParaEnviar } from "@/lib/gmail/enviar";
 import { htmlDeTexto } from "@/lib/gmail/corpo";
 import { emailBase } from "@/lib/resend";
@@ -330,7 +335,7 @@ export async function POST(request: Request) {
         de: caixa.email,
         // Quem está falando é quem CLICOU, não o dono do negócio: um admin
         // respondendo em nome de outra pessoa assinaria com o nome errado.
-        nomeDeExibicao: nomeDeExibicao(usuarioAtual ?? null),
+        nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
         para: destino,
         assunto,
         html: emailBase(htmlDeTexto(texto)),

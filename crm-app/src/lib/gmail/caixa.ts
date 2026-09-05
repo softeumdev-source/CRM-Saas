@@ -9,12 +9,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { ESCOPO_GMAIL_ENVIO } from "@/lib/google/escopos";
-import { podeReceberResposta } from "@/lib/resend";
 
 export type CaixaDeSaida = {
   /** Dono da conexão Google — é o token dele que assina o envio. */
   usuarioId: string;
   email: string;
+  /**
+   * O nome que o cliente vê no `From` e na assinatura do corpo.
+   *
+   * É da CAIXA, e não de quem conectou o Google nem de quem clicou em enviar.
+   * A caixa é uma só, então a pessoa que o cliente conhece também é uma só —
+   * e ela continua a mesma quando o lead ainda não tem dono, que é o estado
+   * normal de todo lead novo em prospecção.
+   */
+  nome: string | null;
 };
 
 /**
@@ -38,7 +46,7 @@ export async function caixasDeSaida(
 
   const { data } = await supabase
     .from("tenants")
-    .select("id, caixa_email_usuario_id")
+    .select("id, caixa_email_usuario_id, caixa_email_nome")
     .in("id", tenantIds)
     .not("caixa_email_usuario_id", "is", null);
 
@@ -55,27 +63,36 @@ export async function caixasDeSaida(
   for (const t of data || []) {
     const c = porUsuario.get(t.caixa_email_usuario_id!);
     if (!c || !(c.escopos || []).includes(ESCOPO_GMAIL_ENVIO)) continue;
-    mapa.set(t.id, { usuarioId: c.usuario_id, email: c.email_google });
+    mapa.set(t.id, { usuarioId: c.usuario_id, email: c.email_google, nome: t.caixa_email_nome });
   }
   return mapa;
 }
 
 /**
- * O nome que o cliente vê no remetente.
+ * O último recurso, quando o tenant ainda não tem nome de caixa configurado.
  *
- * O endereço é sempre o mesmo (a caixa comercial), então a resposta cai sempre
- * no mesmo lugar e a thread não quebra. O que muda é só o nome: quem está
- * falando de verdade.
+ * Existe para nunca sair `From: <comercial@softeum.com.br>` sem nome nenhum —
+ * um endereço nu no remetente é o que mais parece spam numa caixa de entrada.
  *
- * O robô SDR IA tem e-mail `.invalid` de propósito, e `podeReceberResposta` já
- * é o teste de "isto é uma pessoa de verdade" usado no `Reply-To`. Reusar o
- * mesmo teste evita duas definições de quem é humano.
+ * ─────────────────────────────────────────────────────────────────────────
+ * AQUI MORAVA `nomeDeExibicao(responsavel)`, e ele estava errado por desenho.
+ *
+ * Aquela função derivava o nome do RESPONSÁVEL pelo negócio e devolvia
+ * "Primeiro (Softeum)". Três defeitos, todos medidos nas mensagens já enviadas:
+ *
+ *   1. lead novo em prospecção nasce SEM DONO — é o desenho do pool —, então o
+ *      caminho normal caía direto no literal "Softeum";
+ *   2. quando havia dono, saía o nome de quem por acaso estava com o card, e
+ *      não o da pessoa que o cliente conhece. O usuário-robô de semente chegou
+ *      a assinar dois e-mails como "SDR IA";
+ *   3. o CORPO assinava por outro caminho (`{{vendedor}}`, resolvido em SQL),
+ *      então cabeçalho e assinatura podiam discordar no mesmo e-mail.
+ *
+ * O nome agora é propriedade da caixa (`tenants.caixa_email_nome`), lido por
+ * TODOS os caminhos de envio e também pelo corpo. Uma fonte só.
+ * ─────────────────────────────────────────────────────────────────────────
  */
-export function nomeDeExibicao(responsavel: { nome?: string | null; email?: string | null } | null): string {
-  if (!responsavel || !podeReceberResposta(responsavel.email)) return "Softeum";
-  const primeiro = (responsavel.nome || "").trim().split(" ")[0];
-  return primeiro ? `${primeiro} (Softeum)` : "Softeum";
-}
+export const NOME_PADRAO_DO_REMETENTE = "Softeum";
 
 export type ContextoDeThread = {
   threadId: string | null;

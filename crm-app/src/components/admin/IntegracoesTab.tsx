@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Calendar, Check, Inbox, Link2, Loader2, Send, Unlink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { Alerta, Botao, Campo, Cartao, Confirmar, Rotulo, Selecao, Selo } from "@/components/ui";
+import { Alerta, Botao, Campo, Cartao, Confirmar, Entrada, Rotulo, Selecao, Selo } from "@/components/ui";
 import { CaixaDeEntradaGoogle } from "@/components/admin/CaixaDeEntradaGoogle";
 import { HorarioDeAtendimento } from "@/components/admin/HorarioDeAtendimento";
 import { formatarDataHora } from "@/lib/atividades";
@@ -34,6 +34,16 @@ export function IntegracoesTab({
   // parte em várias.
   const [caixaDoTenant, setCaixaDoTenant] = useState<string>("");
   const [salvandoCaixa, setSalvandoCaixa] = useState(false);
+  /**
+   * O nome que o cliente vê no remetente.
+   *
+   * É da CAIXA, e não de quem conectou o Google nem de quem clicou em enviar.
+   * Antes ele era derivado do responsável pelo negócio, e por isso um lead sem
+   * dono — o estado normal de todo lead novo em prospecção — saía assinado com
+   * um literal, e um usuário de semente chegou a assinar dois e-mails.
+   */
+  const [nomeDaCaixa, setNomeDaCaixa] = useState<string>("");
+  const [salvandoNome, setSalvandoNome] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -51,10 +61,11 @@ export function IntegracoesTab({
       setConexoes((data || []) as unknown as Integracao[]);
       const { data: tenant } = await createClient()
         .from("tenants")
-        .select("caixa_email_usuario_id")
+        .select("caixa_email_usuario_id, caixa_email_nome")
         .eq("id", usuarioAtual.tenant_id || "")
         .maybeSingle();
       setCaixaDoTenant(tenant?.caixa_email_usuario_id || "");
+      setNomeDaCaixa(tenant?.caixa_email_nome || "");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar.");
     } finally {
@@ -85,6 +96,24 @@ export function IntegracoesTab({
       .eq("id", usuarioAtual.tenant_id || "");
     setSalvandoCaixa(false);
     if (error) setErro(`Não foi possível salvar a caixa de envio: ${error.message}`);
+  };
+
+  /**
+   * Grava no `blur`, e não a cada tecla: são ~15 caracteres, e um `update` por
+   * letra digitada encheria o banco de escrita por nada.
+   *
+   * `await`, e não `void`: o builder do PostgREST é um thenable preguiçoso e
+   * sem consumir a promise a requisição nunca sai — foi assim que o selo de
+   * "respondeu" ficou aceso por horas.
+   */
+  const salvarNome = async () => {
+    setSalvandoNome(true);
+    const { error } = await createClient()
+      .from("tenants")
+      .update({ caixa_email_nome: nomeDaCaixa.trim() || null })
+      .eq("id", usuarioAtual.tenant_id || "");
+    setSalvandoNome(false);
+    if (error) setErro(`Não foi possível salvar o nome do remetente: ${error.message}`);
   };
 
   const desconectar = async (): Promise<string | void> => {
@@ -204,8 +233,9 @@ export function IntegracoesTab({
           <p className="text-rotulo text-tinta-suave mt-1">
             Por qual conta o CRM manda e-mail para o cliente — a cadência, a proposta e as
             respostas. É uma só para o time inteiro, e de propósito: a resposta do cliente volta
-            para a mesma caixa que a sincronização lê, dentro da mesma conversa. O nome exibido
-            muda conforme quem está falando; o endereço, não.
+            para a mesma caixa que a sincronização lê, dentro da mesma conversa. O nome e o
+            endereço são os dois da caixa — o cliente conhece uma pessoa só, e ela não muda
+            conforme quem clicou em enviar.
           </p>
         </div>
 
@@ -231,6 +261,24 @@ export function IntegracoesTab({
                   </option>
                 ))}
               </Selecao>
+            )}
+          </Campo>
+        )}
+
+        {podemEnviar.length > 0 && (
+          <Campo
+            rotulo="Nome que o cliente vê"
+            dica="Vai no remetente e na assinatura do corpo. Sai igual em cadência, resposta e proposta."
+          >
+            {(props) => (
+              <Entrada
+                {...props}
+                value={nomeDaCaixa}
+                disabled={salvandoNome}
+                placeholder="William Machado"
+                onChange={(e) => setNomeDaCaixa(e.target.value)}
+                onBlur={() => void salvarNome()}
+              />
             )}
           </Campo>
         )}

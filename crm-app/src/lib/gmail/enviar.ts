@@ -66,10 +66,36 @@ export function codificarCabecalho(valor: string): string {
   return `=?utf-8?B?${Buffer.from(valor, "utf-8").toString("base64")}?=`;
 }
 
-/** `Nome <endereco@dominio>`, com o nome codificado quando precisa. */
+/**
+ * `Nome <endereco@dominio>`, com o nome protegido de duas formas diferentes.
+ *
+ * FORA DE ASCII → RFC 2047, pelo `codificarCabecalho` acima. "José" vira
+ * `=?utf-8?B?Sm9zw6k=?=`.
+ *
+ * DENTRO DE ASCII, MAS COM CARACTERE ESPECIAL → aspas. O RFC 5322 reserva
+ * `( ) < > @ , ; : \ " . [ ]` na parte do nome, e um deles solto quebra o
+ * cabeçalho — sem erro nenhum, porque quem reclama é o cliente de e-mail do
+ * outro lado. `Softeum (comercial)` viraria um comentário e sumiria; `Machado,
+ * William` viraria DOIS destinatários.
+ *
+ * Isso deixou de ser hipotético quando o nome do remetente virou um campo que
+ * a pessoa digita em Admin → Integrações. "William Machado" não precisa de
+ * nada disto; o próximo nome que alguém escrever pode precisar.
+ */
+const ESPECIAIS_RFC5322 = /[()<>@,;:\\".[\]]/;
+
 export function enderecoComNome(email: string, nome?: string | null): string {
   const n = (nome || "").trim();
-  return n ? `${codificarCabecalho(n)} <${email}>` : email;
+  if (!n) return email;
+
+  const codificado = codificarCabecalho(n);
+  // Já codificado em RFC 2047 é um `atom` — aspas ali quebrariam a decodificação.
+  const seguro =
+    codificado === n && ESPECIAIS_RFC5322.test(n)
+      ? `"${n.replace(/([\\"])/g, "\\$1")}"`
+      : codificado;
+
+  return `${seguro} <${email}>`;
 }
 
 /** base64 quebrado em 76 colunas, como o RFC 2045 exige. */

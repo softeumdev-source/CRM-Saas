@@ -1630,6 +1630,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          caixa_email_nome: string | null
           caixa_email_usuario_id: string | null
           cor_primaria: string | null
           criado_em: string | null
@@ -1639,6 +1640,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          caixa_email_nome?: string | null
           caixa_email_usuario_id?: string | null
           cor_primaria?: string | null
           criado_em?: string | null
@@ -1648,6 +1650,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          caixa_email_nome?: string | null
           caixa_email_usuario_id?: string | null
           cor_primaria?: string | null
           criado_em?: string | null

@@ -12,7 +12,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { caixasDeSaida } from "@/lib/gmail/caixa";
+import { NOME_PADRAO_DO_REMETENTE, caixasDeSaida } from "@/lib/gmail/caixa";
 import { enviarPeloGmail, type AnexoParaEnviar } from "@/lib/gmail/enviar";
 import { temGoogleConfigurado } from "@/lib/google/config";
 
@@ -55,7 +55,10 @@ export async function enviarDoTenant(
   try {
     const e = await enviarPeloGmail(caixa.usuarioId, {
       de: caixa.email,
-      nomeDeExibicao: m.nomeDeExibicao ?? "Softeum",
+      // Sem nome explícito, herda o da CAIXA. É por aqui que a proposta e o
+      // "todos assinaram" passam a sair como a mesma pessoa que manda a
+      // cadência, sem precisar de uma linha em cada chamador.
+      nomeDeExibicao: m.nomeDeExibicao ?? caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
       para: m.para,
       assunto: m.assunto,
       html: m.html,

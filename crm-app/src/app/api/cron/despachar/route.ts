@@ -6,7 +6,7 @@ import { enviarPeloGmail } from "@/lib/gmail/enviar";
 import {
   assuntoDeResposta,
   caixasDeSaida,
-  nomeDeExibicao,
+  NOME_PADRAO_DO_REMETENTE,
   threadsDosNegocios,
   type ContextoDeThread,
 } from "@/lib/gmail/caixa";
@@ -95,17 +95,14 @@ export async function GET(request: Request) {
         .map((m) => m.negocio_id as string),
     ),
   ];
-  const quemAssina = new Map<string, string>();
+  // A consulta dos DONOS saiu daqui junto com `quemAssina`. Ela existia só para
+  // decidir o nome do remetente a partir do responsável pelo negócio — e esse
+  // era o defeito: lead novo em prospecção não tem dono, então o nome caía num
+  // literal, e quando tinha dono saía o nome de quem por acaso estava com o
+  // card. O nome agora vem da caixa (`caixa.nome`), que é uma só.
   let threads = new Map<string, ContextoDeThread>();
   if (idsDeNegocio.length > 0) {
-    const [{ data: donos }, mapaDeThreads] = await Promise.all([
-      supabase.from("negocios").select("id, responsavel:usuarios!negocios_responsavel_id_fkey(nome, email)").in("id", idsDeNegocio),
-      threadsDosNegocios(supabase, idsDeNegocio),
-    ]);
-    for (const d of donos || []) {
-      quemAssina.set(d.id, nomeDeExibicao(d.responsavel as { nome?: string; email?: string } | null));
-    }
-    threads = mapaDeThreads;
+    threads = await threadsDosNegocios(supabase, idsDeNegocio);
   }
 
   for (const m of mensagens || []) {
@@ -155,7 +152,7 @@ export async function GET(request: Request) {
                 caixa.usuarioId,
                 {
                   de: caixa.email,
-                  nomeDeExibicao: m.negocio_id ? quemAssina.get(m.negocio_id) : "Softeum",
+                  nomeDeExibicao: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                   para: m.destino!,
                   assunto,
                   html: emailBase(m.corpo),
