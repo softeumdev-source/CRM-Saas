@@ -52,6 +52,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // `public/` não é código do projeto: é o que o servidor entrega tal e qual
+    // ao navegador. Nada ali passa pelo compilador, e o eslint não tem o que
+    // dizer sobre um arquivo minificado de terceiros.
+    //
+    // Sem esta linha, o `pdf.worker.min.mjs` do pdf.js — 1448 problemas numa
+    // única linha de código minificado — respondia por 95% do relatório e
+    // afogava os 79 problemas que são de verdade nossos. Um lint que ninguém
+    // consegue ler é um lint que ninguém lê.
+    "public/**",
   ]),
 ]);
 
