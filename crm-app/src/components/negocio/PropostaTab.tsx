@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
+import { comPrazo } from "@/lib/prazo";
+import { mensagemDeFalha } from "@/lib/erros";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, PropostaComRelacoes, SolicitacaoDesconto, Usuario } from "@/lib/types";
 import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
@@ -244,34 +246,57 @@ export function PropostaTab({
     setRespostaAdmin("");
   };
 
+  /**
+   * ESTE BOTÃO FICAVA GIRANDO PARA SEMPRE.
+   *
+   * O corpo era `await fetch` → `await resp.json()` → `setGerando(false)`, sem
+   * `try`. As duas promessas rejeitam de verdade: o `fetch` quando a rede cai,
+   * e o `.json()` quando a resposta não é JSON — que é justamente o 504/500 em
+   * HTML que esta rota tende a devolver, porque ela gera DOIS PDFs no servidor.
+   * Rejeitando qualquer uma, o `setGerando(false)` nunca rodava: o botão ficava
+   * `disabled` com o spinner girando, sem mensagem nenhuma, e a única saída era
+   * recarregar a página. O vendedor não tinha como saber se a proposta saiu.
+   *
+   * `comPrazo` com 60s e não o padrão de 12: dois PDFs demoram. O prazo existe
+   * porque rede bloqueada (proxy, portal cativo, VPN caindo) PENDURA em vez de
+   * rejeitar — está escrito em `lib/prazo.ts`, e sem ele o `try` não salva.
+   */
   const handleGerar = async () => {
     setErro(null);
     setGerando(true);
-    const resp = await fetch("/api/propostas/gerar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        negocioId: negocio.id,
-        planoId,
-        avisoPrevioDias,
-        valorPlataforma: valorMensal,
-        valorUso: 0,
-        qtdCaixasEmail: 0,
-        qtdNumerosWhatsapp: 0,
-        prazoContratoMeses,
-        valorSetup,
-      }),
-    });
-    const data = await resp.json();
-    setGerando(false);
-    if (!resp.ok) {
-      setErro(data.error || "Erro ao gerar proposta.");
-      return;
+    try {
+      const resp = await comPrazo(
+        fetch("/api/propostas/gerar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            negocioId: negocio.id,
+            planoId,
+            avisoPrevioDias,
+            valorPlataforma: valorMensal,
+            valorUso: 0,
+            qtdCaixasEmail: 0,
+            qtdNumerosWhatsapp: 0,
+            prazoContratoMeses,
+            valorSetup,
+          }),
+        }),
+        60_000,
+      );
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao gerar proposta.");
+        return;
+      }
+      setPropostas((prev) => semDuplicadas([{ ...data.proposta, plano, envelopes: [] }, ...prev]));
+      const supabaseClient = createClient();
+      await supabaseClient.from("negocios").update({ valor: valorMensal }).eq("id", negocio.id);
+      if (data.urlComercial) window.open(data.urlComercial, "_blank");
+    } catch (e) {
+      setErro(mensagemDeFalha(e, "Não foi possível gerar a proposta. Tente de novo."));
+    } finally {
+      setGerando(false);
     }
-    setPropostas((prev) => semDuplicadas([{ ...data.proposta, plano, envelopes: [] }, ...prev]));
-    const supabaseClient = createClient();
-    await supabaseClient.from("negocios").update({ valor: valorMensal }).eq("id", negocio.id);
-    if (data.urlComercial) window.open(data.urlComercial, "_blank");
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -325,47 +350,75 @@ export function PropostaTab({
     setEtapaEnvio("editor");
   };
 
+  /**
+   * O MESMO TRAVAMENTO DO `handleGerar`, e aqui é pior: a ação é IRREVERSÍVEL.
+   *
+   * Sem `try/finally`, uma rejeição deixava `enviandoId` preso — o passo ficava
+   * "enviando" para sempre, sem erro e sem confirmação. E o envio pode ter
+   * acontecido no servidor: a pessoa não sabe se o cliente recebeu o link, e o
+   * instinto é clicar de novo, o que manda um SEGUNDO envelope para o mesmo
+   * cliente.
+   *
+   * Por isso o retry precisa ser seguro, e não só possível. A rota recusa
+   * proposta que não esteja em `rascunho` (`enviar/route.ts:38`), então o
+   * segundo clique depois de um envio que deu certo volta 422 com mensagem em
+   * vez de duplicar. O que o `catch` acrescenta é dizer isso à pessoa em vez de
+   * deixá-la no escuro.
+   */
   const handleEnviarComCampos = async (campos: CampoAssinatura[]) => {
     if (!editandoEnvioId) return;
     const signatariosValidos = signatarios.filter((s) => s.nome.trim() && s.email.trim());
 
     setEnviandoId(editandoEnvioId);
     setErro(null);
-    const resp = await fetch(`/api/propostas/${editandoEnvioId}/enviar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // `chave` e estado de tela e nao pode atravessar a fronteira. A rota
-        // hoje le so `nome` e `email`, entao mandar a mais seria inerte — mas
-        // depender disso e apostar que ninguem vai escrever um `...s` ali
-        // depois. Aqui a forma do que sai fica explicita.
-        signatarios: signatariosValidos.map(({ nome, email }) => ({ nome, email })),
-        copias: copias.map((c) => c.valor).filter((v) => v.trim()),
-        campos_assinatura: campos,
-      }),
-    });
-    const data = await resp.json();
-    setEnviandoId(null);
-    if (!resp.ok) {
-      setErro(data.error || "Erro ao enviar proposta.");
-      return;
-    }
-    setEditandoEnvioId(null);
-    setEtapaEnvio(null);
-    setUltimoResultado({
-      propostaId: editandoEnvioId,
-      linkAssinatura: data.linkAssinatura,
-      emailEnviado: data.emailEnviado,
-      emailErro: data.emailErro || null,
-    });
-    const supabase = createClient();
-    const { data: propostaAtualizada } = await supabase
-      .from("propostas")
-      .select("*, plano:planos(*), envelopes(*, signatarios(*))")
-      .eq("id", editandoEnvioId)
-      .single();
-    if (propostaAtualizada) {
-      setPropostas((prev) => prev.map((p) => (p.id === editandoEnvioId ? propostaAtualizada : p)));
+    try {
+      const resp = await comPrazo(
+        fetch(`/api/propostas/${editandoEnvioId}/enviar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            // `chave` e estado de tela e nao pode atravessar a fronteira. A rota
+            // hoje le so `nome` e `email`, entao mandar a mais seria inerte — mas
+            // depender disso e apostar que ninguem vai escrever um `...s` ali
+            // depois. Aqui a forma do que sai fica explicita.
+            signatarios: signatariosValidos.map(({ nome, email }) => ({ nome, email })),
+            copias: copias.map((c) => c.valor).filter((v) => v.trim()),
+            campos_assinatura: campos,
+          }),
+        }),
+        30_000,
+      );
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao enviar proposta.");
+        return;
+      }
+      setEditandoEnvioId(null);
+      setEtapaEnvio(null);
+      setUltimoResultado({
+        propostaId: editandoEnvioId,
+        linkAssinatura: data.linkAssinatura,
+        emailEnviado: data.emailEnviado,
+        emailErro: data.emailErro || null,
+      });
+      const supabase = createClient();
+      const { data: propostaAtualizada } = await supabase
+        .from("propostas")
+        .select("*, plano:planos(*), envelopes(*, signatarios(*))")
+        .eq("id", editandoEnvioId)
+        .single();
+      if (propostaAtualizada) {
+        setPropostas((prev) => prev.map((p) => (p.id === editandoEnvioId ? propostaAtualizada : p)));
+      }
+    } catch (e) {
+      setErro(
+        mensagemDeFalha(
+          e,
+          "Não foi possível confirmar o envio. Recarregue a página antes de tentar de novo — a proposta pode já ter sido enviada.",
+        ),
+      );
+    } finally {
+      setEnviandoId(null);
     }
   };
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailBase } from "@/lib/resend";
+import { escaparHtml } from "@/lib/gmail/corpo";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
@@ -163,8 +164,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       assunto: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
       html: emailBase(`
         <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
-        <p>Olá ${sig.nome},</p>
-        <p>A Softeum preparou a proposta comercial e técnica (${proposta.numero}) para ${negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa"}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
+        <p>Olá ${escaparHtml(sig.nome)},</p>
+        <p>A Softeum preparou a proposta comercial e técnica (${escaparHtml(proposta.numero)}) para ${escaparHtml(negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa")}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
         <p style="text-align:center; margin: 28px 0;">
           <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
         </p>
@@ -175,17 +176,37 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (resultado.erro && !emailErro) emailErro = resultado.erro;
   }
 
+  // Continua indo na RESPOSTA da rota, onde o vendedor autenticado o copia
+  // dentro do CRM (`PropostaTab.tsx:849`). O que mudou é que ele não sai mais
+  // por e-mail para quem não assina.
   const linkPrimario = `${origin}/assinar/${signatariosCriados[0].token}`;
+
+  // A CÓPIA NÃO LEVA MAIS LINK NENHUM.
+  //
+  // Antes esta linha era `const linkPrimario = ${origin}/assinar/${
+  // signatariosCriados[0].token}` e o botão da cópia — rotulado "Visualizar
+  // proposta" — apontava para ele. Ou seja: o token de assinatura DO PRIMEIRO
+  // SIGNATÁRIO ia para todo mundo em cópia, e o `registrar_assinatura` só
+  // confere se o token existe e se aquele signatário ainda não assinou, nunca
+  // quem é a pessoa do outro lado. Quem estava em cópia assinava no lugar do
+  // cliente, com um botão que dizia "visualizar".
+  //
+  // Uma tela de leitura sem token de assinatura ainda não existe. Enquanto não
+  // existir, a cópia sai sem botão e diz o que aconteceu — é melhor não ter
+  // link do que ter um que assina. O nome de quem assina entra escapado
+  // porque vem do formulário de envio.
+  const nomesQueAssinam = signatariosFinal
+    .map((s) => escaparHtml(s.nome))
+    .filter(Boolean)
+    .join(", ");
   for (const email of copias) {
     await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
       para: email,
       assunto: `Cópia: Proposta Softeum ${proposta.numero}`,
       html: emailBase(`
         <h2 style="margin-top:0;">Cópia da proposta enviada para assinatura</h2>
-        <p>Você está recebendo uma cópia da proposta ${proposta.numero} enviada para assinatura.</p>
-        <p style="text-align:center; margin: 28px 0;">
-          <a href="${linkPrimario}" style="background:#64748b; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Visualizar proposta</a>
-        </p>
+        <p>Você está recebendo uma cópia da proposta ${escaparHtml(proposta.numero)}, enviada para assinatura${nomesQueAssinam ? ` de ${nomesQueAssinam}` : ""}.</p>
+        <p style="color:#64748b; font-size:13px;">O link de assinatura vai só para quem assina. Para ver os documentos, peça a quem enviou a proposta.</p>
       `, { assinatura }),
     });
   }

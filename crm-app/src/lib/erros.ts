@@ -18,3 +18,27 @@ export function mensagemDoErro(erro: unknown, padrao?: string): string {
   if (typeof talvez === "string" && talvez) return talvez;
   return padrao ?? String(erro);
 }
+
+/**
+ * A falha de REDE do `fetch`, que não tem mensagem para mostrar a ninguém.
+ *
+ * MEDIDO NO NAVEGADOR: com a rede caindo, o `fetch` rejeita com
+ * `TypeError: Failed to fetch` — e o `mensagemDoErro` acima, que prefere a
+ * mensagem do próprio erro, punha essa frase em inglês dentro de uma tela toda
+ * em português. Foi o que apareceu na primeira rodada de teste dos botões de
+ * convite.
+ *
+ * A frase do navegador também não diz nada de útil: ela não distingue rede
+ * caída de servidor fora do ar, e não sugere o que fazer. Quem sabe o que
+ * dizer é a tela, que conhece a ação — "o convite não foi enviado" é diferente
+ * de "a proposta pode já ter sido enviada".
+ *
+ * O `PrazoEsgotado` de `lib/prazo.ts` NÃO cai aqui de propósito: a mensagem
+ * dele já é nossa, já está em português e diz quanto tempo esperou.
+ */
+export function mensagemDeFalha(erro: unknown, padrao: string): string {
+  const ehFalhaDeRede =
+    erro instanceof TypeError ||
+    (erro instanceof Error && /failed to fetch|networkerror|load failed/i.test(erro.message));
+  return ehFalhaDeRede ? padrao : mensagemDoErro(erro, padrao);
+}

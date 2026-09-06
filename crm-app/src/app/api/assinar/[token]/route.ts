@@ -4,6 +4,7 @@ import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 import { emailBase } from "@/lib/resend";
+import { escaparHtml } from "@/lib/gmail/corpo";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
@@ -323,8 +324,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
               assunto: `Proposta ${numero} assinada por todos — documentos para download`,
               html: emailBase(`
                 <h2 style="margin-top:0;">Documentação assinada disponível para download</h2>
-                ${sigNome ? `<p>Olá ${sigNome},</p>` : ""}
-                <p>Todos os signatários concluíram a assinatura da proposta <strong>${numero}</strong>${titulo ? ` — ${titulo}` : ""}.</p>
+                ${sigNome ? `<p>Olá ${escaparHtml(sigNome)},</p>` : ""}
+                <p>Todos os signatários concluíram a assinatura da proposta <strong>${escaparHtml(numero)}</strong>${titulo ? ` — ${escaparHtml(titulo)}` : ""}.</p>
                 <p>Os documentos assinados, com certificado de conclusão, estão disponíveis para download:</p>
                 <table style="width:100%; margin: 20px 0; border-collapse:collapse;">
                   <tr>

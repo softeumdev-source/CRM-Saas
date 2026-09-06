@@ -1,0 +1,51 @@
+-- Qualquer vendedor virava admin com um `update` na própria linha.
+--
+-- MEDIDO EM PRODUÇÃO, numa transação revertida, com a sessão do próprio
+-- vendedor (`set local role authenticated` + o `sub` dele no JWT):
+--
+--     update public.usuarios set role = 'admin' where id = <ele mesmo>;
+--     -- select role -> 'admin'
+--
+-- Por que passava. A policy é:
+--
+--     usuarios_update · using ((id = auth.uid()) or (usuario_role() = 'admin' and …))
+--                     · with_check  NULO
+--
+-- Quando o `with check` é nulo o Postgres reusa o `using` como check. E o
+-- `using` só pergunta "esta linha é sua?" — nunca "o que você está escrevendo
+-- nela?". Antes e depois do update a linha continua sendo dele, então as duas
+-- pontas passam. Não havia nada segurando: zero gatilhos em `usuarios`.
+--
+-- O segundo caminho era o `tenant_id`: trocando o próprio, o
+-- `usuario_tenant_id()` passa a devolver o tenant novo e a pessoa enxerga a
+-- carteira de outra empresa.
+--
+-- POR QUE PRIVILÉGIO E NÃO `WITH CHECK`. Um `with check` não enxerga o valor
+-- ANTIGO da linha, então "não deixe MUDAR o papel" não se escreve ali sem um
+-- gatilho junto. Privilégio de coluna diz a mesma coisa de forma declarativa,
+-- sem corpo de função para divergir com o tempo.
+--
+-- POR QUE REVOGAR A TABELA E RECONCEDER, e não revogar as colunas: um
+-- `revoke update (role, tenant_id)` NÃO fura um `update` de tabela — o
+-- privilégio de tabela já cobre todas as colunas. Tentei exatamente isso na
+-- primeira rodada de teste e o vendedor continuou virando admin. É o mesmo
+-- tipo de armadilha que 20260905100000 registrou para `execute` de função.
+--
+-- POR QUE `ativo` E `meta_mensal` E MAIS NADA: levantei tudo que o app escreve
+-- em `usuarios` pelo cliente. São dois lugares, os dois na aba Vendedores —
+-- `VendedoresTab.tsx:113` (`ativo`) e `:374` (`meta_mensal`). O `role` nasce no
+-- convite, por `convidar_usuario` / `aceitar_convite`, que são SECURITY
+-- DEFINER e passam por cima disto. Conferido na transação revertida: depois do
+-- revoke, promoção e troca de tenant são recusadas, e as duas escritas da aba
+-- Vendedores continuam funcionando.
+
+revoke update on public.usuarios from authenticated, anon;
+grant  update (ativo, meta_mensal) on public.usuarios to authenticated;
+
+-- O `anon` tinha INSERT/UPDATE/DELETE/TRUNCATE/SELECT na tabela de usuários.
+-- Na prática a RLS já barrava (o `usuario_tenant_id()` de quem não tem sessão
+-- é nulo), mas isso é uma proteção só — e a superfície não precisa existir:
+-- nenhum caminho anônimo lê ou escreve `usuarios` direto. As duas telas
+-- públicas passam por RPC SECURITY DEFINER (`obter_envelope_publico`,
+-- `registrar_assinatura`, `aceitar_convite`), que não dependem destes grants.
+revoke insert, update, delete, truncate, select on public.usuarios from anon;

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { UserPlus, Loader2, Copy, Check, Mail, Clock, RefreshCw, UserX, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { comPrazo } from "@/lib/prazo";
+import { mensagemDeFalha } from "@/lib/erros";
 import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
 import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
 import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selecao } from "@/components/ui";
@@ -38,50 +40,63 @@ export function VendedoresTab({
   const [membrosState, setMembrosState] = useEstadoDaProp(membros);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [reenviado, setReenviado] = useState<string | null>(null);
+  /** Erro por convite. Antes o reenvio falhava sem deixar rastro nenhum. */
+  const [erroPorConvite, setErroPorConvite] = useState<Record<string, string>>({});
 
 
   const handleConvidar = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
     setEnviando(true);
-    const resp = await fetch("/api/vendedores/convidar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome: nome.trim(), email: email.trim(), role: papel }),
-    });
-    const data = await resp.json();
-    setEnviando(false);
-    if (!resp.ok) {
-      setErro(data.error || "Erro ao enviar o convite.");
-      return;
+    try {
+      const resp = await comPrazo(
+        fetch("/api/vendedores/convidar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome: nome.trim(), email: email.trim(), role: papel }),
+        }),
+      );
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setErro(data.error || "Erro ao enviar o convite.");
+        return;
+      }
+      setLinkGerado(data.link);
+      setEmailEnviado(data.emailEnviado);
+      setEmailErro(data.emailErro || null);
+      setRemetenteTest(data.remetenteTest || false);
+      setConvites((prev) => [
+        // A linha otimista é um `Convite` de verdade, e não um objeto com `as any`.
+        // Duas coisas que o cast escondia: `convites` NÃO tem coluna `nome` (o campo
+        // ia junto e nunca era lido — a lista de pendentes mostra e-mail e papel), e
+        // `expira_em` é NOT NULL sem valor aqui, porque `convidar_usuario` devolve só
+        // `convite_id` e `token`. Fica vazio até o Realtime trazer a linha do banco,
+        // o que é seguro porque nada na tela lê essa data.
+        {
+          id: data.convite_id,
+          token: data.token,
+          email,
+          role: papel,
+          status: "pendente",
+          tenant_id: usuarioAtual.tenant_id,
+          convidado_por: usuarioAtual.id,
+          criado_em: new Date().toISOString(),
+          expira_em: "",
+        },
+        ...prev,
+      ]);
+      setNome("");
+      setEmail("");
+      setPapel("vendedor");
+    } catch (e) {
+      // Sem isto, rede caindo deixava `enviando` preso: o formulario ficava
+      // desabilitado para sempre, com o icone parado, e nem dava para tentar
+      // de novo. O `<Alerta tom="risco">` logo acima do botao ja estava pronto
+      // para receber a frase.
+      setErro(mensagemDeFalha(e, "Sem conexão. O convite não foi enviado."));
+    } finally {
+      setEnviando(false);
     }
-    setLinkGerado(data.link);
-    setEmailEnviado(data.emailEnviado);
-    setEmailErro(data.emailErro || null);
-    setRemetenteTest(data.remetenteTest || false);
-    setConvites((prev) => [
-      // A linha otimista é um `Convite` de verdade, e não um objeto com `as any`.
-      // Duas coisas que o cast escondia: `convites` NÃO tem coluna `nome` (o campo
-      // ia junto e nunca era lido — a lista de pendentes mostra e-mail e papel), e
-      // `expira_em` é NOT NULL sem valor aqui, porque `convidar_usuario` devolve só
-      // `convite_id` e `token`. Fica vazio até o Realtime trazer a linha do banco,
-      // o que é seguro porque nada na tela lê essa data.
-      {
-        id: data.convite_id,
-        token: data.token,
-        email,
-        role: papel,
-        status: "pendente",
-        tenant_id: usuarioAtual.tenant_id,
-        convidado_por: usuarioAtual.id,
-        criado_em: new Date().toISOString(),
-        expira_em: "",
-      },
-      ...prev,
-    ]);
-    setNome("");
-    setEmail("");
-    setPapel("vendedor");
   };
 
   const copiarLink = () => {
@@ -91,17 +106,48 @@ export function VendedoresTab({
     setTimeout(() => setCopiado(false), 2000);
   };
 
+  /**
+   * O REENVIO FALHAVA EM SILENCIO.
+   *
+   * Era `if (resp.ok) { … }` sem `else` e sem `try`. Quando o reenvio dava
+   * errado — Resend sem chave, dominio nao verificado, convite expirado, 500 —
+   * o spinner sumia, nenhum ✓ aparecia, nenhuma mensagem aparecia: a linha
+   * voltava a mostrar "Reenviar" exatamente como antes do clique. O admin
+   * ficava esperando alguem que nunca ia receber o convite. E com a rede
+   * caindo, `setReenviandoId(null)` nem rodava — o spinner daquela linha
+   * girava para sempre.
+   */
   const handleReenviar = async (conviteId: string) => {
     setReenviandoId(conviteId);
-    const resp = await fetch("/api/vendedores/reenviar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conviteId }),
+    setErroPorConvite((prev) => {
+      const { [conviteId]: _fora, ...resto } = prev;
+      return resto;
     });
-    setReenviandoId(null);
-    if (resp.ok) {
+    try {
+      const resp = await comPrazo(
+        fetch("/api/vendedores/reenviar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conviteId }),
+        }),
+      );
+      const dados = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setErroPorConvite((prev) => ({
+          ...prev,
+          [conviteId]: dados.error || "Não foi possível reenviar o convite.",
+        }));
+        return;
+      }
       setReenviado(conviteId);
       setTimeout(() => setReenviado(null), 2500);
+    } catch (e) {
+      setErroPorConvite((prev) => ({
+        ...prev,
+        [conviteId]: mensagemDeFalha(e, "Sem conexão. O convite não foi reenviado."),
+      }));
+    } finally {
+      setReenviandoId(null);
     }
   };
 
@@ -161,7 +207,11 @@ export function VendedoresTab({
               <p className="mt-1 px-1 text-rotulo text-tinta-fraca">{DESCRICAO_PAPEL[papel]}</p>
             </div>
             {erro && <Alerta tom="risco">{erro}</Alerta>}
-            <Botao type="submit" variante="primario" larguraTotal disabled={enviando} icone={enviando ? Loader2 : undefined}>
+            {/* `carregando` e nao `disabled` + `icone`: o `Botao` so poe
+                `animate-spin` no caminho de `carregando`. Passando o `Loader2`
+                por `icone`, o spinner saia PARADO — que le como travamento, nao
+                como progresso. O primitivo ja desabilita sozinho. */}
+            <Botao type="submit" variante="primario" larguraTotal carregando={enviando}>
               Enviar convite
             </Botao>
           </form>
@@ -219,6 +269,11 @@ export function VendedoresTab({
                         Reenviar
                       </button>
                     </div>
+                    {erroPorConvite[c.id] && (
+                      <p className="text-rotulo font-medium text-risco mt-1" role="alert">
+                        {erroPorConvite[c.id]}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
