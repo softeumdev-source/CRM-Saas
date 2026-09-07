@@ -129,8 +129,10 @@ function urlPublica(arquivo: string): string | null {
  * `display:flex` vira uma pilha vertical e a logo cai em cima do texto. A
  * largura vai duas vezes — no atributo `width` e no `style` — pela mesma razão.
  *
- * E ela fica DENTRO do card branco, nunca no `div` de fora: aquele não declara
- * `background`, e no tema escuro do Gmail o texto escuro some no fundo escuro.
+ * O card branco em volta saiu, mas o `background:#ffffff` do container FICOU, e
+ * é este bloco a razão: ele declara cores escuras (`#0f172a` no nome), e o tema
+ * escuro do Gmail inverte o que não declara fundo. Sem o fundo lá fora, o nome
+ * de quem assina sumiria contra o escuro.
  */
 /**
  * O ícone de uma linha de contato, ou string vazia.
@@ -254,21 +256,25 @@ export type OpcoesDoEmail = {
    */
   assinatura?: string | null;
   /**
-   * O e-mail sai como CARTA: sem tarja, sem card, sem rodapé e sem imagem
-   * nenhuma. Só o texto e uma assinatura de quatro linhas.
+   * O e-mail sai como CARTA: SEM IMAGEM NENHUMA. Só o texto e uma assinatura de
+   * quatro linhas, sem logo e sem ícones.
    *
    * O motivo é medido, não estético. O primeiro teste de entregabilidade caiu
    * na aba de Promoções do Gmail — não em spam: o Gmail acreditou que era
    * correspondência comercial legítima, e correspondência comercial legítima é
    * exatamente o que ele tira da caixa principal. O relatório mediu 20,9% de
-   * imagem, e o que sai daqui no modo padrão é uma tarja com gradiente, a
-   * palavra SOFTEUM em caixa alta, um card com borda arredondada e um rodapé
-   * centralizado com o nome da empresa. É a forma de uma newsletter.
+   * imagem.
    *
-   * Um vendedor escrevendo para um prospect manda TEXTO. Então prospecção e
-   * resposta manual entram aqui, e só elas: proposta, convite de vendedor e
-   * aviso de assinatura continuam com a marca, porque ali o e-mail é
-   * transacional e esperado, e a tarja ajuda a reconhecer o remetente.
+   * A DIFERENÇA ENTRE OS DOIS MODOS ENCOLHEU, e vale dizer o que sobrou dela. O
+   * modo padrão tinha uma tarja com gradiente, a palavra SOFTEUM em caixa alta,
+   * um card e um rodapé institucional — a forma de uma newsletter. Isso saiu:
+   * hoje ele é texto e a assinatura com a logo. O que separa os dois modos
+   * agora é UMA coisa só, a imagem — a logo e os dois ícones de 14px.
+   *
+   * E é o suficiente, porque era disso que a medição tratava. Prospecção e
+   * resposta manual entram aqui; proposta, convite de vendedor e aviso de
+   * assinatura ficam com a assinatura ilustrada, porque ali o e-mail é
+   * transacional e esperado, e a logo ajuda a reconhecer o remetente.
    */
   comoCarta?: boolean;
 };
@@ -286,16 +292,31 @@ export function emailBase(conteudo: string, opcoes?: OpcoesDoEmail): string {
   </div>`;
   }
 
+  // A MARCA MORA NA ASSINATURA, e só nela.
+  //
+  // Saíram daqui três coisas: a tarja com gradiente e a palavra SOFTEUM em
+  // caixa alta, o card de borda arredondada em volta do texto, e o rodapé
+  // centralizado "Softeum Tecnologia".
+  //
+  // Elas eram a forma de uma NEWSLETTER — um cabeçalho de marca, um corpo
+  // emoldurado e um rodapé institucional. Nenhum e-mail que uma pessoa escreve
+  // tem isso, e o que este sistema manda é e-mail de uma pessoa para um
+  // cliente: uma proposta para assinar, um aviso de que todos assinaram. A
+  // marca continua presente, no lugar onde marca aparece em e-mail de trabalho
+  // — o fim, junto de quem assina.
+  //
+  // O QUE FICA e por quê:
+  //
+  // `background:#ffffff` e `color:#1e293b` continuam, apesar de o card ter
+  // saído, e não é sobra. O tema escuro do Gmail inverte o que não declara
+  // fundo, e a assinatura declara cores escuras (`#0f172a` no nome). Sem fundo
+  // aqui, o nome de quem assina sumiria contra o escuro — que é exatamente o
+  // defeito que o card existia para contornar. O fundo fica; a moldura, não.
+  //
+  // `max-width` fica porque linha de 200 caracteres não se lê. `padding` fica
+  // porque texto colado na borda da janela também não.
   return `
-  <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px;">
-    <div style="background-color:#312e81; background-image: linear-gradient(135deg, #0f172a, #312e81); padding: 20px 24px; border-radius: 16px 16px 0 0;">
-      <span style="color:#fff; font-weight:800; font-size:18px; letter-spacing: 0.5px;">SOFTEUM</span>
-    </div>
-    <div style="background:#fff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; padding: 24px; color:#1e293b;">
-      ${conteudo}${assinatura}
-    </div>
-    <p style="text-align:center; color:#94a3b8; font-size:11px; margin-top:16px;">
-      Softeum Tecnologia
-    </p>
+  <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; background:#ffffff; color:#1e293b; font-size:14px; line-height:1.6;">
+    ${conteudo}${assinatura}
   </div>`;
 }
