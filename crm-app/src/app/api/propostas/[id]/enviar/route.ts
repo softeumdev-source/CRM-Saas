@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { emailBase } from "@/lib/resend";
+import { emailDeAssinatura } from "@/lib/assinatura/email";
 import { escaparHtml } from "@/lib/gmail/corpo";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
@@ -158,19 +159,19 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "Falha ao publicar os PDFs para assinatura." }, { status: 500 });
     }
 
-    const linkAssinatura = `${origin}/assinar/${token}`;
+    // O corpo saiu daqui para `lib/assinatura/email.ts` quando o reenvio
+    // nasceu: os dois envios mandam o MESMO documento e o mesmo link, e duas
+    // cópias do HTML divergiriam no primeiro ajuste de texto.
     const resultado = await enviarDoTenant(admin, usuarioAtual?.tenant_id, {
       para: sig.email,
       assunto: `Proposta Softeum ${proposta.numero} - assinatura eletronica`,
-      html: emailBase(`
-        <h2 style="margin-top:0;">Proposta comercial pronta para assinatura</h2>
-        <p>Olá ${escaparHtml(sig.nome)},</p>
-        <p>A Softeum preparou a proposta comercial e técnica (${escaparHtml(proposta.numero)}) para ${escaparHtml(negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa")}. Revise os documentos e assine eletronicamente pelo link abaixo.</p>
-        <p style="text-align:center; margin: 28px 0;">
-          <a href="${linkAssinatura}" style="background:#4f46e5; color:#fff; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;">Revisar e assinar</a>
-        </p>
-        <p style="font-size:12px; color:#64748b;">Se o botão não funcionar, copie e cole este link no navegador: ${linkAssinatura}</p>
-      `, { assinatura }),
+      html: emailDeAssinatura({
+        nome: sig.nome,
+        numero: proposta.numero,
+        empresa: negocio?.contato?.empresa || negocio?.contato?.nome || "sua empresa",
+        link: `${origin}/assinar/${token}`,
+        assinatura,
+      }),
     });
     if (resultado.enviado) algumEmailEnviado = true;
     if (resultado.erro && !emailErro) emailErro = resultado.erro;

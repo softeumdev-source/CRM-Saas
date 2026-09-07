@@ -135,6 +135,8 @@ export function PropostaTab({
     emailEnviado: boolean;
     emailErro: string | null;
   } | null>(null);
+  const [reenviandoId, setReenviandoId] = useState<string | null>(null);
+  const [reenvio, setReenvio] = useState<{ ok: boolean; texto: string } | null>(null);
 
   const [editandoEnvioId, setEditandoEnvioId] = useState<string | null>(null);
   const [etapaEnvio, setEtapaEnvio] = useState<EtapaEnvio>(null);
@@ -426,6 +428,36 @@ export function PropostaTab({
   // assinado ainda nao tem os dois ultimos). `abrirPdf` ja devolve `false` sem
   // fazer nada nesse caso — quem estreitava era este embrulho.
   const baixarPdf = (path: string | null | undefined) => void abrirPdf(path);
+
+  /**
+   * Reenvia o link de assinatura para UM signatário.
+   *
+   * O `email` chega por parâmetro só para o texto do aviso — quem decide para
+   * onde o e-mail vai é a rota, que lê o endereço cadastrado no banco. Se a
+   * tela mandasse o destinatário, o reenvio viraria um jeito de despachar o
+   * link para um endereço qualquer, que é exatamente o que a Etapa 2 fechou.
+   */
+  const reenviar = async (envelopeId: string, signatarioId: string, email: string) => {
+    setReenviandoId(signatarioId);
+    setReenvio(null);
+    try {
+      const resp = await fetch(`/api/envelopes/${envelopeId}/reenviar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatario_id: signatarioId }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      setReenvio(
+        resp.ok
+          ? { ok: true, texto: `Link reenviado para ${email}.` }
+          : { ok: false, texto: data.error || "Falha ao reenviar o link." },
+      );
+    } catch (e) {
+      setReenvio({ ok: false, texto: mensagemDeFalha(e, "Não foi possível reenviar o link. Tente de novo.") });
+    } finally {
+      setReenviandoId(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -932,8 +964,44 @@ export function PropostaTab({
                                 Enviado · ainda não visualizou
                               </span>
                             )}
+                            {/* O reenvio é a saída que não existia. O link saiu
+                                da tela, então quando o e-mail falha (caixa
+                                desconectada no minuto do envio, endereço que
+                                devolveu bounce) este botão é o único caminho —
+                                e ele manda para o endereço CADASTRADO, que é a
+                                única entrega que o envelope consegue registrar.
+
+                                Não aparece para quem já assinou (não há o que
+                                reenviar) nem para o signatário interno da
+                                Softeum, que nasce assinado e nunca recebeu
+                                e-mail nenhum. */}
+                            {s.status !== "assinado" && s.papel !== "softeum" && (
+                              <button
+                                onClick={() => reenviar(envelope.id, s.id, s.email)}
+                                disabled={reenviandoId === s.id}
+                                className="foco text-rotulo font-medium text-acento disabled:text-tinta-fraca flex items-center gap-1 shrink-0"
+                              >
+                                {reenviandoId === s.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="h-3.5 w-3.5" />
+                                )}
+                                {reenviandoId === s.id ? "Reenviando…" : "Reenviar"}
+                              </button>
+                            )}
                           </div>
                         ))}
+                      {/* O aviso fica FORA do laço, com o nome do destinatário
+                          dentro do texto: uma linha por signatário multiplicaria
+                          o mesmo recado por três num envelope de três. */}
+                      {reenvio && (
+                        <p
+                          role="status"
+                          className={`text-rotulo font-medium pt-1 ${reenvio.ok ? "text-ok" : "text-risco"}`}
+                        >
+                          {reenvio.texto}
+                        </p>
+                      )}
                     </div>
                   )}
 
