@@ -433,15 +433,36 @@ export function MensagensTab({
             >
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                  <p className="text-corpo font-medium text-tinta">{m.assunto}</p>
+                  {/* WhatsApp nao tem assunto: o gerador grava `assunto` nulo
+                      para esse canal, entao o titulo saia VAZIO e o envelope
+                      aparecia ao lado de um telefone. A fila de tarefas logo
+                      acima ja nomeia o canal do jeito certo — e o mesmo
+                      desenho, aqui. */}
+                  <p className="text-corpo font-medium text-tinta">
+                    {m.canal === "whatsapp" ? "Toque de WhatsApp" : m.assunto || "(sem assunto)"}
+                  </p>
                   <p className="text-rotulo text-tinta-suave flex items-center gap-1.5 mt-0.5">
-                    <Mail className="h-3 w-3" /> {m.destino}
+                    {m.canal === "whatsapp" ? (
+                      <MessageCircle className="h-3 w-3" />
+                    ) : (
+                      <Mail className="h-3 w-3" />
+                    )}
+                    {m.destino}
                     {m.gerado_por === "ia" && (
                       <span className="inline-flex items-center gap-1 text-acento font-medium">
                         <Bot className="h-3 w-3" /> escrita por IA
                       </span>
                     )}
                   </p>
+                  {/* Aprovar um toque de WhatsApp AQUI manda pela API da Meta,
+                      que cobra por mensagem — e a fila de tarefas ao lado
+                      existe justamente para o caminho de graca. Quem aprova
+                      precisa saber disso ANTES de clicar. */}
+                  {m.canal === "whatsapp" && (
+                    <p className="text-rotulo font-medium text-alerta mt-0.5">
+                      Sai por template aprovado na Meta — esta mensagem é cobrada por envio.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Botao
@@ -487,10 +508,23 @@ export function MensagensTab({
                   </Botao>
                 </div>
               </div>
-              <div
-                className="text-rotulo text-tinta-suave bg-recuo rounded-xl p-3 max-h-52 overflow-y-auto [&_p]:mb-2"
-                dangerouslySetInnerHTML={{ __html: m.corpo }}
-              />
+              {/* `corpo_formato` decide o render, e isto e FRONTEIRA DE
+                  SEGURANCA, igual a aba de E-mail: 'html' so vale para o que
+                  NOS escrevemos. WhatsApp e texto puro e sai escapado — jogado
+                  no innerHTML, uma tag no meio do texto sumia da tela e ia
+                  inteira para o cliente, e conteudo de terceiro chegaria ao
+                  DOM. A coluna `corpo_formato` tem default 'html' no banco,
+                  entao nao da para confiar so nela. */}
+              {m.canal !== "whatsapp" && m.corpo_formato === "html" ? (
+                <div
+                  className="text-rotulo text-tinta-suave bg-recuo rounded-xl p-3 max-h-52 overflow-y-auto [&_p]:mb-2"
+                  dangerouslySetInnerHTML={{ __html: m.corpo }}
+                />
+              ) : (
+                <p className="text-rotulo text-tinta-suave bg-recuo rounded-xl p-3 max-h-52 overflow-y-auto whitespace-pre-wrap">
+                  {m.corpo}
+                </p>
+              )}
             </div>
           ))}
         </div>

@@ -205,15 +205,3 @@ export async function carregarFunilDeOrigem(
   return data ?? null;
 }
 
-/**
- * O par que quase toda tela precisa: o funil e as etapas dele, numa ida só ao
- * banco por vez. Devolve `pipeline: null` quando o tenant ainda não tem aquele
- * funil — é o que a Fase 4 usa para esconder o board do SDR de quem não o tem.
- */
-export async function carregarFunil(
-  supabase: Cliente,
-  chave: ChavePipeline = PIPELINE_VENDAS,
-): Promise<{ pipeline: Pipeline | null; etapas: EtapaPipeline[] }> {
-  const pipeline = await carregarPipeline(supabase, chave);
-  return { pipeline, etapas: await carregarEtapas(supabase, pipeline?.id) };
-}

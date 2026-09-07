@@ -314,10 +314,16 @@ export function KanbanPageClient({
       if (!termo) return true;
       const c = n.contato;
       if (termoDigitos.length >= 3) {
-        const docs = [c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp].map((v) => (v || "").replace(/\D/g, ""));
+        // `telefone_comercial` saiu das duas listas: a coluna existe no schema
+        // base e NINGUEM escreve nela. Conferido nos tres unicos caminhos que
+        // gravam contato — o modal de lead novo, o formulario da Visao Geral e
+        // a importacao de planilha — e no proprio banco: dos 25 contatos, 0
+        // tem valor ali. Buscar por um campo sempre nulo nao acha e nao deixa
+        // de achar nada; so faz a busca parecer mais larga do que e.
+        const docs = [c?.cnpj, c?.telefone, c?.whatsapp].map((v) => (v || "").replace(/\D/g, ""));
         if (docs.some((d) => d && d.includes(termoDigitos))) return true;
       }
-      const campos = [c?.empresa, c?.nome, c?.email, c?.cnpj, c?.telefone, c?.telefone_comercial, c?.whatsapp, n.titulo];
+      const campos = [c?.empresa, c?.nome, c?.email, c?.cnpj, c?.telefone, c?.whatsapp, n.titulo];
       return campos.some((v) => v && String(v).toLowerCase().includes(termo));
     });
     // `aprovacoes` PRECISA estar aqui: sem ela a lista não recalcularia quando
@@ -675,6 +681,7 @@ export function KanbanPageClient({
           etapaInicial={etapaNovoNegocio}
           responsaveis={responsaveis}
           usuarioAtual={usuarioAtual}
+          ehSdr={ehSdr}
           onClose={() => setModalAberto(false)}
         />
       )}

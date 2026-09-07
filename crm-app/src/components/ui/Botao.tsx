@@ -17,13 +17,33 @@ import { Loader2, type LucideIcon } from "lucide-react";
 type Variante = "primario" | "secundario" | "sutil" | "perigo";
 type Tamanho = "sm" | "md" | "lg";
 
+/**
+ * ACTIVE de verdade, e nao uma copia do hover.
+ *
+ * Eram dois furos diferentes. No mouse, `active` repetia a MESMA cor do hover
+ * nas tres variantes cheias: apertar um botao que o cursor ja apontava nao
+ * mudava um pixel, entao nao havia confirmacao de que o clique pegou. No toque
+ * o furo e do `sutil`: o Tailwind v4 embrulha todo `hover:` num
+ * `@media (hover: hover)`, e o `sutil` so tinha hover — no celular ele nao dava
+ * sinal nenhum.
+ *
+ * A tabela dos cinco estados do DESIGN.md pede `scale-98` no primario e
+ * `bg-recuo` no sutil. A escala e o unico sinal que funciona nos DOIS
+ * ponteiros, entao ela vale para as quatro variantes; o `sutil` ganha tambem a
+ * cor que a tabela pede, porque ele aparece dentro de `Abas` e `Segmentado`,
+ * que ja sao `bg-recuo` — ali a cor some e so a escala responde.
+ *
+ * Escala nao e acento: continua sendo o indigo solido, e so ele, que diz
+ * "acao".
+ */
 const VARIANTE: Record<Variante, string> = {
   primario:
-    "bg-acento-solido text-acento-tinta hover:bg-acento-solido-hover active:bg-acento-solido-hover",
-  secundario: "bg-recuo text-tinta hover:bg-fio active:bg-fio",
-  sutil: "text-tinta-suave hover:bg-recuo hover:text-tinta",
+    "bg-acento-solido text-acento-tinta hover:bg-acento-solido-hover active:bg-acento-solido-hover active:scale-98",
+  secundario: "bg-recuo text-tinta hover:bg-fio active:bg-fio active:scale-98",
+  sutil:
+    "text-tinta-suave hover:bg-recuo hover:text-tinta active:bg-recuo active:text-tinta active:scale-98",
   perigo:
-    "bg-risco-solido text-risco-tinta hover:bg-risco-solido-hover active:bg-risco-solido-hover",
+    "bg-risco-solido text-risco-tinta hover:bg-risco-solido-hover active:bg-risco-solido-hover active:scale-98",
 };
 
 /**
@@ -74,8 +94,14 @@ export function Botao({
         // `font-semibold`, nao `font-bold`: o app tinha 372 usos de peso e
         // nenhum `font-normal`, entao o negrito nao distinguia mais nada.
         "inline-flex items-center justify-center font-semibold whitespace-nowrap",
-        // transicoes nomeadas: nunca `transition-all`, que anima ate layout
-        "transition-[background-color,color] duration-150 ease-out",
+        // Transicoes NOMEADAS: nunca `transition-all`, que anima ate layout.
+        //
+        // O terceiro nome e `scale`, e nao `transform`: no Tailwind v4 (4.3.3
+        // neste repo) a classe `scale-98` compila para `scale: var(--tw-scale-x)
+        // var(--tw-scale-y)` — propriedade propria, e nao um atalho de
+        // `transform`. Medido no CSS de saida deste build. Com `transform` na
+        // lista o pressionar saltaria seco, sem os 150ms.
+        "transition-[background-color,color,scale] duration-150 ease-out",
         "foco",
         "disabled:cursor-not-allowed disabled:opacity-60",
         larguraTotal ? "w-full" : "",

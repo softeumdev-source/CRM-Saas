@@ -29,7 +29,7 @@ import type { NegocioComRelacoes, Plano, PropostaComRelacoes, SolicitacaoDescont
 import { AVISOS_PREVIOS_DIAS, formatarMoeda, ROTULO_PAPEL_SIGNATARIO } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 import { abrirPdf } from "@/lib/storage";
-import { Confirmar } from "@/components/ui";
+import { Botao, Confirmar, Ponto, Selo, type Tom } from "@/components/ui";
 
 /**
  * Remove propostas repetidas mantendo a primeira ocorrência (a mais recente).
@@ -50,11 +50,14 @@ function exibirMoeda(valor: number): string {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const STATUS_COR: Record<string, string> = {
-  rascunho: "bg-recuo text-tinta-suave",
-  enviada: "bg-alerta-fraco text-alerta",
-  assinada: "bg-ok-fraco text-ok",
-  cancelada: "bg-risco-fraco text-risco",
+// Era um mapa de CLASSES, que e uma segunda escala de cor concorrendo com a do
+// <Selo>. Aqui mora so o significado (status -> tom); a cor e o raio saem do
+// primitivo, como na aba E-mail do mesmo card.
+const STATUS_TOM: Record<string, Tom> = {
+  rascunho: "neutro",
+  enviada: "alerta",
+  assinada: "ok",
+  cancelada: "risco",
 };
 
 // A proposta vale 30 dias para aceite (a partir da emissão). Passado esse prazo,
@@ -453,7 +456,10 @@ export function PropostaTab({
         <h3 className="font-medium text-corpo text-tinta">Gerar nova proposta</h3>
 
         <div>
-          <label htmlFor="propostata-1" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Plano</label>
+          {/* Caixa normal em `text-tinta-suave`: e a tipografia do rotulo do
+              `Campo` (ui/Campo.tsx). O htmlFor/id fica como esta — ja liga
+              rotulo e controle, que era o outro motivo de existir o Campo. */}
+          <label htmlFor="propostata-1" className="text-rotulo font-medium text-tinta-suave block mb-1">Plano</label>
           <select id="propostata-1" value={planoId} onChange={(e) => {
             setPlanoId(e.target.value);
             const p = planos.find((x) => x.id === e.target.value);
@@ -469,7 +475,7 @@ export function PropostaTab({
         </div>
 
         <div className="bg-acento-fraco border border-fio rounded-xl p-4">
-          <label htmlFor="propostata-2" className="text-rotulo font-medium uppercase text-acento block mb-1">Mensalidade do plano</label>
+          <label htmlFor="propostata-2" className="text-rotulo font-medium text-acento block mb-1">Mensalidade do plano</label>
           <div className="flex items-center gap-2">
             <span className="text-corpo text-acento">R$</span>
             <input id="propostata-2"
@@ -498,7 +504,7 @@ export function PropostaTab({
         </div>
 
         <div className="bg-recuo border border-fio rounded-xl p-4">
-          <label htmlFor="propostata-3" className="text-rotulo font-medium uppercase text-tinta-suave block mb-1">Setup (cobrança única)</label>
+          <label htmlFor="propostata-3" className="text-rotulo font-medium text-tinta-suave block mb-1">Setup (cobrança única)</label>
           <div className="flex items-center gap-2">
             <span className="text-corpo text-tinta-suave">R$</span>
             <input id="propostata-3"
@@ -518,11 +524,11 @@ export function PropostaTab({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="propostata-4" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Prazo contrato (meses)</label>
+            <label htmlFor="propostata-4" className="text-rotulo font-medium text-tinta-suave block mb-1">Prazo contrato (meses)</label>
             <input id="propostata-4" type="number" min={1} value={prazoContratoMeses} onChange={(e) => setPrazoContratoMeses(parseInt(e.target.value) || 12)} className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl" />
           </div>
           <div>
-            <label htmlFor="propostata-5" className="text-rotulo font-medium uppercase text-tinta-fraca block mb-1">Aviso prévio de rescisão</label>
+            <label htmlFor="propostata-5" className="text-rotulo font-medium text-tinta-suave block mb-1">Aviso prévio de rescisão</label>
             <select id="propostata-5" value={avisoPrevioDias} onChange={(e) => setAvisoPrevioDias(parseInt(e.target.value))} className="foco w-full px-3 py-2 text-corpo bg-recuo border border-fio rounded-xl font-medium">
               {AVISOS_PREVIOS_DIAS.map((d) => (
                 <option key={d} value={d}>{d} dias {d === 180 ? "(padrão)" : ""}</option>
@@ -549,21 +555,38 @@ export function PropostaTab({
               placeholder="Resposta ao vendedor (opcional)"
               className="foco w-full px-3 py-2 text-rotulo bg-superficie border border-alerta/40 rounded-lg"
             />
-            <div className="flex items-center gap-2">
-              <button
+            {/* Eram dois botoes crus de ~30px, colados, decidindo dinheiro. O
+                `Botao` ja da o alvo de 44px em ponteiro grosso
+                (`pointer-coarse:min-h-11`) e a geometria unica do app.
+
+                NAO foi criada variante `ok`: aprovar E a acao do bloco, e acao
+                no sistema e o indigo solido. Um verde solido seria um segundo
+                "solido = acao", e nao ha outro botao no projeto usando
+                `bg-ok-solido` que justificasse a variante. O vermelho de
+                Recusar fica: ele ja existe como `perigo`.
+
+                `gap-3` e `flex-wrap` para os dois pararem de encostar quando o
+                alvo cresce para 44px — errar o dedo aqui decide o desconto no
+                sentido errado. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Botao
+                variante="primario"
+                tamanho="sm"
+                icone={ThumbsUp}
+                carregando={decidindo}
                 onClick={() => decidirDesconto(true)}
-                disabled={decidindo}
-                className="foco flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-ok-tinta bg-ok-solido hover:bg-ok-solido-hover rounded-lg disabled:opacity-60"
               >
-                {decidindo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ThumbsUp className="h-3.5 w-3.5" />} Aprovar
-              </button>
-              <button
+                Aprovar
+              </Botao>
+              <Botao
+                variante="perigo"
+                tamanho="sm"
+                icone={ThumbsDown}
+                disabled={decidindo}
                 onClick={() => decidirDesconto(false)}
-                disabled={decidindo}
-                className="foco flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium text-risco-tinta bg-risco-solido hover:bg-risco-solido-hover rounded-lg disabled:opacity-60"
               >
-                <ThumbsDown className="h-3.5 w-3.5" /> Recusar
-              </button>
+                Recusar
+              </Botao>
             </div>
           </div>
         )}
@@ -663,13 +686,16 @@ export function PropostaTab({
                     </div>
                     <div className="flex items-center gap-2">
                       {propostaVencida(p) && (
-                        <span className="px-2.5 py-1 text-rotulo font-medium rounded-full bg-risco-fraco text-risco flex items-center gap-1" title={`Emitida há ${diasDesde(p.criado_em)} dias — validade de ${VALIDADE_PROPOSTA_DIAS} dias expirada.`}>
-                          <AlertTriangle className="h-3 w-3" /> Vencida · gere nova
+                        // O `title` vai no embrulho porque o <Selo> nao repassa
+                        // atributo solto — e a conta dos dias NAO pode sumir da
+                        // tela. `inline-flex` para o embrulho nao esticar a linha.
+                        <span className="inline-flex" title={`Emitida há ${diasDesde(p.criado_em)} dias — validade de ${VALIDADE_PROPOSTA_DIAS} dias expirada.`}>
+                          <Selo tom="risco" icone={AlertTriangle}>Vencida · gere nova</Selo>
                         </span>
                       )}
-                      <span className={`px-2.5 py-1 text-rotulo font-medium rounded-full capitalize ${STATUS_COR[p.status]}`}>
+                      <Selo tom={STATUS_TOM[p.status] ?? "neutro"} className="capitalize">
                         {p.status}
-                      </span>
+                      </Selo>
                     </div>
                   </div>
 
@@ -722,9 +748,16 @@ export function PropostaTab({
                       {/* Editado e removido POR CHAVE, nao por indice: com o
                           indice, remover uma linha faz as de baixo mudarem de
                           numero, e um handler que ainda carregue o indice
-                          antigo passa a escrever na linha errada. */}
+                          antigo passa a escrever na linha errada.
+
+                          O `flex-wrap` aqui e a largura minima nos dois campos
+                          sao da mesma familia de problema: a 390px os dois
+                          `flex-1` davam ~125px cada, e nao dava para CONFERIR o
+                          e-mail antes de disparar o contrato. Com o minimo, a
+                          linha quebra em vez de espremer; no mouse nada muda,
+                          porque ai sobra largura e o wrap nunca dispara. */}
                       {signatarios.map((s) => (
-                        <div key={s.chave} className="flex items-center gap-2">
+                        <div key={s.chave} className="flex flex-wrap items-center gap-2">
                           <input
                             value={s.nome}
                             onChange={(e) =>
@@ -734,7 +767,7 @@ export function PropostaTab({
                             }
                             placeholder="Nome completo"
                             aria-label="Nome do signatário"
-                            className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+                            className="foco min-w-[10rem] flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           <input
                             value={s.email}
@@ -745,7 +778,7 @@ export function PropostaTab({
                             }
                             placeholder="email@empresa.com"
                             aria-label="E-mail do signatário"
-                            className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
+                            className="foco min-w-[10rem] flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
                           {/* O `x` media 16px — o proprio icone era a caixa
                               clicavel. Aqui apagar linha de signatario e acao
@@ -859,10 +892,14 @@ export function PropostaTab({
                   {envelope && (
                     <div className="bg-recuo rounded-xl p-3 space-y-1.5">
                       <p className="text-rotulo font-medium uppercase text-tinta-fraca flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ok opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-ok" />
-                        </span>
+                        {/* Era um `animate-ping`: laco infinito, proibido pelo
+                            DESIGN.md — num CRM aberto o dia todo o pisca-pisca
+                            para de significar qualquer coisa depois do primeiro
+                            minuto. O <Ponto> do sistema diz "ao vivo" parado, e
+                            a frase ao lado continua dizendo em palavras (o ponto
+                            e `aria-hidden`, entao nada se perde no leitor de
+                            tela). */}
+                        <Ponto tom="ok" />
                         Status da assinatura (tempo real)
                       </p>
                       {[...(envelope.signatarios || [])]

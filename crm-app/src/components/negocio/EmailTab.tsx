@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ChevronDown, Mail, Paperclip } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Mail, Paperclip } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { formatarDataHora } from "@/lib/atividades";
@@ -36,9 +36,13 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
   const [teto, setTeto] = useState(POR_PAGINA);
   const [temMais, setTemMais] = useState(false);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const carregar = useCallback(async () => {
+  // O `limite` entra por parametro, com o `teto` do estado como padrao: quem
+  // clica em "carregar mais antigas" precisa buscar JA com o teto novo, e o
+  // estado so chegaria neste callback no render seguinte.
+  const carregar = useCallback(async (limite: number = teto) => {
     const supabase = createClient();
     // Pede UM a mais que o teto: é assim que dá para saber que existe mais sem
     // uma segunda consulta de contagem. Antes a tela cortava em 100 e não
@@ -55,7 +59,7 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
         // existe exatamente para esta ordenação.
         .order("recebida_em", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false })
-        .limit(teto + 1),
+        .limit(limite + 1),
       supabase.from("anexos").select("*").eq("negocio_id", negocio.id),
     ]);
 
@@ -68,8 +72,8 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
       return;
     }
     const lista = (msg.data || []) as unknown as Mensagem[];
-    setTemMais(lista.length > teto);
-    setMensagens(lista.slice(0, teto));
+    setTemMais(lista.length > limite);
+    setMensagens(lista.slice(0, limite));
     if (anx.data) setAnexos(anx.data);
     setErro(null);
     setCarregando(false);
@@ -83,6 +87,23 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
     ],
     carregarAoMontar: true,
   });
+
+  /**
+   * Aumentar o `teto` sozinho nao busca nada: quem executa `carregar` e a ref
+   * guardada dentro de `useSincronizacao`, e o efeito que dispara essa ref nao
+   * observa `teto`. Sem esta chamada explicita o clique ficava mudo ate o
+   * proximo tique de seguranca do realtime (45s) — o botao parecia quebrado.
+   */
+  const carregarMais = useCallback(async () => {
+    const novoTeto = teto + POR_PAGINA;
+    setCarregandoMais(true);
+    setTeto(novoTeto);
+    try {
+      await carregar(novoTeto);
+    } finally {
+      setCarregandoMais(false);
+    }
+  }, [carregar, teto]);
 
   const threads = useMemo(() => agruparEmThreads(mensagens), [mensagens]);
   const anexosPorMensagem = useMemo(() => {
@@ -106,7 +127,8 @@ export function EmailTab({ negocio }: { negocio: NegocioComRelacoes }) {
       emailDoContato={negocio.contato?.email || null}
       carregando={carregando}
       temMais={temMais}
-      aoCarregarMais={() => setTeto((t) => t + POR_PAGINA)}
+      carregandoMais={carregandoMais}
+      aoCarregarMais={carregarMais}
       compositor={<CompositorDeEmail negocio={negocio} aoEnviado={carregar} />}
     />
   );
@@ -128,6 +150,7 @@ export function VistaDeEmail({
   emailDoContato,
   carregando = false,
   temMais = false,
+  carregandoMais = false,
   aoCarregarMais,
   compositor,
 }: {
@@ -137,6 +160,7 @@ export function VistaDeEmail({
   emailDoContato: string | null;
   carregando?: boolean;
   temMais?: boolean;
+  carregandoMais?: boolean;
   aoCarregarMais?: () => void;
   /** Entra por prop para a vista continuar pura — e provável com fixtures. */
   compositor?: ReactNode;
@@ -150,6 +174,21 @@ export function VistaDeEmail({
   // Zero e-mail NÃO é motivo para esconder o compositor: é justamente quando
   // alguém precisa escrever o primeiro. Antes o estado vazio devolvia só o
   // aviso, e a conversa não tinha como começar de dentro do card.
+  // Entre abrir a aba e o Supabase responder, a moldura de duas colunas
+  // aparecia com "Conversas" e "0" e nada embaixo — e sem o compositor, que
+  // vive dentro da coluna da direita. Isso le como card quebrado, e nao como
+  // card carregando. Mesma forma da aba de mensagens.
+  if (carregando && threads.length === 0) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-128 items-center justify-center gap-2 rounded-2xl border border-fio bg-superficie text-corpo text-tinta-suave"
+      >
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Carregando e-mails…
+      </div>
+    );
+  }
+
   if (!carregando && threads.length === 0) {
     return (
       <div className="overflow-hidden rounded-2xl border border-fio bg-superficie">
@@ -192,8 +231,14 @@ export function VistaDeEmail({
 
           {temMais && (
             <div className="p-3">
-              <Botao variante="secundario" tamanho="sm" className="w-full" onClick={aoCarregarMais}>
-                Carregar mais antigas
+              <Botao
+                variante="secundario"
+                tamanho="sm"
+                className="w-full"
+                carregando={carregandoMais}
+                onClick={aoCarregarMais}
+              >
+                {carregandoMais ? "Carregando…" : "Carregar mais antigas"}
               </Botao>
             </div>
           )}
@@ -276,7 +321,17 @@ function LinhaDaThread({
             thread.temResposta ? "font-semibold" : "font-normal"
           }`}
         >
-          {thread.temResposta && <Ponto tom="info" />}
+          {thread.temResposta && (
+            <>
+              <Ponto tom="info" />
+              {/* O `Ponto` e `aria-hidden` e o negrito nao chega a leitor de
+                  tela: sem este texto, "o cliente respondeu" existia so como
+                  cor e peso. O `sr-only` nao muda um pixel — e
+                  `position:absolute`, entao nao vira item do flex e nao soma
+                  ao `gap`. */}
+              <span className="sr-only">Cliente respondeu.</span>
+            </>
+          )}
           <span className="truncate">{thread.assunto}</span>
         </span>
         <span className="shrink-0 text-rotulo text-tinta-fraca tabular">

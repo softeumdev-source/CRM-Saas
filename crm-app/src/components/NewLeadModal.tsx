@@ -13,6 +13,7 @@ export function NewLeadModal({
   etapaInicial,
   responsaveis,
   usuarioAtual,
+  ehSdr = false,
   onClose,
 }: {
   /** Funil em que o negócio nasce. Ver o comentário do insert abaixo. */
@@ -22,8 +23,14 @@ export function NewLeadModal({
   etapaInicial?: string | null;
   responsaveis: Usuario[];
   usuarioAtual: Usuario;
+  /** O board da prospeccao chama a coisa de "lead" e o de vendas de
+      "negocio" — e quem abriu o modal e o unico que sabe qual das duas vale.
+      Sem isto o modal inventava uma terceira palavra no meio do caminho. */
+  ehSdr?: boolean;
   onClose: () => void;
 }) {
+  /** A palavra deste modal, do titulo ao botao. Uma so. */
+  const substantivo = ehSdr ? "lead" : "negócio";
   const router = useRouter();
   const idForm = useId();
   const [loading, setLoading] = useState(false);
@@ -95,11 +102,13 @@ export function NewLeadModal({
     router.refresh();
   };
 
+  // A MESMA palavra do botao que abriu isto aqui: "Novo Lead" na prospeccao,
+  // "Novo Negócio" em vendas (KanbanPageClient).
   return (
     <Modal
       aberto
       aoFechar={onClose}
-      titulo="Novo Negócio"
+      titulo={ehSdr ? "Novo Lead" : "Novo Negócio"}
       rodape={
         <>
           <Botao variante="sutil" onClick={onClose}>
@@ -108,17 +117,25 @@ export function NewLeadModal({
           {/* O rodape do Modal fica fora do <form>, entao o submit se liga a
               ele pelo atributo form em vez de por aninhamento. */}
           <Botao type="submit" form={idForm} variante="primario" carregando={loading}>
-            Criar negócio
+            Criar {substantivo}
           </Botao>
         </>
       }
     >
       <form id={idForm} onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Campo rotulo="Nome do contato" obrigatorio className="col-span-2">
+        {/* Uma coluna abaixo de 640px (DESIGN.md §9). Medido: num viewport de
+            375px o modal da 303px de conteudo, e `grid-cols-2` com `gap-3`
+            deixava 145px por campo.
+
+            O `col-span-2` PRECISA virar `sm:col-span-2` junto: num grid de uma
+            coluna, `col-span-2` cria uma segunda coluna implicita — o campo
+            largo passaria a mandar na grade justamente onde so deve haver
+            uma. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Campo rotulo="Nome do contato" obrigatorio className="sm:col-span-2">
             {(p) => <Entrada {...p} required value={nome} onChange={(e) => setNome(e.target.value)} />}
           </Campo>
-          <Campo rotulo="Empresa" className="col-span-2">
+          <Campo rotulo="Empresa" className="sm:col-span-2">
             {(p) => <Entrada {...p} value={empresa} onChange={(e) => setEmpresa(e.target.value)} />}
           </Campo>
           <Campo rotulo="E-mail">
@@ -132,7 +149,7 @@ export function NewLeadModal({
           <Campo
             rotulo="CNPJ"
             dica="Necessário para gerar proposta — dá para preencher depois."
-            className="col-span-2"
+            className="sm:col-span-2"
           >
             {(p) => (
               <Entrada
@@ -146,7 +163,7 @@ export function NewLeadModal({
         </div>
 
         <div className="space-y-3 border-t border-fio pt-3">
-          <Campo rotulo="Título do negócio" obrigatorio>
+          <Campo rotulo={`Título do ${substantivo}`} obrigatorio>
             {(p) => (
               <Entrada
                 {...p}
@@ -157,7 +174,11 @@ export function NewLeadModal({
               />
             )}
           </Campo>
-          <div className="grid grid-cols-2 gap-3">
+          {/* Mesma regra §9, e aqui ela pesa mais: os dois campos sao
+              <select>, e texto de <option> nao quebra linha. Medido: com a
+              coluna de 145px sobravam ~97px depois do px-3 e do pr-9 da seta —
+              nome de etapa e nome de vendedor saiam cortados. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="Etapa">
               {(p) => (
                 <Selecao {...p} value={etapaId} onChange={(e) => setEtapaId(e.target.value)}>
@@ -169,14 +190,19 @@ export function NewLeadModal({
                 </Selecao>
               )}
             </Campo>
-            <Campo rotulo="Vendedor responsável">
+            {/* UM nome para este campo em todo o sistema: "Responsável".
+                "Vendedor responsável" mentia no funil do SDR, onde quem
+                assume e um SDR. E UMA redacao para o vazio: "pool" e palavra
+                de dentro de casa, e o que ela quer dizer cabe na propria
+                frase. */}
+            <Campo rotulo="Responsável">
               {(p) => (
                 <Selecao
                   {...p}
                   value={responsavelId}
                   onChange={(e) => setResponsavelId(e.target.value)}
                 >
-                  <option value="">Sem dono (pool)</option>
+                  <option value="">Sem dono — o próximo da equipe assume</option>
                   {responsaveis.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.nome}
