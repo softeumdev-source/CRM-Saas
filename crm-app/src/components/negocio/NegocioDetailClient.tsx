@@ -139,7 +139,7 @@ export function NegocioDetailClient({
     const [neg, ativ, props] = await Promise.all([
       supabase.from("negocios").select(SELECT_NEGOCIO_COMPLETO).eq("id", negocioId).single(),
       supabase.from("atividades").select("*, usuario:usuarios(*)").eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
-      supabase.from("propostas").select("*, plano:planos(*), envelopes(*, signatarios(*))").eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
+      supabase.from("propostas").select("*, plano:planos(*), envelopes(*, signatarios(id, envelope_id, nome, email, papel, ordem, status, assinado_em, visualizado_em))").eq("negocio_id", negocioId).order("criado_em", { ascending: false }),
     ]);
     if (neg.data) setNegocio(neg.data as unknown as NegocioComRelacoes);
     if (ativ.data) setAtividades(ativ.data as unknown as AtividadeComUsuario[]);

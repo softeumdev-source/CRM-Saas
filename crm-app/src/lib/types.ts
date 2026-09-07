@@ -102,8 +102,33 @@ export type AssinaturaRegistrada = {
 };
 
 /**
+ * O signatário COMO A TELA O RECEBE — sem `token`.
+ *
+ * As cinco consultas que carregam signatários para o navegador pediam
+ * `signatarios(*)`, e o `*` incluía a coluna `token`. Nenhuma tela renderiza
+ * esse campo, mas ele viajava até o navegador em todas elas: ficava no HTML da
+ * página renderizada no servidor, no cache do Realtime e no devtools de quem
+ * abrisse. Um token de assinatura é CREDENCIAL — quem o tem assina no lugar do
+ * cliente, porque `registrar_assinatura` confere o token e o status, nunca quem
+ * está do outro lado.
+ *
+ * O tipo é estreitado junto com as consultas, e não só elas, pela mesma razão
+ * do `SolicitacaoDescontoComRelacoes` logo acima: declarar `Signatario` aqui
+ * seria mentir para quem lê o tipo. `token` apareceria no editor e chegaria
+ * `undefined` na tela — que é justamente como um vazamento volta.
+ *
+ * `ip_assinatura`, `user_agent`, `assinatura_dados` e `email_faturamento` ficam
+ * de fora pelo mesmo motivo: nenhuma tela os mostra, e são o dado mais sensível
+ * da tabela.
+ */
+export type SignatarioNaTela = Pick<
+  Signatario,
+  "id" | "envelope_id" | "nome" | "email" | "papel" | "ordem" | "status" | "assinado_em" | "visualizado_em"
+>;
+
+/**
  * `propostas` com o plano e os envelopes, como a aba de proposta do negócio
- * carrega (`*, plano:planos(*), envelopes(*, signatarios(*))`).
+ * carrega (`*, plano:planos(*), envelopes(*, signatarios(<colunas>))`).
  *
  * Existia como `Record<string, unknown>` dentro do `NegocioDetailClient` — o
  * nome certo sobre forma nenhuma. Quem lia `proposta.envelopes[0].signatarios`
@@ -112,17 +137,19 @@ export type AssinaturaRegistrada = {
  */
 export type PropostaComRelacoes = Proposta & {
   plano: Plano | null;
-  envelopes: (Envelope & { signatarios: Signatario[] })[];
+  envelopes: (Envelope & { signatarios: SignatarioNaTela[] })[];
 };
 
 /**
  * `envelopes` com os signatários e a proposta inteira, como a tela de
  * assinaturas e a aba de proposta pedem.
  *
- * Aqui os embeds são `*` de verdade, então os tipos das linhas valem inteiros.
+ * Os embeds de `proposta` para baixo são `*` de verdade, então os tipos daquelas
+ * linhas valem inteiros. O de `signatarios` NÃO é: ele traz a lista de colunas
+ * sem o `token` — ver `SignatarioNaTela`.
  */
 export type EnvelopeComRelacoes = Envelope & {
-  signatarios: Signatario[];
+  signatarios: SignatarioNaTela[];
   proposta:
     | (Proposta & {
         negocio: (Negocio & { contato: Contato | null; responsavel: Usuario | null }) | null;

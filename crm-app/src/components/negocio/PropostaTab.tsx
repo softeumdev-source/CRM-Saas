@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  Copy,
-  Check,
   Plus,
   X,
   Eye,
@@ -132,10 +130,8 @@ export function PropostaTab({
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
-  const [linkCopiado, setLinkCopiado] = useState<string | null>(null);
   const [ultimoResultado, setUltimoResultado] = useState<{
     propostaId: string;
-    linkAssinatura: string;
     emailEnviado: boolean;
     emailErro: string | null;
   } | null>(null);
@@ -400,14 +396,13 @@ export function PropostaTab({
       setEtapaEnvio(null);
       setUltimoResultado({
         propostaId: editandoEnvioId,
-        linkAssinatura: data.linkAssinatura,
         emailEnviado: data.emailEnviado,
         emailErro: data.emailErro || null,
       });
       const supabase = createClient();
       const { data: propostaAtualizada } = await supabase
         .from("propostas")
-        .select("*, plano:planos(*), envelopes(*, signatarios(*))")
+        .select("*, plano:planos(*), envelopes(*, signatarios(id, envelope_id, nome, email, papel, ordem, status, assinado_em, visualizado_em))")
         .eq("id", editandoEnvioId)
         .single();
       if (propostaAtualizada) {
@@ -431,12 +426,6 @@ export function PropostaTab({
   // assinado ainda nao tem os dois ultimos). `abrirPdf` ja devolve `false` sem
   // fazer nada nesse caso — quem estreitava era este embrulho.
   const baixarPdf = (path: string | null | undefined) => void abrirPdf(path);
-
-  const copiarLink = (link: string) => {
-    navigator.clipboard.writeText(link);
-    setLinkCopiado(link);
-    setTimeout(() => setLinkCopiado(null), 2000);
-  };
 
   return (
     <div className="space-y-5">
@@ -807,7 +796,17 @@ export function PropostaTab({
                       </button>
 
                       <div className="pt-2 border-t border-fio">
-                        <p className="text-rotulo font-medium text-tinta-suave mb-2">Enviar cópia para (opcional)</p>
+                        <p className="text-rotulo font-medium text-tinta-suave">Enviar cópia para (opcional)</p>
+                        {/* A tela nunca disse a diferença, e o vendedor não
+                            tinha como adivinhar: os dois campos pedem nome e
+                            e-mail e ficam um embaixo do outro. Quem lia "cópia"
+                            como "também assina" colocava o cliente aqui, e o
+                            documento ficava esperando uma assinatura que nunca
+                            ia chegar. Uma linha resolve. */}
+                        <p className="text-rotulo text-tinta-fraca mb-2">
+                          Quem está em cópia não assina. Recebe o aviso agora e os documentos assinados quando
+                          todos os signatários concluírem.
+                        </p>
                         {copias.map((c) => (
                           <div key={c.chave} className="flex items-center gap-2 mb-2">
                             <input
@@ -945,24 +944,21 @@ export function PropostaTab({
                           ? "E-mail de assinatura enviado aos envolvidos, pela caixa comercial."
                           : ultimoResultado.emailErro
                             ? `Falha ao enviar e-mail: ${ultimoResultado.emailErro}`
-                            : "E-mail não enviado — copie e envie o link manualmente:"}
+                            : "E-mail não enviado."}
                       </p>
                       {/* O envio agora sai da caixa comercial pelo Gmail, não do
                           Resend. Mandar a pessoa configurar RESEND_FROM_EMAIL
-                          aqui seria mandá-la mexer no lugar errado. */}
+                          aqui seria mandá-la mexer no lugar errado.
+
+                          Aqui ficava a URL de assinatura num `<code>` com botão
+                          de copiar. Ela saiu: o link é uma CREDENCIAL — quem o
+                          tem assina no lugar do cliente, porque o banco confere
+                          o token, nunca quem está do outro lado. */}
                       {!ultimoResultado.emailEnviado && (
                         <p className="text-alerta mt-1">
                           Conecte a conta comercial em Admin → Integrações e escolha-a como caixa de envio.
                         </p>
                       )}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <code className="flex-1 truncate bg-superficie px-2 py-1 rounded-lg border border-fio">
-                          {ultimoResultado.linkAssinatura}
-                        </code>
-                        <button onClick={() => copiarLink(ultimoResultado!.linkAssinatura)} className="foco text-acento hover:text-acento">
-                          {linkCopiado === ultimoResultado.linkAssinatura ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </button>
-                      </div>
                     </div>
                   )}
                 </div>

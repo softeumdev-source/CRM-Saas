@@ -176,12 +176,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (resultado.erro && !emailErro) emailErro = resultado.erro;
   }
 
-  // Continua indo na RESPOSTA da rota, onde o vendedor autenticado o copia
-  // dentro do CRM (`PropostaTab.tsx:849`). O que mudou é que ele não sai mais
-  // por e-mail para quem não assina.
-  const linkPrimario = `${origin}/assinar/${signatariosCriados[0].token}`;
+  // O LINK NÃO VOLTA MAIS PARA A TELA.
+  //
+  // Ele saía na resposta desta rota, e a tela do vendedor mostrava a URL num
+  // `<code>` com botão de copiar. Um link de assinatura é uma CREDENCIAL: quem
+  // o tem assina no lugar do cliente, porque `registrar_assinatura` confere o
+  // token e o status do signatário, nunca quem é a pessoa do outro lado. Numa
+  // tela ele vira captura, mensagem de WhatsApp entre colegas, histórico de
+  // navegador — caminhos que não deixam rastro nenhum no envelope.
+  //
+  // O link continua existindo e continua indo por e-mail, para o endereço
+  // cadastrado do signatário, que é a única entrega que o envelope consegue
+  // registrar. Quando esse e-mail falha, a saída passa a ser o reenvio, e não
+  // um endereço colado à mão.
 
-  // A CÓPIA NÃO LEVA MAIS LINK NENHUM.
+  // A CÓPIA NÃO LEVA LINK NENHUM.
   //
   // Antes esta linha era `const linkPrimario = ${origin}/assinar/${
   // signatariosCriados[0].token}` e o botão da cópia — rotulado "Visualizar
@@ -225,7 +234,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   return NextResponse.json({
     envelope,
-    linkAssinatura: linkPrimario,
     emailEnviado: algumEmailEnviado,
     emailErro: emailErro || null,
   });

@@ -27,7 +27,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
     const recarregar = () => {
       createClient()
         .from("envelopes")
-        .select("*, signatarios(*), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*)))")
+        .select("*, signatarios(id, envelope_id, nome, email, papel, ordem, status, assinado_em, visualizado_em), proposta:propostas(*, negocio:negocios(*, contato:contatos(*), responsavel:usuarios!negocios_responsavel_id_fkey(*)))")
         .order("criado_em", { ascending: false })
         .then(({ data }) => data && setEnvelopes(data as EnvelopeComRelacoes[]));
     };

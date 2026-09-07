@@ -63,7 +63,7 @@ export default async function NegocioPage({
     supabase.from("atividades").select("*, usuario:usuarios(*)").eq("negocio_id", id).order("criado_em", { ascending: false }),
     supabase
       .from("propostas")
-      .select("*, plano:planos(*), envelopes(*, signatarios(*))")
+      .select("*, plano:planos(*), envelopes(*, signatarios(id, envelope_id, nome, email, papel, ordem, status, assinado_em, visualizado_em))")
       .eq("negocio_id", id)
       .order("criado_em", { ascending: false }),
     supabase.from("usuarios").select("*").eq("id", user!.id).single(),
