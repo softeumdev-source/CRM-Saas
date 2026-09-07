@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Loader2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NegocioComRelacoes } from "@/lib/types";
+import { rotuloDaOrigem } from "@/lib/types";
 import { formatarDataHora, type AtividadeComUsuario } from "@/lib/atividades";
 import { Alerta, Apoio, Botao, Campo, Cartao, Entrada, Rotulo, Selecao, Selo, Vazio } from "@/components/ui";
 
@@ -20,28 +21,6 @@ function rotuloDoTipo(tipo: string | null): string {
   return mapa[tipo ?? ""] ?? "Atividade";
 }
 
-/**
- * A origem crua do contato vira a frase que a tela mostra.
- *
- * Sao quatro valores, e cada um tem um dono no codigo: `manual` (o modal de
- * novo negocio), `importacao` (a planilha do admin), `gmail` e `whatsapp` (os
- * dois webhooks de entrada). O `capitalize` que estava aqui so trocava a
- * primeira letra — "Importacao" e "Whatsapp" chegavam na tela do jeito que o
- * banco guarda.
- *
- * Slug desconhecido volta como veio, de proposito: melhor a pessoa ler um slug
- * do que a linha sumir ou mentir.
- */
-function rotuloDaOrigem(origem: string | null | undefined): string {
-  const mapa: Record<string, string> = {
-    manual: "Cadastro manual",
-    importacao: "Importação de leads",
-    gmail: "E-mail recebido",
-    whatsapp: "WhatsApp recebido",
-  };
-  const chave = origem || "manual";
-  return mapa[chave] ?? chave;
-}
 
 /**
  * `AAAA-MM-DD` (ou um ISO completo) como `04/09/2026`, sem passar por `Date`.

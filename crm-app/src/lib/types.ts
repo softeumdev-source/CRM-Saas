@@ -349,6 +349,35 @@ export function localDoContato(
   return partes.length > 0 ? partes.join(" · ") : "—";
 }
 
+/**
+ * A origem crua do contato vira a frase que a tela mostra.
+ *
+ * Sao quatro valores, e cada um tem um dono no codigo — conferido nos quatro
+ * lugares que escrevem a coluna: `manual` (NewLeadModal), `importacao` (a
+ * importacao de planilha do admin), `gmail` (o cron do Gmail e a tela de
+ * quarentena) e `whatsapp` (o webhook da Meta). Nenhum outro valor entra.
+ *
+ * Subiu do VisaoGeralTab para ca quando a lista de leads passou a precisar do
+ * mesmo rotulo. Mesmo motivo do `localDoContato` logo acima: duas copias
+ * divergiriam na primeira correcao.
+ *
+ * O `capitalize` do CSS que fazia este trabalho so trocava a primeira letra —
+ * "Importacao" e "Whatsapp" chegavam na tela do jeito que o banco guarda.
+ *
+ * Slug desconhecido volta como veio, de proposito: melhor a pessoa ler um slug
+ * do que a linha sumir ou mentir.
+ */
+export function rotuloDaOrigem(origem: string | null | undefined): string {
+  const mapa: Record<string, string> = {
+    manual: "Cadastro manual",
+    importacao: "Importação de leads",
+    gmail: "E-mail recebido",
+    whatsapp: "WhatsApp recebido",
+  };
+  const chave = origem || "manual";
+  return mapa[chave] ?? chave;
+}
+
 export function iniciais(nome: string): string {
   return nome
     .split(" ")

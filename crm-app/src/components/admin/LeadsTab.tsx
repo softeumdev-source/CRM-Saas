@@ -6,7 +6,7 @@ import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
-import { localDoContato } from "@/lib/types";
+import { localDoContato, rotuloDaOrigem } from "@/lib/types";
 import {
   mapearLinha,
   classificarImportacao,
@@ -615,11 +615,17 @@ export function LeadsTab({
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-tinta-suave">{localDoContato(c.cidade, c.estado)}</td>
                   <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
-                  <td className="p-3 text-tinta-fraca capitalize">
+                  {/* Sem `capitalize`: ele mordia as DUAS saidas desta
+                      celula. No slug so trocava a primeira letra, entao
+                      "importacao" virava "Importacao" — e quem escreve o
+                      rotulo agora e o mesmo mapa da Visao Geral. E no Selo era
+                      pior: `capitalize` e palavra por palavra, entao
+                      "ja em Prospecção" saia "Já Em Prospecção". */}
+                  <td className="p-3 text-tinta-fraca">
                     {funilDoContato.has(c.id) ? (
                       <Selo tom="neutro">já em {funilDoContato.get(c.id)}</Selo>
                     ) : (
-                      c.origem
+                      rotuloDaOrigem(c.origem)
                     )}
                   </td>
                   <td className="p-3">
