@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
 import { ESCOPO_GMAIL } from "@/lib/google/config";
-import { abrirCaixa, CursorExpirado } from "@/lib/gmail/api";
+import { abrirCaixa, CursorExpirado, RecursoAusente } from "@/lib/gmail/api";
 import { lerMensagem } from "@/lib/gmail/mime";
 import { resolverPorEmail } from "@/lib/entrada/resolver";
 import { gravarEntrada } from "@/lib/entrada/gravar";
@@ -60,6 +60,12 @@ type Resumo = {
   duplicadas: number;
   quarentena: number;
   ignoradas: number;
+  /**
+   * Mensagem que o historico listou e que a Google nao entrega mais (404):
+   * apagada da caixa entre listar e buscar. Conta separado de `ignoradas`
+   * porque ignorar e uma DECISAO nossa e isto e um fato do outro lado.
+   */
+  sumidas: number;
   /** Primeira rodada da caixa: cursor gravado, nada importado. */
   primeira?: boolean;
   /** O cursor tinha caducado; foi rearmado no ponto de agora. */
@@ -127,7 +133,7 @@ export async function GET(request: Request) {
 type Admin = ReturnType<typeof createAdminClient>;
 
 async function sincronizar(admin: Admin, i: Integracao, ate: number): Promise<Resumo> {
-  const r: Resumo = { caixa: i.email_google, gravadas: 0, duplicadas: 0, quarentena: 0, ignoradas: 0 };
+  const r: Resumo = { caixa: i.email_google, gravadas: 0, duplicadas: 0, quarentena: 0, ignoradas: 0, sumidas: 0 };
 
   if (!i.tenant_id) {
     r.erro = "usuário sem tenant";
@@ -195,7 +201,25 @@ async function sincronizar(admin: Admin, i: Integracao, ate: number): Promise<Re
       }
       try {
         for (const id of registro.ids) {
-          contar(r, await processar(admin, caixa, i, id));
+          try {
+            contar(r, await processar(admin, caixa, i, id));
+          } catch (e) {
+            // MENSAGEM QUE SUMIU NAO TRAVA A CAIXA.
+            //
+            // Foi assim que a producao parou: o `cursor` so avanca sobre
+            // registro CONCLUIDO, entao uma mensagem que a Google nao entrega
+            // mais fazia a rodada inteira parar no mesmo ponto — e a rodada
+            // seguinte tentava exatamente a mesma mensagem, para sempre. Nada
+            // do que veio DEPOIS dela era lido, inclusive resposta de cliente.
+            //
+            // Nao ha o que reter: se a mensagem nao existe mais na caixa, ela
+            // nao vai existir na proxima tentativa. Conta e segue.
+            if (e instanceof RecursoAusente) {
+              r.sumidas += 1;
+              continue;
+            }
+            throw e;
+          }
         }
         cursor = registro.id;
       } catch (e) {

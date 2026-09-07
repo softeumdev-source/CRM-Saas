@@ -28,6 +28,30 @@ export class CursorExpirado extends Error {
   }
 }
 
+/**
+ * 404 da Google, e QUAL chamada levou 404.
+ *
+ * Isto existe porque a falta desta distincao travou a caixa de producao por
+ * horas sem ninguem conseguir dizer por que. O `pedir` mapeava TODO 404 para
+ * `CursorExpirado` — e tres chamadas diferentes podem levar 404:
+ *
+ *   /history   -> o cursor caducou de verdade (a Google descartou o historico)
+ *   /messages/ -> aquela mensagem sumiu da caixa entre listar e buscar
+ *   /profile   -> a caixa mesma nao respondeu
+ *
+ * As tres viravam a MESMA frase, "O cursor de histórico do Gmail expirou.", e
+ * so a primeira tinha conserto automatico. As outras duas caiam no ramo de
+ * erro generico: o cursor nunca avancava, a rodada seguinte repetia a mesma
+ * chamada, e a caixa ficava presa para sempre — com a mensagem errada na tela
+ * de integracoes, apontando para o lugar errado.
+ */
+export class RecursoAusente extends Error {
+  constructor(readonly caminho: string) {
+    super(`A Google respondeu 404 em ${caminho.split("?")[0]}.`);
+    this.name = "RecursoAusente";
+  }
+}
+
 async function pedir<T>(token: string, caminho: string): Promise<T> {
   const r = await fetch(`${BASE}${caminho}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -37,7 +61,7 @@ async function pedir<T>(token: string, caminho: string): Promise<T> {
     cache: "no-store",
   });
 
-  if (r.status === 404) throw new CursorExpirado();
+  if (r.status === 404) throw new RecursoAusente(caminho);
   if (!r.ok) {
     const corpo = await r.text().catch(() => "");
     throw new Error(`Gmail ${r.status}: ${corpo.slice(0, 200)}`);
@@ -129,11 +153,20 @@ export async function abrirCaixa(usuarioId: string): Promise<Caixa> {
         `&historyTypes=messageAdded&maxResults=100`;
       if (pageToken) caminho += `&pageToken=${encodeURIComponent(pageToken)}`;
 
-      const r = await pedir<{
-        historyId?: string;
-        nextPageToken?: string;
-        history?: { id?: string; messagesAdded?: { message?: { id?: string } }[] }[];
-      }>(token, caminho);
+      // AQUI, e so aqui, 404 quer dizer "o cursor caducou". A traducao mora no
+      // chamador que conhece o significado, e nao no `pedir`, que so sabe o
+      // codigo HTTP.
+      let r;
+      try {
+        r = await pedir<{
+          historyId?: string;
+          nextPageToken?: string;
+          history?: { id?: string; messagesAdded?: { message?: { id?: string } }[] }[];
+        }>(token, caminho);
+      } catch (e) {
+        if (e instanceof RecursoAusente) throw new CursorExpirado();
+        throw e;
+      }
 
       const registros: RegistroHistorico[] = [];
       for (const h of r.history || []) {
