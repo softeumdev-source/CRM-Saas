@@ -160,12 +160,17 @@ export async function GET(request: Request) {
                   para: m.destino!,
                   copia: m.copia,
                   assunto: m.assunto || "Softeum",
-                  // `comoCarta`: prospeccao sai como TEXTO, sem tarja, sem
-                  // card e sem imagem. Medido no MailReach — a versao com a
-                  // marca caiu na aba de Promocoes do Gmail, com 20,9% de
-                  // imagem. Nao foi para spam: o Gmail acreditou que era
-                  // correspondencia comercial legitima, e e exatamente isso que
-                  // ele tira da caixa principal.
+                  // O `comoCarta` saiu: existe UM formato de e-mail agora, e
+                  // ele e texto mais a assinatura com a logo. A prospeccao
+                  // passa a levar a assinatura ilustrada como todo o resto.
+                  //
+                  // O que justificava o modo separado era o MailReach, que
+                  // mediu 20,9% de imagem e viu a prospeccao cair na aba de
+                  // Promocoes. Mas aquela medicao foi do e-mail INTEIRO da
+                  // epoca — tarja, SOFTEUM em caixa alta, card e rodape —, e
+                  // nada disso existe mais: sobrou a logo e dois icones de
+                  // 14px. Vale remedir no MailReach antes da proxima campanha
+                  // grande.
                   // O `whatsappComoTexto` saiu daqui: o WhatsApp deixou de ser
                   // link em TODO e-mail do sistema, entao a opcao por mensagem
                   // perdeu a razao de existir. A coluna
@@ -173,7 +178,6 @@ export async function GET(request: Request) {
                   // leitor — nao apago coluna com dado gravado por causa de um
                   // conserto de aparencia.
                   html: emailBase(m.corpo, {
-                    comoCarta: true,
                     assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
                   }),
                   emRespostaA: null,

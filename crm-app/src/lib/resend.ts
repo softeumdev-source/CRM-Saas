@@ -169,7 +169,7 @@ function iconeDaLinha(arquivo: string): string {
  * abaixo da linha que separa a assinatura do corpo, não parte da centralização
  * — com `middle`, o alinhamento sai exato mesmo assim.
  */
-function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
+function assinaturaEmHtml(nome: string): string {
   // O NÚMERO fica; o `href` não. UM domínio linkado por e-mail, e ele é o nosso.
   //
   // Isto valia só para o e-mail de teste de entregabilidade (era a opção
@@ -179,25 +179,17 @@ function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
   // reconhece o número e oferece a ligação.
   const whatsapp = `WhatsApp ${WHATSAPP_LEGIVEL}`;
 
-  // A assinatura de QUEM ESCREVE À MÃO: quatro linhas, nenhuma imagem, nenhuma
-  // tabela, nenhuma cor declarada. Ninguém abre o Gmail e monta uma tabela com
-  // a logo da empresa para responder um cliente — e o classificador de
-  // Promoções sabe disso melhor do que nós.
+  // AQUI EXISTIA UMA SEGUNDA ASSINATURA: quatro linhas de texto puro, sem logo e
+  // sem ícones, usada pela cadência e pela resposta manual. Ela saiu.
   //
-  // Não declarar cor NÃO é descuido: sem `color`, o cliente usa a dele e o tema
-  // escuro do Gmail inverte o texto junto com o resto da mensagem. É o defeito
-  // que o card branco daqui de baixo existe para contornar, e que some sozinho
-  // quando não há card nenhum.
-  if (opcoes?.comoCarta) {
-    return `
-      <div style="margin-top:22px;">
-        ${escaparHtml(nome)}<br />
-        ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
-        <a href="${SITE}">${SITE_LEGIVEL}</a><br />
-        ${whatsapp}
-      </div>`;
-  }
-
+  // O motivo dela era o teste do MailReach, que mediu 20,9% de imagem e viu a
+  // prospecção cair na aba de Promoções. Só que aquela medição foi do e-mail
+  // INTEIRO da época — tarja com gradiente, SOFTEUM em caixa alta, card
+  // arredondado e rodapé institucional —, e nada disso existe mais. O que
+  // sobrou de imagem é a logo e dois ícones de 14px.
+  //
+  // Manter duas assinaturas custava o que sempre custa: a de baixo era a que
+  // recebia atenção, e a de cima ia ficando para trás em silêncio.
   const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
     ? `<td width="60" valign="middle" style="width:60px; padding:24px 16px 4px 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
@@ -255,42 +247,11 @@ export type OpcoesDoEmail = {
    * esquecimento. Quem manda para CLIENTE opta por dentro, passando o nome.
    */
   assinatura?: string | null;
-  /**
-   * O e-mail sai como CARTA: SEM IMAGEM NENHUMA. Só o texto e uma assinatura de
-   * quatro linhas, sem logo e sem ícones.
-   *
-   * O motivo é medido, não estético. O primeiro teste de entregabilidade caiu
-   * na aba de Promoções do Gmail — não em spam: o Gmail acreditou que era
-   * correspondência comercial legítima, e correspondência comercial legítima é
-   * exatamente o que ele tira da caixa principal. O relatório mediu 20,9% de
-   * imagem.
-   *
-   * A DIFERENÇA ENTRE OS DOIS MODOS ENCOLHEU, e vale dizer o que sobrou dela. O
-   * modo padrão tinha uma tarja com gradiente, a palavra SOFTEUM em caixa alta,
-   * um card e um rodapé institucional — a forma de uma newsletter. Isso saiu:
-   * hoje ele é texto e a assinatura com a logo. O que separa os dois modos
-   * agora é UMA coisa só, a imagem — a logo e os dois ícones de 14px.
-   *
-   * E é o suficiente, porque era disso que a medição tratava. Prospecção e
-   * resposta manual entram aqui; proposta, convite de vendedor e aviso de
-   * assinatura ficam com a assinatura ilustrada, porque ali o e-mail é
-   * transacional e esperado, e a logo ajuda a reconhecer o remetente.
-   */
-  comoCarta?: boolean;
 };
 
 export function emailBase(conteudo: string, opcoes?: OpcoesDoEmail): string {
   const nome = (opcoes?.assinatura || "").trim();
-  const assinatura = nome ? assinaturaEmHtml(nome, opcoes) : "";
-
-  // A carta: fonte, tamanho e entrelinha, e mais nada. Sem `background`, sem
-  // `max-width`, sem borda — é o que o Gmail produz quando uma PESSOA digita.
-  if (opcoes?.comoCarta) {
-    return `
-  <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:14px; line-height:1.6;">
-    ${conteudo}${assinatura}
-  </div>`;
-  }
+  const assinatura = nome ? assinaturaEmHtml(nome) : "";
 
   // A MARCA MORA NA ASSINATURA, e só nela.
   //
