@@ -91,8 +91,9 @@ export async function enviarEmail(params: {
 const CARGO_DE_QUEM_ASSINA = "Executivo de vendas";
 const SITE = "https://www.softeum.com.br/";
 const SITE_LEGIVEL = "www.softeum.com.br";
-/** Com DDI: sem o `55` o link do WhatsApp não abre conversa nenhuma. */
-const WHATSAPP_E164 = "5547996592551";
+// O E.164 (`5547996592551`) saiu junto com o `href` do WhatsApp: ele só servia
+// para montar o `wa.me`, e sem link ninguém lê aquele formato. Fica o número
+// como uma pessoa escreve.
 const WHATSAPP_LEGIVEL = "(47) 99659-2551";
 
 /**
@@ -167,15 +168,14 @@ function iconeDaLinha(arquivo: string): string {
  * — com `middle`, o alinhamento sai exato mesmo assim.
  */
 function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
-  // O NÚMERO não muda nunca; o que muda é ele ser ou não um `href`. Em teste de
-  // entregabilidade cada domínio linkado a mais é um sinal a mais para o filtro
-  // pesar, e o que queremos medir é a reputação de UM domínio: o nosso. Quem lê
-  // continua vendo o WhatsApp, e no celular o cliente de e-mail reconhece o
-  // número sozinho.
-  const whatsapp = (estilo: string) =>
-    opcoes?.whatsappComoTexto
-      ? `WhatsApp ${WHATSAPP_LEGIVEL}`
-      : `<a href="https://wa.me/${WHATSAPP_E164}"${estilo}>WhatsApp ${WHATSAPP_LEGIVEL}</a>`;
+  // O NÚMERO fica; o `href` não. UM domínio linkado por e-mail, e ele é o nosso.
+  //
+  // Isto valia só para o e-mail de teste de entregabilidade (era a opção
+  // `whatsappComoTexto`) e passou a valer para todos: cada domínio linkado a
+  // mais é um sinal a mais para o filtro pesar, e `wa.me` não é nosso. Quem lê
+  // continua vendo o WhatsApp — no celular, o próprio cliente de e-mail
+  // reconhece o número e oferece a ligação.
+  const whatsapp = `WhatsApp ${WHATSAPP_LEGIVEL}`;
 
   // A assinatura de QUEM ESCREVE À MÃO: quatro linhas, nenhuma imagem, nenhuma
   // tabela, nenhuma cor declarada. Ninguém abre o Gmail e monta uma tabela com
@@ -192,23 +192,38 @@ function assinaturaEmHtml(nome: string, opcoes?: OpcoesDoEmail): string {
         ${escaparHtml(nome)}<br />
         ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
         <a href="${SITE}">${SITE_LEGIVEL}</a><br />
-        ${whatsapp("")}
+        ${whatsapp}
       </div>`;
   }
 
   const logo = urlPublica("logo-softeum.png");
   const celulaDaLogo = logo
-    ? `<td width="58" valign="middle" style="width:58px; padding:20px 14px 0 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
+    ? `<td width="60" valign="middle" style="width:60px; padding:24px 16px 4px 0; vertical-align:middle;"><img src="${logo}" alt="Softeum" width="44" height="42" style="display:block; width:44px; height:42px; border:0;" /></td>`
     : "";
 
+  // O QUE MUDOU AQUI, e por quê:
+  //
+  // O nome sobe para 15px e o cargo desce para `#64748b`. Antes as quatro
+  // linhas saíam quase no mesmo peso e no mesmo tom, e a assinatura lia como um
+  // bloco de quatro coisas iguais. Quem assina é uma PESSOA — o nome é o que
+  // deve chegar primeiro, e a diferença de tom faz isso sem aumentar nada.
+  //
+  // A entrelinha vai de 1.6 para 1.75 e o respiro acima do fio de 28px para
+  // 32px. É o ajuste que faltava: a assinatura estava grudada no fim do texto,
+  // e no celular ela parecia parágrafo, não rodapé.
+  //
+  // O que NÃO mudou, de propósito: a tabela (o Outlook desktop renderiza com o
+  // motor do Word e quebraria um flex), o `valign` no atributo além do CSS
+  // (mesmo motivo), e as três imagens — a logo e os dois ícones. Nada de
+  // gradiente e nenhuma cor nova fora da rampa que o arquivo já usa.
   return `
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin-top:28px; border-top:1px solid #e2e8f0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; margin-top:32px; border-top:1px solid #e2e8f0;">
         <tr>${celulaDaLogo}
-          <td valign="middle" style="padding-top:20px; vertical-align:middle; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:13px; line-height:1.6; color:#475569;">
-            <strong style="color:#0f172a; font-size:14px;">${escaparHtml(nome)}</strong><br />
-            ${CARGO_DE_QUEM_ASSINA} · Softeum<br />
+          <td valign="middle" style="padding:24px 0 4px; vertical-align:middle; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size:13px; line-height:1.75; color:#475569;">
+            <strong style="color:#0f172a; font-size:15px; font-weight:600;">${escaparHtml(nome)}</strong><br />
+            <span style="color:#64748b;">${CARGO_DE_QUEM_ASSINA} · Softeum</span><br />
             ${iconeDaLinha("icone-site.png")}<a href="${SITE}" style="color:#4f46e5; text-decoration:none;">${SITE_LEGIVEL}</a><br />
-            ${iconeDaLinha("icone-whatsapp.png")}${whatsapp(' style="color:#475569; text-decoration:none;"')}
+            ${iconeDaLinha("icone-whatsapp.png")}${whatsapp}
           </td>
         </tr>
       </table>`;
@@ -238,16 +253,6 @@ export type OpcoesDoEmail = {
    * esquecimento. Quem manda para CLIENTE opta por dentro, passando o nome.
    */
   assinatura?: string | null;
-  /**
-   * O WhatsApp da assinatura sai como TEXTO, sem `href`. Só o site fica linkado.
-   *
-   * Existe por mensagem, e não como decisão global, porque quem precisa disto é
-   * o e-mail de teste de entregabilidade — ele mede em quantas caixas a nossa
-   * mensagem cai na entrada, e um segundo domínio linkado (`wa.me`) entra na
-   * conta do filtro junto com o nosso. A campanha de verdade continua com o
-   * link, que é um toque de um clique e vale dinheiro.
-   */
-  whatsappComoTexto?: boolean;
   /**
    * O e-mail sai como CARTA: sem tarja, sem card, sem rodapé e sem imagem
    * nenhuma. Só o texto e uma assinatura de quatro linhas.

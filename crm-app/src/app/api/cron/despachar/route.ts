@@ -144,11 +144,13 @@ export async function GET(request: Request) {
             // cliente pela caixa de entrada. O que nao pode e o robo responder
             // uma conversa que ninguem comecou.
             //
-            // `copia` e `assinatura_sem_link_whatsapp` sao nulas e false em toda
-            // mensagem de cadencia, entao o caminho normal nao muda nada. Elas
-            // existem para o e-mail de teste de entregabilidade: um envio so,
-            // com as 28 caixas de semente do MailReach em Cc, e a assinatura
-            // linkando um dominio so — o nosso, que e o que esta sendo medido.
+            // `copia` e nula em toda mensagem de cadencia, entao o caminho
+            // normal nao muda nada. Ela existe para o e-mail de teste de
+            // entregabilidade: um envio so, com as 28 caixas de semente do
+            // MailReach em Cc.
+            //
+            // A outra coluna daquele teste, `assinatura_sem_link_whatsapp`, NAO
+            // e mais lida — ver a nota logo abaixo, no `html`.
             try {
               const e = await enviarPeloGmail(
                 caixa.usuarioId,
@@ -164,10 +166,15 @@ export async function GET(request: Request) {
                   // imagem. Nao foi para spam: o Gmail acreditou que era
                   // correspondencia comercial legitima, e e exatamente isso que
                   // ele tira da caixa principal.
+                  // O `whatsappComoTexto` saiu daqui: o WhatsApp deixou de ser
+                  // link em TODO e-mail do sistema, entao a opcao por mensagem
+                  // perdeu a razao de existir. A coluna
+                  // `mensagens.assinatura_sem_link_whatsapp` fica no banco sem
+                  // leitor — nao apago coluna com dado gravado por causa de um
+                  // conserto de aparencia.
                   html: emailBase(m.corpo, {
                     comoCarta: true,
                     assinatura: caixa.nome ?? NOME_PADRAO_DO_REMETENTE,
-                    whatsappComoTexto: m.assinatura_sem_link_whatsapp,
                   }),
                   emRespostaA: null,
                   referencias: null,
