@@ -6,6 +6,7 @@ import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Contato, Usuario } from "@/lib/types";
+import { localDoContato } from "@/lib/types";
 import {
   mapearLinha,
   classificarImportacao,
@@ -593,6 +594,10 @@ export function LeadsTab({
                 </th>
                 <th className="p-3">Nome</th>
                 <th className="p-3">Empresa</th>
+                {/* A cidade entra ao lado da empresa porque e onde a empresa
+                    esta — e e a coluna que a importacao de planilha ja
+                    preenchia sem ter onde aparecer. */}
+                <th className="p-3">Cidade</th>
                 <th className="p-3">E-mail</th>
                 <th className="p-3">Origem</th>
                 <th className="p-3 w-10"><span className="sr-only">Excluir</span></th>
@@ -608,6 +613,7 @@ export function LeadsTab({
                   <td className="p-3"><input className="foco" type="checkbox" aria-label={`Selecionar o lead ${c.nome}`} checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
+                  <td className="p-3 text-tinta-suave">{localDoContato(c.cidade, c.estado)}</td>
                   <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
                   <td className="p-3 text-tinta-fraca capitalize">
                     {funilDoContato.has(c.id) ? (
@@ -629,7 +635,7 @@ export function LeadsTab({
               ))}
               {contatosSemDono.length === 0 && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <Vazio icone={Users2} titulo="Nenhum lead sem dono">
                       Importe uma base acima ou aguarde novos leads — eles caem aqui antes de ir para um vendedor.
                     </Vazio>
@@ -734,6 +740,7 @@ export function LeadsTab({
                 </th>
                 <th className="p-3">Nome</th>
                 <th className="p-3">Empresa</th>
+                <th className="p-3">Cidade</th>
                 <th className="p-3">Vendedor</th>
               </tr>
             </thead>
@@ -743,6 +750,7 @@ export function LeadsTab({
                   <td className="p-3"><input className="foco" type="checkbox" aria-label={`Selecionar o lead ${c.nome}`} checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
+                  <td className="p-3 text-tinta-suave">{localDoContato(c.cidade, c.estado)}</td>
                   <td className="p-3 text-acento font-medium">
                     <span className="flex items-center gap-2 flex-wrap">
                       {c.responsavel?.nome || "—"}
@@ -766,7 +774,7 @@ export function LeadsTab({
               ))}
               {comDonoFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <Vazio icone={Search} titulo="Nenhum lead neste filtro">
                       Tente outro vendedor ou limpe a busca.
                     </Vazio>

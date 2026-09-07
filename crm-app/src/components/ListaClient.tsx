@@ -9,7 +9,7 @@ import { useSincronizacao } from "@/lib/supabase/realtime";
 import { etapasParaEscolher, recorteDeFunil } from "@/lib/pipelines";
 import { atrasoDaCascata } from "@/components/ui";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
-import { SELECT_NEGOCIO_COMPLETO, formatarMoeda } from "@/lib/types";
+import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, localDoContato } from "@/lib/types";
 import {
   descreverPrazo,
   diasSemContato,
@@ -188,6 +188,13 @@ export function ListaClient({
                 <th className="p-4">Último contato</th>
                 <th className="p-4">Próxima ação</th>
                 <th className="p-4">Vendedor</th>
+                {/* Ao lado do CNPJ de proposito: os dois sao dado de CADASTRO.
+                    Enfiada logo depois de "Empresa / Contato", a cidade
+                    empurraria Etapa, Valor e Proxima acao para a direita — as
+                    colunas que a pessoa varre primeiro. O cartao ja rola na
+                    horizontal (`overflow-x-auto` na linha 181), entao a coluna
+                    nova nao empurra a pagina. */}
+                <th className="p-4">Cidade</th>
                 <th className="p-4">CNPJ</th>
                 <th className="p-4 text-right">Ação</th>
               </tr>
@@ -266,6 +273,9 @@ export function ListaClient({
                       )}
                     </td>
                     <td className="p-4 font-medium text-tinta-suave">{n.responsavel?.nome || "Sem dono"}</td>
+                    <td className="p-4 text-tinta-suave whitespace-nowrap">
+                      {localDoContato(n.contato?.cidade, n.contato?.estado)}
+                    </td>
                     <td className="p-4">
                       {/* "OK" VERDE aparecia em quase toda linha, e sinal que
                           nao varia nao e sinal — e ruido que treina a pessoa a
@@ -297,7 +307,7 @@ export function ListaClient({
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-6 text-center text-tinta-fraca">
+                  <td colSpan={9} className="p-6 text-center text-tinta-fraca">
                     {carregados < total
                       ? `Nenhum negócio encontrado entre os ${carregados} carregados — carregue mais abaixo.`
                       : "Nenhum negócio encontrado."}

@@ -329,6 +329,26 @@ export function formatarMoeda(valor: number | null | undefined): string {
   return (valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/**
+ * Onde o contato fica, numa celula de tabela.
+ *
+ * Mora aqui, e nao em cada lista, pelo mesmo motivo do `traduzirErroDeAcesso`:
+ * sao tres telas mostrando o mesmo par de colunas do banco, e tres copias
+ * divergiriam na primeira correcao.
+ *
+ * A UF SOZINHA continua valendo. Hoje, dos 25 contatos, 14 tem `estado` e
+ * NENHUM tem `cidade` — trocar isso por um travessao esconderia o unico dado
+ * de localizacao que existe hoje, que e exatamente o erro que a cidade
+ * invisivel ja tinha cometido. Some so quando nao ha nem um nem outro.
+ */
+export function localDoContato(
+  cidade: string | null | undefined,
+  estado: string | null | undefined,
+): string {
+  const partes = [cidade?.trim(), estado?.trim()].filter(Boolean);
+  return partes.length > 0 ? partes.join(" · ") : "—";
+}
+
 export function iniciais(nome: string): string {
   return nome
     .split(" ")
