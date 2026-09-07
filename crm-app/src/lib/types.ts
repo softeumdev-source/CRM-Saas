@@ -96,9 +96,18 @@ export type EnvelopePublico = {
   tenant: { nome: string; cor_primaria: string };
 };
 
-/** O que `registrar_assinatura` devolve. Também `json` no banco. */
+/**
+ * O que `registrar_assinatura` devolve. Também `json` no banco.
+ *
+ * `proximo` é quem está na vez depois desta assinatura, ou `null` quando o
+ * envelope fechou. Ele NÃO traz o token: a RPC roda com a chave anônima, dentro
+ * do navegador de quem acabou de assinar, e o token de outra pessoa é a
+ * credencial dela. Quem precisa do token é a rota, no servidor, e ela o busca
+ * pelo `id`.
+ */
 export type AssinaturaRegistrada = {
   envelope_concluido?: boolean;
+  proximo?: { id: string; nome: string; email: string } | null;
 };
 
 /**

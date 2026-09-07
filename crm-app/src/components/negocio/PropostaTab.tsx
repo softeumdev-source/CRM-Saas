@@ -933,9 +933,21 @@ export function PropostaTab({
                         <Ponto tom="ok" />
                         Status da assinatura (tempo real)
                       </p>
+                      {/* QUEM ESTÁ NA VEZ. A assinatura passou a ser em
+                          sequência: só o primeiro cliente recebe o link no
+                          envio, e cada um seguinte só recebe quando o anterior
+                          assina. Sem isto a tela diria "Enviado" para quem
+                          ainda não recebeu e-mail nenhum — e "Reenviar" ali em
+                          cima furaria a fila, mandando o link antes da vez. */}
                       {[...(envelope.signatarios || [])]
                         .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
-                        .map((s) => (
+                        .map((s, _i, fila) => {
+                          // Espera alguém à frente? Então este ainda não recebeu
+                          // link nenhum.
+                          const naFila = fila.some(
+                            (o) => (o.ordem ?? 0) < (s.ordem ?? 0) && o.status !== "assinado",
+                          );
+                          return (
                           <div key={s.id} className="flex items-center justify-between text-rotulo gap-2 flex-wrap">
                             {/* O `papel` saia cru do banco: a tela mostrava
                                 "(softeum)", que e enum, nao palavra de gente. A
@@ -958,10 +970,15 @@ export function PropostaTab({
                                 <Eye className="h-3.5 w-3.5" />
                                 Visualizou{s.visualizado_em ? ` em ${new Date(s.visualizado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""} · aguardando assinatura
                               </span>
+                            ) : naFila ? (
+                              <span className="flex items-center gap-1 font-medium text-tinta-fraca">
+                                <Clock className="h-3.5 w-3.5" />
+                                Na fila · recebe o link quando chegar a vez
+                              </span>
                             ) : (
                               <span className="flex items-center gap-1 font-medium text-alerta">
                                 <Clock className="h-3.5 w-3.5" />
-                                Enviado · ainda não visualizou
+                                Aguardando assinatura · ainda não visualizou
                               </span>
                             )}
                             {/* O reenvio é a saída que não existia. O link saiu
@@ -975,7 +992,7 @@ export function PropostaTab({
                                 reenviar) nem para o signatário interno da
                                 Softeum, que nasce assinado e nunca recebeu
                                 e-mail nenhum. */}
-                            {s.status !== "assinado" && s.papel !== "softeum" && (
+                            {s.status !== "assinado" && s.papel !== "softeum" && !naFila && (
                               <button
                                 onClick={() => reenviar(envelope.id, s.id, s.email)}
                                 disabled={reenviandoId === s.id}
@@ -990,7 +1007,8 @@ export function PropostaTab({
                               </button>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       {/* O aviso fica FORA do laço, com o nome do destinatário
                           dentro do texto: uma linha por signatário multiplicaria
                           o mesmo recado por três num envelope de três. */}

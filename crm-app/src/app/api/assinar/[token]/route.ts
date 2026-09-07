@@ -7,6 +7,7 @@ import { emailBase } from "@/lib/resend";
 import { escaparHtml } from "@/lib/gmail/corpo";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
 import { quemAssina } from "@/lib/gmail/caixa";
+import { emailDeAssinatura } from "@/lib/assinatura/email";
 import { renderPropostaComercialPdf } from "@/lib/pdf/PropostaComercial";
 import { montarDadosDaProposta } from "@/lib/pdf/montarDados";
 import { mensagemDoErro } from "@/lib/erros";
@@ -346,6 +347,51 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         }
       } catch (e) {
         console.error("Falha ao gerar PDF assinado ou enviar emails", e);
+      }
+    }
+
+    // A VEZ DO PRÓXIMO.
+    //
+    // Sem isto a fila trava: o envio manda o link só para o primeiro, e os
+    // seguintes nunca receberiam nada — o envelope ficaria aberto para sempre,
+    // esperando gente que não sabe que está sendo esperada.
+    //
+    // O `proximo` vem da RPC sem o token, de propósito: ela roda com a chave
+    // anônima, dentro do navegador de quem acabou de assinar, e devolver o
+    // token de outra pessoa ali entregaria a credencial dela. O token é buscado
+    // AQUI, no servidor, pelo id.
+    //
+    // A falha é registrada e engolida: quem acabou de assinar já assinou, e a
+    // assinatura dele não pode ser desfeita porque o e-mail do próximo não
+    // saiu. Quando isso acontece, o vendedor tem o botão de reenvio na tela.
+    const proximo = (data as unknown as AssinaturaRegistrada)?.proximo;
+    if (proximo?.id && temServiceRole()) {
+      try {
+        const admin = createAdminClient();
+        const { data: sigProximo } = await admin
+          .from("signatarios")
+          .select("token, nome, email, envelope:envelopes(proposta:propostas(numero, tenant_id, negocio:negocios(contato:contatos(nome, empresa))))")
+          .eq("id", proximo.id)
+          .single();
+
+        const prop = sigProximo?.envelope?.proposta;
+        const contatoProx = prop?.negocio?.contato;
+        if (sigProximo?.token) {
+          const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+          await enviarDoTenant(admin, prop?.tenant_id, {
+            para: sigProximo.email,
+            assunto: `Proposta Softeum ${prop?.numero ?? ""} - assinatura eletronica`,
+            html: emailDeAssinatura({
+              nome: sigProximo.nome,
+              numero: prop?.numero ?? "",
+              empresa: contatoProx?.empresa || contatoProx?.nome || "sua empresa",
+              link: `${origin}/assinar/${sigProximo.token}`,
+              assinatura: await quemAssina(admin, prop?.tenant_id),
+            }),
+          });
+        }
+      } catch (e) {
+        console.error("Falha ao avisar o proximo signatario da fila", e);
       }
     }
 

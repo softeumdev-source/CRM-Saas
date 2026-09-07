@@ -142,7 +142,24 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
   let algumEmailEnviado = false;
   let emailErro: string | null = null;
-  for (const sig of signatariosCriados) {
+
+  // A FILA COMEÇA COM UM. Os PDFs vão para o storage de TODOS os tokens —
+  // é barato, e o reenvio e as assinaturas seguintes dependem de eles já
+  // estarem lá —, mas só o primeiro cliente recebe e-mail agora.
+  //
+  // Antes o laço mandava o link para os três de uma vez, e a `ordem` era
+  // decoração: qualquer um assinava a qualquer momento. Isso importa porque o
+  // documento MUDA entre uma assinatura e outra — quem assina depois assina um
+  // PDF que já traz a rubrica de quem veio antes. Os seguintes recebem o link
+  // em `api/assinar/[token]`, quando chega a vez de cada um.
+  //
+  // `signatariosCriados` sai do `insert` na ordem de `linhasClientes`, que já é
+  // a ordem do formulário — mas a ordenação vai explícita, porque "a ordem que
+  // o insert devolveu" não é garantia de nada.
+  const naFila = [...signatariosCriados].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  const primeiroDaFila = naFila[0]?.id;
+
+  for (const sig of naFila) {
     const token = sig.token;
     const [upComercial, upTecnica] = await Promise.all([
       admin.storage.from("assinatura-publica").upload(`${token}/comercial.pdf`, comercialParaAssinar, {
@@ -158,6 +175,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       console.error("Falha ao publicar PDFs para assinatura", upComercial.error, upTecnica.error);
       return NextResponse.json({ error: "Falha ao publicar os PDFs para assinatura." }, { status: 500 });
     }
+
+    // Quem não é o primeiro da fila teve os PDFs publicados e fica esperando:
+    // sem e-mail agora, sem link na mão de ninguém.
+    if (sig.id !== primeiroDaFila) continue;
 
     // O corpo saiu daqui para `lib/assinatura/email.ts` quando o reenvio
     // nasceu: os dois envios mandam o MESMO documento e o mesmo link, e duas
