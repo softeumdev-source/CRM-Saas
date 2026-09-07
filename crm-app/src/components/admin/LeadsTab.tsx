@@ -10,6 +10,7 @@ import { localDoContato, rotuloDaOrigem } from "@/lib/types";
 import {
   mapearLinha,
   classificarImportacao,
+  chaveEmpresaNome,
   paraContato,
   rotuloStatus,
   normalizarEmail,
@@ -154,16 +155,20 @@ export function LeadsTab({
         return;
       }
 
-      // Contatos já existentes no tenant (email + cnpj) para dedup contra o banco.
+      // Contatos já existentes no tenant, nas TRÊS chaves de dedup: e-mail, CNPJ
+      // e empresa+nome. A terceira entrou porque linha sem e-mail e sem CNPJ
+      // passava sempre — e o índice único do banco não a pega, porque ele é
+      // parcial (`where email is not null`).
       setProgresso("Conferindo duplicados na base...");
       const supabase = createClient();
       const existentesEmails = new Set<string>();
       const existentesCnpj = new Set<string>();
+      const existentesEmpresaNome = new Set<string>();
       const PAGINA = 1000;
       for (let de = 0; ; de += PAGINA) {
         const { data, error } = await supabase
           .from("contatos")
-          .select("email, cnpj")
+          .select("email, cnpj, empresa, nome")
           .range(de, de + PAGINA - 1);
         if (error) throw error;
         for (const c of data || []) {
@@ -171,11 +176,19 @@ export function LeadsTab({
           if (em) existentesEmails.add(em);
           const cn = normalizarCnpj(c.cnpj);
           if (cn) existentesCnpj.add(cn);
+          const en = chaveEmpresaNome(c.empresa, c.nome);
+          if (en) existentesEmpresaNome.add(en);
         }
         if (!data || data.length < PAGINA) break;
       }
 
-      const { classificadas, resumo } = classificarImportacao(mapeadas, existentesEmails, existentesCnpj);
+      const { classificadas, resumo } = classificarImportacao(
+        mapeadas,
+        existentesEmails,
+        existentesCnpj,
+        2,
+        existentesEmpresaNome,
+      );
       setPreview({ arquivo: file.name, classificadas, resumo });
     } catch (err: unknown) {
       setErro(err instanceof Error ? err.message : "Falha ao ler o arquivo.");

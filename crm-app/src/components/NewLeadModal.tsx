@@ -53,6 +53,39 @@ export function NewLeadModal({
     setLoading(true);
     const supabase = createClient();
 
+    // DUPLICIDADE: perguntar antes, para poder DIZER quem é.
+    //
+    // O índice único `ux_contatos_tenant_email` já barrava o insert, então lead
+    // repetido nunca era criado. O problema era a mensagem: chegava o texto cru
+    // do Postgres ("duplicate key value violates unique constraint ..."), que
+    // não diz de quem é o lead nem o que fazer. O vendedor via um erro de banco
+    // e não tinha como saber que a pessoa já está na base — nem com quem.
+    //
+    // Esta consulta é a MENSAGEM; o índice continua sendo a GARANTIA, para o
+    // caso de duas pessoas salvarem no mesmo instante. Por isso as duas coisas
+    // ficam: o `23505` logo abaixo traduz esse empate para a mesma frase.
+    const emailNormalizado = email.trim().toLowerCase();
+    // Sem `tenant_id` a consulta não teria como se limitar ao tenant certo, e a
+    // RLS de `contatos` já recorta por ele de qualquer forma — mas nesse caso o
+    // insert abaixo também falharia, e o `23505` cobre.
+    if (emailNormalizado && usuarioAtual.tenant_id) {
+      const { data: jaExiste } = await supabase
+        .from("contatos")
+        .select("nome, empresa")
+        .eq("tenant_id", usuarioAtual.tenant_id)
+        .ilike("email", emailNormalizado)
+        .maybeSingle();
+      if (jaExiste) {
+        setLoading(false);
+        setErro(
+          `Já existe um lead com este e-mail: ${jaExiste.nome}` +
+            (jaExiste.empresa ? ` (${jaExiste.empresa})` : "") +
+            ". Procure por ele na lista em vez de criar outro.",
+        );
+        return;
+      }
+    }
+
     const { data: contato, error: erroContato } = await supabase
       .from("contatos")
       .insert({
@@ -70,7 +103,15 @@ export function NewLeadModal({
 
     if (erroContato || !contato) {
       setLoading(false);
-      setErro(erroContato?.message || "Erro ao criar contato.");
+      // `23505` é violação de unicidade. Só chega aqui quem passou pela
+      // consulta acima e perdeu a corrida para outra aba salvando o mesmo
+      // e-mail no mesmo instante — raro, e ainda assim merece a frase de gente
+      // em vez do texto do Postgres.
+      setErro(
+        erroContato?.code === "23505"
+          ? "Já existe um lead com este e-mail. Procure por ele na lista em vez de criar outro."
+          : erroContato?.message || "Erro ao criar contato.",
+      );
       return;
     }
 
