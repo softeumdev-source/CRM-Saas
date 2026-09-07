@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { traduzirErroDeAcesso } from "@/lib/erros";
 import { Loader2, KeyRound } from "lucide-react";
 
 export default function RedefinirSenhaPage() {
@@ -28,7 +29,10 @@ export default function RedefinirSenhaPage() {
     const { error } = await supabase.auth.updateUser({ password: senha });
     setLoading(false);
     if (error) {
-      setErro(error.message);
+      // Sem sessao o `updateUser` devolve "Auth session missing!", que e
+      // exatamente o que a pessoa ve quando o link do e-mail venceu ou ja foi
+      // usado — o caso mais comum desta tela, e o mais mudo em ingles.
+      setErro(traduzirErroDeAcesso(error.message));
       return;
     }
     router.push("/");

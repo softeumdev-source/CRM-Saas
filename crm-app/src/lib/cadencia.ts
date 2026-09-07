@@ -17,6 +17,32 @@ export const ROTULO_STATUS_INSCRICAO: Record<string, string> = {
 };
 
 /**
+ * `cadencias.tipo` diz DE ONDE O LEAD VEIO, e o banco guarda em ingles
+ * (`inbound`/`outbound`). E ortogonal a `proposito`, que diz o PAPEL da
+ * cadencia — por isso os dois aparecem juntos na linha do admin.
+ */
+export const ROTULO_TIPO_CADENCIA: Record<string, string> = {
+  inbound: "Lead que chegou até nós",
+  outbound: "Lead que fomos buscar",
+};
+
+/** O canal do modelo, escrito como se escreve em português. */
+export const ROTULO_CANAL: Record<string, string> = {
+  email: "E-mail",
+  whatsapp: "WhatsApp",
+};
+
+/**
+ * A categoria do template na Meta. `utilidade` nao cai no teto de duas
+ * mensagens de marketing por pessoa por dia — por isso a diferenca fica
+ * visivel na lista em vez de virar detalhe do banco.
+ */
+export const ROTULO_CATEGORIA: Record<string, string> = {
+  utilidade: "Utilidade",
+  marketing: "Marketing",
+};
+
+/**
  * O "plano de ação": a sequência inteira com as datas, calculada antes de
  * inscrever alguém.
  *

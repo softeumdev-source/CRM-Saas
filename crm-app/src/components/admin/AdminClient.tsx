@@ -31,7 +31,7 @@ import type { AbaAdmin } from "@/components/admin/abas";
 const ABAS_COM_ICONE = [
   { chave: "desempenho", rotulo: "Desempenho", icone: LineChart },
   { chave: "vendedores", rotulo: "Time", icone: Users },
-  { chave: "funil", rotulo: "Funil do Vendedor", icone: BarChart3 },
+  { chave: "funil", rotulo: "Funil do vendedor", icone: BarChart3 },
   { chave: "planos", rotulo: "Planos", icone: Package },
   { chave: "leads", rotulo: "Leads", icone: UserSquare2 },
   { chave: "descontos", rotulo: "Descontos", icone: BadgePercent },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 import { Upload, Loader2, Users2, Shuffle, CheckCircle2, ArrowRightLeft, Search, Send, X, AlertTriangle, Trash2 } from "lucide-react";
@@ -67,6 +67,10 @@ export function LeadsTab({
   // desatualizado a cada `router.refresh()`.
   const [contatosSemDono, setContatosSemDono] = useEstadoDaProp(contatosSemDonoIniciais);
   const [contatosComDono, setContatosComDono] = useEstadoDaProp<ContatoComDono[]>(contatosComDonoIniciais);
+  // O `<input type="file">` continua fora da tela (display:none) porque o
+  // controle nativo nao aceita estilo; quem abre o seletor e o botao de
+  // verdade, chamando `click()` por este ref.
+  const arquivoRef = useRef<HTMLInputElement>(null);
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ inseridos: number; total: number } | null>(null);
@@ -394,11 +398,31 @@ export function LeadsTab({
           Os leads importados entram no pool &quot;sem dono&quot; até serem distribuídos.
         </p>
         {!preview && (
-          <label htmlFor="leadstab-1" className="inline-flex items-center gap-2 px-4 py-2.5 text-rotulo font-medium text-acento-tinta bg-acento-solido hover:bg-acento-solido-hover rounded-xl cursor-pointer w-fit foco">
-            {processando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {processando ? progresso || "Processando..." : "Escolher arquivo"}
-            <input id="leadstab-1" type="file" accept=".csv,.xlsx" className="foco hidden" onChange={analisarArquivo} disabled={processando} />
-          </label>
+          <>
+            {/* Era um `label` com o input `hidden`: label nao entra na ordem de
+                tabulacao e input com display:none nao recebe foco, entao a
+                unica porta de entrada em massa de lead so abria com mouse.
+                O botao de verdade tabula, responde a Enter e Espaco, e abre o
+                mesmo seletor pelo `click()` no input. */}
+            <Botao
+              variante="primario"
+              carregando={processando}
+              icone={Upload}
+              className="w-fit"
+              onClick={() => arquivoRef.current?.click()}
+            >
+              {processando ? progresso || "Processando..." : "Escolher arquivo"}
+            </Botao>
+            <input
+              ref={arquivoRef}
+              id="leadstab-1"
+              type="file"
+              accept=".csv,.xlsx"
+              className="hidden"
+              onChange={analisarArquivo}
+              disabled={processando}
+            />
+          </>
         )}
         {resultado && (
           <p className="text-rotulo font-medium text-ok flex items-center gap-1.5">
@@ -509,7 +533,7 @@ export function LeadsTab({
               disabled={distribuindo || contatosSemDono.length === 0}
               icone={distribuindo ? Loader2 : Shuffle}
             >
-              Distribuir automático (round-robin)
+              Distribuir automaticamente (rodízio)
             </Botao>
             {/* O primário é este: distribuir manda o lead para um vendedor
                 trabalhar na mão; prospecção põe o SDR para tocar. */}
@@ -577,7 +601,11 @@ export function LeadsTab({
             <tbody className="divide-y divide-fio">
               {contatosSemDono.map((c) => (
                 <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3"><input className="foco" type="checkbox" checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
+                  {/* O nome do lead vai no `aria-label`: no leitor de tela a
+                      caixa e anunciada sozinha, longe da celula do nome —
+                      mesmo motivo do `aria-label` do botao de excluir logo
+                      abaixo. */}
+                  <td className="p-3"><input className="foco" type="checkbox" aria-label={`Selecionar o lead ${c.nome}`} checked={selecionados.has(c.id)} onChange={() => alternarSelecao(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-tinta-suave">{c.email || "—"}</td>
@@ -695,6 +723,7 @@ export function LeadsTab({
                   <input
                     type="checkbox"
                     className="foco"
+                    aria-label="Selecionar todos os leads da lista"
                     checked={comDonoFiltrados.length > 0 && comDonoFiltrados.every((c) => selComDono.has(c.id))}
                     onChange={() =>
                       setSelComDono((prev) =>
@@ -711,7 +740,7 @@ export function LeadsTab({
             <tbody className="divide-y divide-fio">
               {comDonoFiltrados.map((c) => (
                 <tr key={c.id} className="hover:bg-recuo">
-                  <td className="p-3"><input className="foco" type="checkbox" checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
+                  <td className="p-3"><input className="foco" type="checkbox" aria-label={`Selecionar o lead ${c.nome}`} checked={selComDono.has(c.id)} onChange={() => alternarSelComDono(c.id)} /></td>
                   <td className="p-3 font-medium text-tinta">{c.nome}</td>
                   <td className="p-3 text-tinta-suave">{c.empresa || "—"}</td>
                   <td className="p-3 text-acento font-medium">

@@ -3,6 +3,7 @@
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { traduzirErroDeAcesso } from "@/lib/erros";
 import { Loader2, UserPlus } from "lucide-react";
 
 export default function AceitarConvitePage({
@@ -37,7 +38,14 @@ export default function AceitarConvitePage({
     });
     if (error || !data || data.length === 0) {
       setLoading(false);
-      setErro(error?.message || "Convite inválido ou expirado.");
+      // O `raise exception` do `aceitar_convite` chega aqui como frase de
+      // banco: minuscula, sem acento e sem dizer o que fazer. Quem escreve
+      // para a pessoa e esta linha, nao a funcao do Postgres.
+      setErro(
+        error?.message
+          ? traduzirErroDeAcesso(error.message)
+          : "Convite inválido ou expirado.",
+      );
       return;
     }
     const emailAceito = data[0].email;

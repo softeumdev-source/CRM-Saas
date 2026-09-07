@@ -4,6 +4,7 @@ import {
   RESPOSTA_DO_GOOGLE,
   TIPOS_UTEIS,
   normalizarEventos,
+  traduzirErroDoGoogle,
   type EventoBruto,
   type EventoDaAgenda,
   type RespostaDoConvidado,
@@ -280,7 +281,13 @@ export async function eventosDoPeriodo(
   const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   const dados = await resp.json().catch(() => null);
   if (!resp.ok) {
-    const motivo = dados?.error?.message || `A Google respondeu ${resp.status}.`;
+    // A frase vem em ingles da Google. Traduzir AQUI, e nao na tela: as duas
+    // telas que mostram este motivo (a Agenda e o botao de sugerir horarios)
+    // recebem a MESMA frase, e cada uma conhecer o vocabulario da Google por
+    // sua conta era como as duas divergiriam na primeira correcao.
+    const motivo = dados?.error?.message
+      ? traduzirErroDoGoogle(String(dados.error.message))
+      : `A Google respondeu ${resp.status}.`;
     // 401/403 é permissão, e reconectar resolve. Qualquer outro código é a
     // Google indisponível — mandar a pessoa reconectar ali seria mentira.
     throw new AgendaIndisponivel(motivo, resp.status === 401 || resp.status === 403);

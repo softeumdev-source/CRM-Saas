@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarClock } from "lucide-react";
 import { Alerta, Botao } from "@/components/ui";
 import { comPrazo } from "@/lib/prazo";
+import { mensagemDeFalha } from "@/lib/erros";
 import type { RespostaDeSugestoes } from "@/app/api/agenda/sugestoes/route";
 
 /**
@@ -44,7 +45,12 @@ export function BotaoSugerirHorarios({
       }
       aoSugerir(dados.texto);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível ler a agenda.");
+      // `e.message` cru punha "Failed to fetch" — a frase do NAVEGADOR, em
+      // ingles — dentro de um alerta em portugues. `mensagemDeFalha` troca a
+      // falha de rede pela nossa frase e preserva a mensagem quando ela e
+      // nossa, que e o caso do `PrazoEsgotado` do `comPrazo`: aquela ja diz
+      // quanto tempo esperou, e apaga-la seria perder informacao.
+      setErro(mensagemDeFalha(e, "Não foi possível ler a agenda."));
     } finally {
       setBuscando(false);
     }

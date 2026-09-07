@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { Usuario, Notificacao } from "@/lib/types";
-import { iniciais } from "@/lib/types";
+import { iniciais, ROTULO_PAPEL } from "@/lib/types";
 import { formatarDataHora } from "@/lib/atividades";
 import { useRolou } from "@/lib/movimento";
 import {
@@ -195,10 +195,29 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
         </nav>
 
         <div className="flex items-center gap-3">
-          <div className="relative">
+          {/* Escape fecha o painel. O ouvinte fica no contentor, entao vale
+              com o foco no sino E com o foco dentro da lista (o "Limpar" e os
+              links), sem precisar de ouvinte global no documento nem de um
+              `useEffect` que teria de ser removido na desmontagem. */}
+          <div
+            className="relative"
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && showNotifs) setShowNotifs(false);
+            }}
+          >
+            {/* O sino so tem icone: sem `aria-label` o leitor de tela anuncia
+                "botao" e o numero de nao lidas nao chega em audio. O trio
+                `aria-haspopup`/`aria-expanded`/`aria-controls` diz que ele abre
+                um painel e se o painel esta aberto agora. `min-h-11`/`min-w-11`
+                sob `pointer-coarse`: 18px de icone + `p-2` davam 34px, e o alvo
+                de toque e 44px (DESIGN.md). */}
             <button
               onClick={marcarLidas}
-              className="foco relative p-2 text-tinta-fraca hover:text-acento hover:bg-recuo rounded-xl transition-colors"
+              aria-label={naoLidas > 0 ? `Notificações, ${naoLidas} não lidas` : "Notificações"}
+              aria-haspopup="dialog"
+              aria-expanded={showNotifs}
+              aria-controls="painel-notificacoes"
+              className="foco relative inline-flex items-center justify-center p-2 text-tinta-fraca hover:text-acento hover:bg-recuo rounded-xl transition-colors pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             >
               <Bell className="h-4.5 w-4.5" />
               {naoLidas > 0 && (
@@ -208,7 +227,12 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
               )}
             </button>
             {showNotifs && (
-              <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-flutuante z-40">
+              <div
+                id="painel-notificacoes"
+                role="dialog"
+                aria-label="Notificações"
+                className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-superficie border border-fio rounded-2xl shadow-flutuante z-40"
+              >
                 <div className="p-3 border-b border-fio flex items-center justify-between gap-2">
                   <span className="text-rotulo font-medium text-tinta-suave">Notificações</span>
                   {notificacoes.length > 0 && (
@@ -253,13 +277,22 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
             </div>
             <div className="hidden sm:block">
               <p className="text-rotulo font-medium text-tinta leading-tight">{usuario.nome}</p>
-              <p className="text-rotulo text-tinta-fraca capitalize">{usuario.role}</p>
+              {/* ROTULO_PAPEL no lugar de `capitalize`: CSS nao sabe que "sdr"
+                  e sigla e escreve "Sdr". O mapa e o mesmo que a aba Vendedores
+                  usa (VendedoresTab.tsx:201), entao o cargo se chama igual nos
+                  dois lugares. O `||` cobre um papel novo no banco antes de o
+                  mapa saber dele. */}
+              <p className="text-rotulo text-tinta-fraca">{ROTULO_PAPEL[usuario.role] || usuario.role}</p>
             </div>
+            {/* Alvo de toque: icone de 16px + `p-2` da 32x32px, e no celular
+                este botao fica colado no avatar. `min-h-11`/`min-w-11` sob
+                `pointer-coarse` leva o alvo a 44px sem mudar o desenho no
+                mouse; `inline-flex` mantem o icone centrado na caixa maior. */}
             <button
               onClick={handleLogout}
               disabled={loggingOut}
               title="Sair"
-              className="foco p-2 text-tinta-fraca hover:text-risco hover:bg-recuo rounded-xl transition-colors"
+              className="foco inline-flex items-center justify-center p-2 text-tinta-fraca hover:text-risco hover:bg-recuo rounded-xl transition-colors pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             >
               {loggingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
             </button>
@@ -272,11 +305,21 @@ export function Navbar({ usuario }: { usuario: UsuarioComTenant }) {
           const Icon = l.icon;
           const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
           return (
+            // Alvo de toque. Este menu SO existe no celular (`md:hidden`), e
+            // `py-1.5` sobre um texto de 12px/1.4 da 28,8px de altura. O dedo
+            // precisa de 44px (DESIGN.md, "Alvos de toque"). `min-h-11` sob
+            // `pointer-coarse` levanta a altura no toque sem tirar nada da
+            // tela e sem engordar a fileira em quem tem mouse.
             <Link
               key={l.href}
               href={l.href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium rounded-lg whitespace-nowrap ${
-                active ? "bg-acento-solido text-acento-tinta" : "bg-recuo text-tinta-suave"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-rotulo font-medium rounded-lg whitespace-nowrap pointer-coarse:min-h-11 ${
+                // Acento solido e ACAO. "Onde estou" e ESTADO, entao o ativo
+                // se marca com o par tingido `bg-acento-fraco text-acento` — o
+                // mesmo do Selo de acento e do avatar — e nao com preenchimento
+                // cheio. Mesma logica do desktop (linha 179), que ja destaca o
+                // ativo pela cor do texto, e nao por bloco solido.
+                active ? "bg-acento-fraco text-acento" : "bg-recuo text-tinta-suave"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />

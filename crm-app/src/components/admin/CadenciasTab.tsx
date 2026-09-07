@@ -5,6 +5,7 @@ import { AlertTriangle, Bot, Check, FileText, Loader2, Mail, MessageCircle, Rota
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
 import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo, Selo } from "@/components/ui";
+import { ROTULO_CANAL, ROTULO_CATEGORIA, ROTULO_TIPO_CADENCIA } from "@/lib/cadencia";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
 import { formatarDataHora } from "@/lib/atividades";
@@ -218,7 +219,10 @@ export function CadenciasTab() {
                       )}
                     </div>
                     <p className="text-rotulo text-tinta-suave mt-0.5">
-                      {c.tipo} · {resumoDeCanais(c.passos || [])}
+                      {/* Cai no proprio valor se aparecer um tipo que o mapa
+                          ainda nao conhece: rotulo cru e ruim, linha sem a
+                          origem do lead e pior. */}
+                      {ROTULO_TIPO_CADENCIA[c.tipo] || c.tipo} · {resumoDeCanais(c.passos || [])}
                       {c.proposito === "reaquecimento"
                         ? " · usada quando um lead volta da nutrição"
                         : " · usada em lead novo"}
@@ -418,7 +422,9 @@ export function CadenciasTab() {
                   {t.nome}
                 </p>
                 <p className="text-rotulo text-tinta-suave truncate">
-                  {t.canal} · {t.categoria} ·{" "}
+                  {/* Mesma queda para o valor cru dos outros mapas: um canal ou
+                     uma categoria nova no banco continua aparecendo. */}
+                  {ROTULO_CANAL[t.canal] || t.canal} · {ROTULO_CATEGORIA[t.categoria] || t.categoria} ·{" "}
                   {t.canal === "whatsapp"
                     ? t.template_externo_id || "sem modelo aprovado na Meta"
                     : t.assunto || "sem assunto"}

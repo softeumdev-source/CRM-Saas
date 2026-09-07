@@ -80,6 +80,18 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
 
   return (
     <div className="space-y-2">
+      {/* Fundo BRANCO cravado, e nao `bg-superficie`. O traco sai daqui por
+          `toDataURL` e e carimbado numa pagina de PDF, que e branca SEMPRE —
+          entao a tinta tem de ser escura, e `#1e293b` esta certo.
+
+          Ler a cor do token consertaria a tela e quebraria o papel: no tema
+          escuro o token de tinta e claro, e a assinatura sumiria dentro do PDF
+          assinado, que e o documento que vale. Fixar o fundo conserta os dois
+          lados de uma vez e nao muda um byte do PNG exportado (o canvas nunca
+          foi pintado; o fundo aqui e so CSS).
+
+          O fio tracejado continua legivel nos dois temas: `--cor-fio-forte` e
+          #d4d4d8 no claro e #3a4250 no escuro, ambos contra branco. */}
       <div ref={containerRef} className="w-full h-40">
         <canvas
           ref={canvasRef}
@@ -87,7 +99,8 @@ export function SignaturePad({ onChange }: { onChange: (dataUrl: string | null) 
           onPointerMove={handleMove}
           onPointerUp={handleUp}
           onPointerLeave={handleUp}
-          className="w-full h-full bg-superficie rounded-xl border-2 border-dashed border-fio-forte touch-none cursor-crosshair"
+          style={{ backgroundColor: "#ffffff" }}
+          className="w-full h-full rounded-xl border-2 border-dashed border-fio-forte touch-none cursor-crosshair"
         />
       </div>
       <button

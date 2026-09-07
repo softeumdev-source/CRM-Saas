@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { traduzirErroDeAcesso } from "@/lib/erros";
 import { Loader2, Lock, Mail, TrendingUp } from "lucide-react";
 
 function LoginForm() {
@@ -27,7 +28,10 @@ function LoginForm() {
       });
       setLoading(false);
       if (error) {
-        setErro(error.message);
+        // A frase do Supabase vem em ingles ("For security purposes, you can
+        // only request this after 51 seconds.") e caia inteira dentro de um
+        // aviso em portugues, na PRIMEIRA tela que qualquer pessoa ve.
+        setErro(traduzirErroDeAcesso(error.message));
         return;
       }
       setRecuperado(true);

@@ -447,7 +447,7 @@ export function NegocioDetailClient({
               {negocio.vendedor_origem_id && entrega && (
                 <span
                   className="inline-flex items-center gap-1 rounded-full bg-info-fraco px-2.5 py-1 text-rotulo font-medium text-info"
-                  title="Voltou da nutricao para o SDR reaquecer. Ja teve contato com um vendedor."
+                  title="Voltou da nutrição para o SDR reaquecer. Já teve contato com um vendedor."
                 >
                   <RotateCcw className="h-3 w-3" aria-hidden /> Em reaquecimento
                 </span>

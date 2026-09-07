@@ -26,7 +26,7 @@ import { comPrazo } from "@/lib/prazo";
 import { mensagemDeFalha } from "@/lib/erros";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import type { NegocioComRelacoes, Plano, PropostaComRelacoes, SolicitacaoDesconto, Usuario } from "@/lib/types";
-import { AVISOS_PREVIOS_DIAS, formatarMoeda } from "@/lib/types";
+import { AVISOS_PREVIOS_DIAS, formatarMoeda, ROTULO_PAPEL_SIGNATARIO } from "@/lib/types";
 import { PdfFieldEditor, type CampoAssinatura } from "@/components/PdfFieldEditor";
 import { abrirPdf } from "@/lib/storage";
 import { Confirmar } from "@/components/ui";
@@ -747,11 +747,19 @@ export function PropostaTab({
                             aria-label="E-mail do signatário"
                             className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                           />
+                          {/* O `x` media 16px — o proprio icone era a caixa
+                              clicavel. Aqui apagar linha de signatario e acao
+                              destrutiva na tela que decide quem assina o
+                              contrato. Mesma solucao ja usada no chip de anexo
+                              (CompositorDeEmail): `p-1` sobe a caixa visivel
+                              para 24px e o `::after` estende o ALVO para 44x44
+                              so em ponteiro grosso, sem mexer no layout da
+                              linha no mouse. */}
                           {signatarios.length > 1 && (
                             <button
                               onClick={() => setSignatarios((prev) => prev.filter((x) => x.chave !== s.chave))}
                               aria-label={`Remover signatário ${s.nome || "sem nome"}`}
-                              className="foco text-tinta-fraca hover:text-risco"
+                              className="foco relative shrink-0 rounded-lg p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-risco pointer-coarse:after:absolute pointer-coarse:after:left-1/2 pointer-coarse:after:top-1/2 pointer-coarse:after:h-11 pointer-coarse:after:w-11 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:content-['']"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -780,10 +788,13 @@ export function PropostaTab({
                               aria-label="E-mail para cópia"
                               className="foco flex-1 px-3 py-2 text-rotulo bg-superficie border border-fio rounded-lg"
                             />
+                            {/* Mesmo alvo de 44x44 do remover signatario: os
+                                dois botoes sao a mesma acao e nao podem ter
+                                tamanhos de toque diferentes. */}
                             <button
                               onClick={() => setCopias((prev) => prev.filter((x) => x.chave !== c.chave))}
                               aria-label={`Remover cópia ${c.valor || "sem e-mail"}`}
-                              className="foco text-tinta-fraca hover:text-risco"
+                              className="foco relative shrink-0 rounded-lg p-1 text-tinta-fraca transition-colors duration-150 ease-out hover:text-risco pointer-coarse:after:absolute pointer-coarse:after:left-1/2 pointer-coarse:after:top-1/2 pointer-coarse:after:h-11 pointer-coarse:after:w-11 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2 pointer-coarse:after:content-['']"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -858,7 +869,17 @@ export function PropostaTab({
                         .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
                         .map((s) => (
                           <div key={s.id} className="flex items-center justify-between text-rotulo gap-2 flex-wrap">
-                            <span className="font-medium text-tinta-suave">{s.nome} <span className="text-tinta-fraca">({s.papel})</span></span>
+                            {/* O `papel` saia cru do banco: a tela mostrava
+                                "(softeum)", que e enum, nao palavra de gente. A
+                                forma e a MESMA da tela de Assinaturas: o papel
+                                vira rotulo a frente, capitalizado, e o nome vem
+                                depois. As DUAS informacoes ficam (regra 14) — o
+                                status continua no span ao lado. */}
+                            <span className="font-medium text-tinta-suave">
+                              <span className="text-tinta-fraca">{ROTULO_PAPEL_SIGNATARIO[s.papel ?? ""] ?? "Signatário"}</span>
+                              {" · "}
+                              {s.nome}
+                            </span>
                             {s.status === "assinado" ? (
                               <span className="flex items-center gap-1 font-medium text-ok">
                                 <CheckCircle2 className="h-3.5 w-3.5" />

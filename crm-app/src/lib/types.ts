@@ -266,6 +266,20 @@ export const DESCRICAO_PAPEL: Record<string, string> = {
 };
 
 /**
+ * `signatarios.papel` e OUTRO enum, sem relacao com o `ROTULO_PAPEL` acima
+ * (aquele e o papel do usuario no CRM). Medido no banco, so "cliente" e
+ * "softeum" existem, e nenhum dos dois e palavra que alguem usaria numa frase.
+ *
+ * Mora aqui porque duas telas mostram a mesma coisa: a de Assinaturas e a aba
+ * Proposta do negocio. O nome e diferente de proposito — importar os dois no
+ * mesmo arquivo tem de ser possivel.
+ */
+export const ROTULO_PAPEL_SIGNATARIO: Record<string, string> = {
+  cliente: "Cliente",
+  softeum: "Softeum",
+};
+
+/**
  * Quem forma o time MEDIDO no painel: metas, ranking e funil por pessoa.
  *
  * O SDR nao entra: ele opera negocio, mas o funil dele e outro, com outras

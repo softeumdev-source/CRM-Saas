@@ -165,12 +165,23 @@ export function PdfSignViewer({
   return (
     <div>
       <div className="flex items-center justify-between mb-3 bg-recuo rounded-xl px-4 py-2">
+        {/* Os dois unicos controles do visualizador nao tinham nome: o leitor
+            de tela anunciava "botao" e "botao", e nada dizia qual virava para
+            frente. O alvo era 28px (16 do icone + 6+6 de padding), pouco mais
+            da metade dos 44px do DESIGN.md secao 9 — num controle que o cliente
+            usa com o polegar para virar a pagina do contrato.
+
+            `min-w-11` acompanha `min-h-11` porque este botao e so icone:
+            crescer so na altura deixaria o alvo com 28px de largura. Mesmo par
+            usado no navegador da agenda (SemanaDaAgenda.tsx). O imposto e por
+            PONTEIRO grosso; no mouse a barra continua com a densidade de hoje. */}
         <button
           onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
           disabled={paginaAtual <= 1}
-          className="foco p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
+          aria-label="Página anterior"
+          className="foco inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-fio disabled:opacity-30 transition-[background-color] duration-150 ease-out pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" aria-hidden />
         </button>
         <span className="text-rotulo font-medium text-tinta-suave">
           Página {paginaAtual} / {totalPaginas}
@@ -178,9 +189,10 @@ export function PdfSignViewer({
         <button
           onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
           disabled={paginaAtual >= totalPaginas}
-          className="foco p-1.5 rounded-lg hover:bg-fio disabled:opacity-30"
+          aria-label="Próxima página"
+          className="foco inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-fio disabled:opacity-30 transition-[background-color] duration-150 ease-out pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
 
@@ -204,11 +216,20 @@ export function PdfSignViewer({
           </div>
         ))}
 
+        {/* Saiu o `animate-pulse`. O DESIGN.md secao 7 diz "Nada roda em laco",
+            e este laco pisca EM CIMA do contrato justamente enquanto o cliente
+            le o que vai assinar. O anel de cor continua no lugar, parado: o
+            campo segue marcado com fundo tingido, fio de 2px, anel colorido,
+            icone e o texto "Assinar aqui" — nenhuma informacao saiu da tela, so
+            o movimento.
+
+            A transicao passa a nomear `transform`: com `transition-colors` o
+            `hover:scale-102` nao era animado por ninguem e saltava seco. */}
         {meusCamposPagina.map((campo) => (
           <div
             key={campo.id}
             onClick={() => !assinado && onCampoClick(campo)}
-            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-colors duration-150 ease-out ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-102"} ${!assinado ? "animate-pulse ring-2 " + cor.pulse : ""}`}
+            className={`absolute flex items-center justify-center gap-1.5 rounded-lg border-2 transition-[background-color,border-color,transform] duration-150 ease-out ${assinado ? "pointer-events-none" : "cursor-pointer hover:scale-102"} ${!assinado ? "ring-2 " + cor.pulse : ""}`}
             style={{
               left: `${campo.x * 100}%`,
               top: `${campo.y * 100}%`,

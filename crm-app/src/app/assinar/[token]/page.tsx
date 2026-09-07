@@ -20,6 +20,22 @@ import {
   ChevronUp,
 } from "lucide-react";
 
+/**
+ * O CNPJ e gravado como o vendedor digitou e sai cru nesta tela. Aqui e o
+ * unico lugar do produto que uma pessoa de fora le, e o que ela faz com esse
+ * numero e CONFERIR se e a empresa dela antes de assinar — sem os pontos e a
+ * barra, conferir 14 digitos vira soletracao.
+ *
+ * So formata com 14 digitos exatos. Cadastro incompleto ou fora do padrao sai
+ * inteiro, do jeito que foi digitado: numa tela de assinatura, esconder o valor
+ * real e pior do que mostra-lo torto.
+ */
+function formatarCnpj(cnpj: string): string {
+  const digitos = (cnpj || "").replace(/\D/g, "");
+  if (digitos.length !== 14) return cnpj;
+  return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+}
+
 export default function AssinarPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [dados, setDados] = useState<EnvelopePublico | null>(null);
@@ -137,12 +153,24 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
       />
 
       {modoAssinatura === "digitada" ? (
-        <input
-          value={nomeDigitado}
-          onChange={(e) => setNomeDigitado(e.target.value)}
-          className="foco w-full px-4 py-3 text-display border-b-2 border-fio-forte"
-          style={{ fontFamily: "cursive" }}
-        />
+        // Era o UNICO campo do painel sem nome acessivel: sem id, sem label,
+        // sem aria-label e sem placeholder. Os dois campos logo abaixo
+        // (`assinar-email-faturamento` e `assinar-aceite`) ja seguem este
+        // padrao — label com `htmlFor`, input com o `id` correspondente — e
+        // este passa a seguir tambem, em vez de inventar outro jeito.
+        <div>
+          <label htmlFor="assinar-nome-digitado" className="flex items-center gap-2 text-rotulo font-medium text-tinta-suave mb-1">
+            <FileSignature className="h-3.5 w-3.5 text-acento" />
+            Nome completo para a assinatura
+          </label>
+          <input id="assinar-nome-digitado"
+            value={nomeDigitado}
+            onChange={(e) => setNomeDigitado(e.target.value)}
+            placeholder="Seu nome completo"
+            className="foco w-full px-4 py-3 text-display border-b-2 border-fio-forte"
+            style={{ fontFamily: "cursive" }}
+          />
+        </div>
       ) : (
         <SignaturePad onChange={setAssinaturaDesenhada} />
       )}
@@ -239,8 +267,11 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 <Building2 className="h-4 w-4 text-acento" />
                 <h1 className="font-semibold text-tinta">{dados.contato.empresa || dados.contato.nome}</h1>
               </div>
+              {/* O CNPJ e o unico dado desta linha que o cliente confere
+                  digito a digito antes de assinar. Cru, ele saia como
+                  "12345678000199". */}
               <p className="text-rotulo text-tinta-suave">
-                {dados.negocio.titulo} · CNPJ {dados.contato.cnpj} · Aviso prévio de{" "}
+                {dados.negocio.titulo} · CNPJ {formatarCnpj(dados.contato.cnpj)} · Aviso prévio de{" "}
                 {dados.proposta.aviso_previo_dias} dias
               </p>
 

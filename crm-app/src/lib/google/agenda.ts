@@ -68,6 +68,42 @@ export class AgendaIndisponivel extends Error {
 }
 
 /**
+ * A frase da API do Google, que vem SEMPRE em ingles, virada em portugues.
+ *
+ * A Agenda escreve "A agenda do Google não está sendo mostrada: {motivo}" e o
+ * motivo era o `error.message` cru da Google: a linha saia "A agenda do Google
+ * não está sendo mostrada: Request had insufficient authentication scopes.",
+ * metade em cada idioma. O botao de sugerir horarios mostra o MESMO motivo, e
+ * quebrava igual.
+ *
+ * A traducao diz a CAUSA e para antes de mandar reconectar. Quem oferece a
+ * reconexao e a tela, que sabe onde o link fica — "conectar a agenda" ao lado
+ * do aviso na Agenda, "Conecte a agenda em Admin → Integrações" no botao —, e
+ * repetir isso aqui daria a mesma instrucao duas vezes na mesma linha. Quando a
+ * acao NAO e reconectar (cota estourada, Google fora do ar) ela vem na frase,
+ * porque ai nenhuma tela a mostra.
+ *
+ * Frase desconhecida volta inteira: um motivo em ingles ainda diz mais do que
+ * "deu erro".
+ */
+export function traduzirErroDoGoogle(mensagem: string): string {
+  const m = mensagem.toLowerCase();
+  if (/insufficient authentication scopes|insufficient permission/.test(m)) {
+    return "A conexão com o Google não tem permissão para ler a agenda.";
+  }
+  if (/invalid credentials|invalid authentication credentials|invalid_grant/.test(m)) {
+    return "O acesso ao Google expirou ou foi revogado.";
+  }
+  if (/rate limit|quota|usage limits/.test(m)) {
+    return "O Google recusou o pedido por excesso de chamadas. Tente de novo em alguns minutos.";
+  }
+  if (/backend error|internal error|service is currently unavailable/.test(m)) {
+    return "O Google está fora do ar neste momento. Tente de novo em alguns minutos.";
+  }
+  return mensagem;
+}
+
+/**
  * Tipos que NÃO entram na agenda do CRM.
  *
  * `workingLocation` é o marcador de "hoje trabalho em casa" que o Workspace

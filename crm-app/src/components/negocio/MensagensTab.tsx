@@ -614,8 +614,13 @@ export function MensagensTab({
                           {passo.ordem}
                         </span>
                         <Clock className="h-3 w-3 text-tinta-fraca shrink-0" />
+                        {/* O canal cru vinha do banco em minusculo. Sao so
+                            dois valores possiveis — o check da coluna
+                            `cadencia_passos.canal` aceita 'email' e
+                            'whatsapp', nada mais. */}
                         <span>
-                          {formatarDataHora(quando.toISOString())} · {passo.canal}
+                          {formatarDataHora(quando.toISOString())} ·{" "}
+                          {passo.canal === "whatsapp" ? "WhatsApp" : "E-mail"}
                         </span>
                         {manual && (
                           <span className="text-acento font-medium">
