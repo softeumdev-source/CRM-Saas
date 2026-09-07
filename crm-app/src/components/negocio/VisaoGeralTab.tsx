@@ -74,6 +74,7 @@ type CamposDoContato = {
   whatsapp: string | null;
   cnpj: string | null;
   cargo: string | null;
+  cidade: string | null;
   estado: string | null;
 };
 
@@ -97,6 +98,12 @@ export function VisaoGeralTab({
   const [whatsapp, setWhatsapp] = useState(negocio.contato?.whatsapp || "");
   const [cnpj, setCnpj] = useState(negocio.contato?.cnpj || "");
   const [cargo, setCargo] = useState(negocio.contato?.cargo || "");
+  // A cidade ja vinha preenchida do banco e nao tinha onde aparecer: a
+  // importacao de planilha grava `contatos.cidade` (ver `CAMPOS_IMPORTAVEIS`
+  // em lib/importarLeads.ts, e o proprio texto da tela de importacao promete
+  // a coluna, em LeadsTab.tsx:396), e nenhuma tela lia de volta. Entra ao lado
+  // da UF, que ja estava aqui.
+  const [cidade, setCidade] = useState(negocio.contato?.cidade || "");
   // O estado antes se chamava `industria` mas gravava em `contato.estado`. Um
   // nome mentindo sobre o campo e o comeco de um bug.
   const [uf, setUf] = useState(negocio.contato?.estado || "");
@@ -126,6 +133,7 @@ export function VisaoGeralTab({
       whatsapp: whatsapp.trim() || null,
       cnpj: cnpj.trim() || null,
       cargo: cargo.trim() || null,
+      cidade: cidade.trim() || null,
       estado: uf.trim() || null,
     };
 
@@ -212,9 +220,18 @@ export function VisaoGeralTab({
           )}
         </Campo>
 
+        <Campo rotulo="Cargo">
+          {(p) => <Entrada {...p} value={cargo} onChange={(e) => setCargo(e.target.value)} />}
+        </Campo>
+
+        {/* Cidade e UF na mesma linha porque sao a mesma pergunta, e o Cargo
+            sobe para largura cheia em vez de os tres se espremerem em tres
+            colunas — num cartao de meia pagina, "Estado (UF)" quebraria o
+            rotulo em duas linhas. E a mesma cadencia do CNPJ e do WhatsApp
+            logo acima, que ja ocupam a largura toda. */}
         <div className="grid grid-cols-2 gap-3">
-          <Campo rotulo="Cargo">
-            {(p) => <Entrada {...p} value={cargo} onChange={(e) => setCargo(e.target.value)} />}
+          <Campo rotulo="Cidade">
+            {(p) => <Entrada {...p} value={cidade} onChange={(e) => setCidade(e.target.value)} />}
           </Campo>
           <Campo rotulo="Estado (UF)">
             {(p) => <Entrada {...p} value={uf} onChange={(e) => setUf(e.target.value)} maxLength={2} />}
