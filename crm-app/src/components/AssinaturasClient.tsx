@@ -202,7 +202,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                   {assinadoComercial && (
                     <button
                       type="button"
-                      onClick={() => void abrirPdf(assinadoComercial)}
+                      onClick={() => void abrirPdf(assinadoComercial, "assinatura-publica")}
                       className="foco flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar comercial assinada
@@ -211,7 +211,7 @@ export function AssinaturasClient({ envelopesIniciais }: { envelopesIniciais: En
                   {assinadoTecnica && (
                     <button
                       type="button"
-                      onClick={() => void abrirPdf(assinadoTecnica)}
+                      onClick={() => void abrirPdf(assinadoTecnica, "assinatura-publica")}
                       className="foco flex items-center gap-1 text-rotulo font-semibold text-ok hover:text-ok"
                     >
                       <Download className="h-3.5 w-3.5" /> Baixar técnica assinada

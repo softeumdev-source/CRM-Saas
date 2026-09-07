@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { createAnonClient } from "@/lib/supabase/anon";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PdfSignViewer } from "@/components/PdfSignViewer";
 import type { CampoAssinatura } from "@/components/PdfFieldEditor";
@@ -52,26 +51,42 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [tecnicaAberta, setTecnicaAberta] = useState(false);
   const [docsAssinados, setDocsAssinados] = useState<DocumentosAssinados | null>(null);
 
+  // A CARGA PASSA PELO SERVIDOR, e não é preferência de arquitetura: é o IP.
+  //
+  // Aqui era `createAnonClient().rpc("obter_envelope_publico", ...)`, chamado
+  // do navegador. O banco não tem como saber o endereço de quem chamou, então o
+  // "visualizado em" do certificado era uma data sem ninguém atrás dela. A rota
+  // recebe `x-forwarded-for` e `user-agent` e repassa — a mesma fonte que a
+  // assinatura já usava, o que deixa as duas provas comparáveis.
   useEffect(() => {
-    const supabase = createAnonClient();
-    supabase
-      .rpc("obter_envelope_publico", { p_token: token })
-      .then(({ data, error }) => {
+    let vivo = true;
+    fetch(`/api/assinar/${token}`, { cache: "no-store" })
+      .then(async (resp) => {
+        const corpo = await resp.json().catch(() => null);
+        if (!vivo) return;
         setCarregando(false);
-        if (error || !data) {
-          setErro(mensagemDoErro(error, "Link inválido ou expirado."));
+        if (!resp.ok || !corpo) {
+          setErro(corpo?.error || "Link inválido ou expirado.");
           return;
         }
         // A RPC devolve `json`, então o tipo gerado é `Json` e o cast é
         // inevitável. Feito UMA vez, num tipo com nome: tudo abaixo é lido com
         // conferência, em vez de cada leitura ser um `any` solto.
-        const envelope = data as unknown as EnvelopePublico;
+        const envelope = corpo as EnvelopePublico;
         setDados(envelope);
         setNomeDigitado(envelope.signatario.nome);
         setEmailFaturamento("");
         if (envelope.signatario.status === "assinado") setConcluido(true);
         if (envelope.documentos_assinados) setDocsAssinados(envelope.documentos_assinados);
+      })
+      .catch((e) => {
+        if (!vivo) return;
+        setCarregando(false);
+        setErro(mensagemDoErro(e, "Não foi possível carregar o documento."));
       });
+    return () => {
+      vivo = false;
+    };
   }, [token]);
 
   const handleAssinar = async () => {

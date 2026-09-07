@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { createAnonClient } from "@/lib/supabase/server";
 import { createAdminClient, temServiceRole } from "@/lib/supabase/admin";
-import { SUPABASE_URL } from "@/lib/supabase/config";
 import { emailBase } from "@/lib/resend";
 import { escaparHtml } from "@/lib/gmail/corpo";
 import { enviarDoTenant } from "@/lib/gmail/enviarDoTenant";
@@ -118,6 +117,53 @@ async function gerarPdfComCertificado(
   return doc.save();
 }
 
+/**
+ * A CARGA da página de assinatura, do lado do servidor.
+ *
+ * Existe por um motivo só: o IP. A página chamava `obter_envelope_publico`
+ * direto do navegador, e o banco não tem como saber o endereço de quem chamou —
+ * então o "visualizado em" do certificado era uma data sem ninguém atrás dela.
+ * A assinatura sempre registrou IP e user-agent (o POST aqui embaixo); a
+ * VISUALIZAÇÃO, que é o momento em que a pessoa teve acesso ao documento, não
+ * registrava nada.
+ *
+ * Aqui os dois vêm do `x-forwarded-for` e do `user-agent` da requisição — a
+ * mesma fonte que a assinatura usa, o que mantém as duas provas comparáveis.
+ *
+ * A RPC continua sendo chamada com a chave ANÔNIMA, e não com service role: ela
+ * é `security definer` e já sabe se defender: sem token válido, levanta exceção.
+ * Trocar por service role só ampliaria o estrago de um defeito futuro.
+ *
+ * Sem sessão, de propósito: quem abre este link é o cliente, que não tem conta.
+ */
+export async function GET(request: Request, context: { params: Promise<{ token: string }> }) {
+  try {
+    const { token } = await context.params;
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "desconhecido";
+    const userAgent = request.headers.get("user-agent") || "desconhecido";
+
+    const supabase = createAnonClient();
+    const { data, error } = await supabase.rpc("obter_envelope_publico", {
+      p_token: token,
+      p_ip: ip,
+      p_user_agent: userAgent,
+    });
+
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message || "Link inválido ou expirado." }, { status: 404 });
+    }
+
+    return NextResponse.json(data, {
+      // Documento de assinatura não entra em cache de ninguém: cada abertura é
+      // um evento que precisa chegar ao banco para virar registro.
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    console.error("Erro ao carregar envelope publico:", e);
+    return NextResponse.json({ error: mensagemDoErro(e, "Erro ao carregar o documento.") }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   try {
     const { token } = await context.params;
@@ -188,19 +234,24 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         if (eAtual) emailsFatMap.set(eAtual.toLowerCase(), eAtual);
         const emailFat = [...emailsFatMap.values()].join(", ");
 
+        // Os dois PDFs de origem, baixados com SERVICE ROLE.
+        //
+        // Eram dois `fetch` na URL pública do bucket. O bucket fechou — aquela
+        // URL não serve mais nada, e sem esta troca o documento assinado
+        // simplesmente não seria gerado, em silêncio, dentro do `try`.
         const [comercialResp, tecnicaResp] = await Promise.all([
-          fetch(`${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial.pdf`),
-          fetch(`${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica.pdf`),
+          admin.storage.from("assinatura-publica").download(`${token}/comercial.pdf`),
+          admin.storage.from("assinatura-publica").download(`${token}/tecnica.pdf`),
         ]);
 
-        if (comercialResp.ok && tecnicaResp.ok) {
+        if (comercialResp.data && tecnicaResp.data) {
           // Regera o comercial com o(s) e-mail(s) de faturamento preenchido(s),
           // renderizando nativamente (react-pdf) em vez de "carimbar" texto no
           // PDF pronto — o que dependia do encoding e falhava silenciosamente.
           // Layout idêntico ao original → posições de assinatura preservadas.
           // Em qualquer falha, cai no PDF original já enviado.
-          let comercialBuf: ArrayBuffer | Uint8Array = await comercialResp.arrayBuffer();
-          let tecnicaBuf: ArrayBuffer | Uint8Array = await tecnicaResp.arrayBuffer();
+          let comercialBuf: ArrayBuffer | Uint8Array = await comercialResp.data.arrayBuffer();
+          let tecnicaBuf: ArrayBuffer | Uint8Array = await tecnicaResp.data.arrayBuffer();
 
           // Sempre regenera o comercial para assinatura (mesmo sem e-mail de
           // faturamento): é assim que a NOTA DE VALIDADE sai do documento assinado
@@ -271,10 +322,23 @@ export async function POST(request: Request, context: { params: Promise<{ token:
             }),
           ]);
 
-          const urlComercial = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/comercial-assinado.pdf`;
-          const urlTecnica = `${SUPABASE_URL}/storage/v1/object/public/assinatura-publica/${token}/tecnica-assinado.pdf`;
+          // O QUE VAI PARA O BANCO É CAMINHO; o que vai para o e-mail é o
+          // endereço do proxy. Antes os dois eram a mesma coisa — a URL pública
+          // do bucket, que não expira e não pede nada — e ela ficava gravada na
+          // proposta e linkada no e-mail de conclusão, para sempre.
+          const caminhoComercial = `${token}/comercial-assinado.pdf`;
+          const caminhoTecnica = `${token}/tecnica-assinado.pdf`;
+
+          const origemApp = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+          const urlComercial = `${origemApp}/api/pdf-publico/${token}/comercial-assinado.pdf`;
+          const urlTecnica = `${origemApp}/api/pdf-publico/${token}/tecnica-assinado.pdf`;
+
           documentosAssinados = { comercial: urlComercial, tecnica: urlTecnica };
-          await supabase.rpc("salvar_pdf_assinado", { p_token: token, p_comercial_url: urlComercial, p_tecnica_url: urlTecnica });
+          await supabase.rpc("salvar_pdf_assinado", {
+            p_token: token,
+            p_comercial_path: caminhoComercial,
+            p_tecnica_path: caminhoTecnica,
+          });
 
           // Amplia a consulta que ja existia em vez de somar outra ida: o
           // tenant vem pelo mesmo caminho (envelope -> proposta -> negocio).
@@ -378,7 +442,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
         const contatoProx = prop?.negocio?.contato;
         if (sigProximo?.token) {
           const origin = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-          await enviarDoTenant(admin, prop?.tenant_id, {
+          const envioProximo = await enviarDoTenant(admin, prop?.tenant_id, {
             para: sigProximo.email,
             assunto: `Proposta Softeum ${prop?.numero ?? ""} - assinatura eletronica`,
             html: emailDeAssinatura({
@@ -389,6 +453,15 @@ export async function POST(request: Request, context: { params: Promise<{ token:
               assinatura: await quemAssina(admin, prop?.tenant_id),
             }),
           });
+
+          // Mesmo registro do primeiro envio: a vez na fila é um envio de link
+          // como qualquer outro, e precisa deixar o mesmo rastro.
+          if (envioProximo.enviado) {
+            await admin
+              .from("signatarios")
+              .update({ link_enviado_em: new Date().toISOString(), link_enviado_para: sigProximo.email })
+              .eq("id", proximo.id);
+          }
         }
       } catch (e) {
         console.error("Falha ao avisar o proximo signatario da fila", e);

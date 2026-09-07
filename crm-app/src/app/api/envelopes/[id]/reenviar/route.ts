@@ -104,5 +104,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: resultado.erro || "Falha ao reenviar o e-mail." }, { status: 502 });
   }
 
+  // O reenvio SUBSTITUI o registro anterior: o que importa provar é a última
+  // entrega, que é a que o cliente tinha em mãos quando assinou.
+  await admin
+    .from("signatarios")
+    .update({ link_enviado_em: new Date().toISOString(), link_enviado_para: sig.email })
+    .eq("id", sig.id);
+
   return NextResponse.json({ enviado: true, para: sig.email });
 }

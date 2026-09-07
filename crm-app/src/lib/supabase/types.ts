@@ -1451,13 +1451,17 @@ export type Database = {
           email_faturamento: string | null
           envelope_id: string | null
           id: string
+          link_enviado_em: string | null
+          link_enviado_para: string | null
           ip_assinatura: string | null
+          ip_visualizacao: string | null
           nome: string
           ordem: number | null
           papel: string
           status: string
           token: string
           user_agent: string | null
+          user_agent_visualizacao: string | null
           visualizado_em: string | null
         }
         Insert: {
@@ -1469,13 +1473,17 @@ export type Database = {
           email_faturamento?: string | null
           envelope_id?: string | null
           id?: string
+          link_enviado_em?: string | null
+          link_enviado_para?: string | null
           ip_assinatura?: string | null
+          ip_visualizacao?: string | null
           nome: string
           ordem?: number | null
           papel?: string
           status?: string
           token?: string
           user_agent?: string | null
+          user_agent_visualizacao?: string | null
           visualizado_em?: string | null
         }
         Update: {
@@ -1487,13 +1495,17 @@ export type Database = {
           email_faturamento?: string | null
           envelope_id?: string | null
           id?: string
+          link_enviado_em?: string | null
+          link_enviado_para?: string | null
           ip_assinatura?: string | null
+          ip_visualizacao?: string | null
           nome?: string
           ordem?: number | null
           papel?: string
           status?: string
           token?: string
           user_agent?: string | null
+          user_agent_visualizacao?: string | null
           visualizado_em?: string | null
         }
         Relationships: [
@@ -1918,7 +1930,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      obter_envelope_publico: { Args: { p_token: string }; Returns: Json }
+      obter_envelope_publico: { Args: { p_ip?: string; p_token: string; p_user_agent?: string }; Returns: Json }
       pipelines_do_meu_papel: { Args: never; Returns: string[] }
       processar_cadencias: {
         Args: { p_inscricao_id?: string }
@@ -1986,8 +1998,8 @@ export type Database = {
       retomar_leads_em_nutricao: { Args: never; Returns: number }
       salvar_pdf_assinado: {
         Args: {
-          p_comercial_url: string
-          p_tecnica_url: string
+          p_comercial_path: string
+          p_tecnica_path: string
           p_token: string
         }
         Returns: undefined

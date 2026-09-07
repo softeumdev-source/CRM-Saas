@@ -194,7 +194,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         assinatura,
       }),
     });
-    if (resultado.enviado) algumEmailEnviado = true;
+    // PARA ONDE O LINK FOI, e quando. É a primeira pergunta de qualquer
+    // contestação de assinatura, e até aqui não havia resposta em lugar nenhum.
+    // Fica separado de `signatarios.email` porque aquele campo pode ser
+    // corrigido depois — a prova é de onde o link chegou NAQUELE momento.
+    //
+    // Só grava quando o e-mail de fato saiu: uma data aqui com o envio falhado
+    // seria pior do que campo vazio.
+    if (resultado.enviado) {
+      algumEmailEnviado = true;
+      await admin
+        .from("signatarios")
+        .update({ link_enviado_em: new Date().toISOString(), link_enviado_para: sig.email })
+        .eq("id", sig.id);
+    }
     if (resultado.erro && !emailErro) emailErro = resultado.erro;
   }
 

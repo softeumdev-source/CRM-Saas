@@ -430,6 +430,15 @@ export function PropostaTab({
   const baixarPdf = (path: string | null | undefined) => void abrirPdf(path);
 
   /**
+   * O ASSINADO mora no outro bucket.
+   *
+   * `pdf_assinado_*_path` aponta para `assinatura-publica`, não para
+   * `documentos`. Enquanto a coluna guardava URL absoluta isso não aparecia;
+   * agora guarda caminho, e assinar no bucket errado devolveria 404.
+   */
+  const baixarAssinado = (path: string | null | undefined) => void abrirPdf(path, "assinatura-publica");
+
+  /**
    * Reenvia o link de assinatura para UM signatário.
    *
    * O `email` chega por parâmetro só para o texto do aviso — quem decide para
@@ -733,12 +742,12 @@ export function PropostaTab({
                       </button>
                     )}
                     {p.pdf_assinado_comercial_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_comercial_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
+                      <button onClick={() => baixarAssinado(p.pdf_assinado_comercial_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
                         <Download className="h-3 w-3" /> Assinado (comercial)
                       </button>
                     )}
                     {p.pdf_assinado_tecnica_path && (
-                      <button onClick={() => baixarPdf(p.pdf_assinado_tecnica_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
+                      <button onClick={() => baixarAssinado(p.pdf_assinado_tecnica_path)} className="foco text-rotulo flex items-center gap-1 text-ok hover:text-ok font-medium">
                         <Download className="h-3 w-3" /> Assinado (técnica)
                       </button>
                     )}

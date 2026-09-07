@@ -1,8 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
 import { SUPABASE_URL } from "@/lib/supabase/config";
 
-/** Bucket unico dos documentos gerados (propostas, contratos assinados). */
-const BUCKET = "documentos";
+/**
+ * Os dois buckets, e por que deixou de ser um.
+ *
+ * `documentos` guarda a proposta gerada; `assinatura-publica` guarda o que vai
+ * para o cliente assinar e o resultado assinado. O nome do segundo mente desde
+ * que ele fechou — era público, deixou de ser —, e o nome fica porque renomear
+ * bucket é mover objeto, não é renomear.
+ *
+ * Isto era um `const BUCKET = "documentos"` só. Enquanto os PDFs assinados eram
+ * gravados como URL ABSOLUTA, a distinção não aparecia: `urlAssinada` caía no
+ * ramo de URL e devolvia a string. Com o caminho relativo, assinar no bucket
+ * errado devolve URL que dá 404 — e os botões "Baixar assinada" do vendedor
+ * quebrariam em silêncio.
+ */
+export type BucketDeDocumento = "documentos" | "assinatura-publica";
+const BUCKET_PADRAO: BucketDeDocumento = "documentos";
 
 /**
  * Abre um PDF do Storage numa aba nova.
@@ -14,9 +28,12 @@ const BUCKET = "documentos";
  * Aceita URL completa tambem: propostas antigas guardaram links absolutos
  * antes de o bucket existir.
  */
-export async function abrirPdf(caminho: string | null | undefined): Promise<boolean> {
+export async function abrirPdf(
+  caminho: string | null | undefined,
+  bucket: BucketDeDocumento = BUCKET_PADRAO,
+): Promise<boolean> {
   if (!caminho) return false;
-  const url = await urlAssinada(caminho);
+  const url = await urlAssinada(caminho, bucket);
   if (!url) return false;
   window.open(url, "_blank", "noopener");
   return true;
@@ -48,7 +65,10 @@ export async function abrirPdf(caminho: string | null | undefined): Promise<bool
  */
 const PREFIXO_STORAGE = `${SUPABASE_URL.replace(/\/+$/, "")}/storage/v1/object/`;
 
-export async function urlAssinada(caminho: string | null | undefined): Promise<string | null> {
+export async function urlAssinada(
+  caminho: string | null | undefined,
+  bucket: BucketDeDocumento = BUCKET_PADRAO,
+): Promise<string | null> {
   if (!caminho) return null;
 
   // Propostas antigas guardaram URL absoluta antes de o bucket existir — mas
@@ -57,6 +77,6 @@ export async function urlAssinada(caminho: string | null | undefined): Promise<s
     return caminho.startsWith(PREFIXO_STORAGE) ? caminho : null;
   }
 
-  const { data } = await createClient().storage.from(BUCKET).createSignedUrl(caminho, 60 * 5);
+  const { data } = await createClient().storage.from(bucket).createSignedUrl(caminho, 60 * 5);
   return data?.signedUrl ?? null;
 }
