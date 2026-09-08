@@ -1819,10 +1819,52 @@ export type Database = {
         }
         Returns: string
       }
+      buscar_negocios: {
+        Args: { p_termo: string; p_pipeline_id?: string | null; p_limite?: number }
+        Returns: {
+          atualizado_em: string | null
+          contato_id: string | null
+          criado_em: string | null
+          data_fechamento_prevista: string | null
+          etapa_id: string | null
+          fechado_em: string | null
+          ganho: boolean | null
+          id: string
+          motivo_perda: string | null
+          pipeline_id: string | null
+          prioridade: string | null
+          probabilidade: number | null
+          responsavel_id: string | null
+          respostas_lidas_em: string | null
+          respostas_nao_lidas: number
+          retomar_em: string | null
+          tenant_id: string | null
+          titulo: string
+          ultima_atividade_em: string | null
+          ultima_resposta_canal: string | null
+          ultima_resposta_em: string | null
+          ultima_resposta_whatsapp_em: string | null
+          valor: number | null
+          vendedor_origem_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "negocios"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       contagem_negocios_por_etapa: {
         Args: { p_pipeline_id: string }
         Returns: {
           etapa_id: string
+          total: number
+        }[]
+      }
+      contagem_por_cadencia: {
+        Args: { p_pipeline_id: string; p_etapa_id?: string | null }
+        Returns: {
+          estado: string
           total: number
         }[]
       }
@@ -1894,6 +1936,41 @@ export type Database = {
       google_registrar_erro: {
         Args: { p_erro: string; p_usuario_id: string }
         Returns: undefined
+      }
+      negocios_por_cadencia: {
+        Args: { p_pipeline_id: string; p_etapa_id?: string | null; p_por_estado?: number }
+        Returns: {
+          atualizado_em: string | null
+          contato_id: string | null
+          criado_em: string | null
+          data_fechamento_prevista: string | null
+          etapa_id: string | null
+          fechado_em: string | null
+          ganho: boolean | null
+          id: string
+          motivo_perda: string | null
+          pipeline_id: string | null
+          prioridade: string | null
+          probabilidade: number | null
+          responsavel_id: string | null
+          respostas_lidas_em: string | null
+          respostas_nao_lidas: number
+          retomar_em: string | null
+          tenant_id: string | null
+          titulo: string
+          ultima_atividade_em: string | null
+          ultima_resposta_canal: string | null
+          ultima_resposta_em: string | null
+          ultima_resposta_whatsapp_em: string | null
+          valor: number | null
+          vendedor_origem_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "negocios"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       negocios_do_board: {
         Args: { p_pipeline_id: string; p_por_etapa?: number }

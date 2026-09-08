@@ -2,36 +2,69 @@
 
 import { useState } from "react";
 import { Plus, Layers, CheckCircle2, AlertTriangle } from "lucide-react";
-import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
+import type { NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
-import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
+// `ordenarPorCadencia` saiu daqui junto com o `etapas.map`: a ordem passou a
+// ser responsabilidade de quem monta a coluna — ver `ColunaDoBoard`.
+import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 import { LeadCard, type VarianteDoCard } from "@/components/LeadCard";
 import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
 
+/**
+ * Uma coluna do board, já resolvida por quem a montou.
+ *
+ * O board deixou de mapear `etapas` porque nem toda coluna é uma etapa: no
+ * funil do SDR a coluna da etapa de entrada é substituída por quatro colunas de
+ * CADÊNCIA (ver `COLUNAS_DE_CADENCIA`, em lib/board.ts). Elas têm nome, cor,
+ * contagem e cards como qualquer outra — o que muda é que não existem como
+ * linha em `etapas_pipeline`, e por isso não podem ser destino de arrasto.
+ *
+ * Os cards chegam JÁ ORDENADOS. Não é detalhe: a coluna de etapa ordena por
+ * urgência (`ordenarPorCadencia`), e as de cadência vêm ordenadas pelo relógio
+ * que importa em cada uma — o toque mais antigo parado na fila, a próxima data
+ * a vencer. Reordenar aqui, igual para todas, desfaria a segunda.
+ */
+export type ColunaDoBoard = {
+  /** Chave do React. É o id da etapa, ou o do estado de cadência. */
+  id: string;
+  nome: string;
+  cor: string;
+  /** Os cards que esta coluna desenha, já filtrados e já ordenados. */
+  cards: NegocioComRelacoes[];
+  /** Quantos existem no banco nesta coluna — pode ser mais do que carregou. */
+  total: number;
+  /** Quantos carregaram nesta coluna, ANTES dos filtros de busca/foco. */
+  carregados: number;
+  /**
+   * Para onde vai um card solto aqui. `null` recusa o arrasto: as colunas de
+   * cadência não são um lugar em que se possa PÔR um lead — quem manda nelas é
+   * o `processar_cadencias()`, e arrastar um card para "Toque pronto" não
+   * criaria toque nenhum. Um alvo que aceita e não faz nada é pior que um alvo
+   * que não aceita.
+   */
+  aceitaSolta: string | null;
+  /** Em que etapa o "+" cria. `null` esconde o botão. */
+  criarEm: string | null;
+  /** O que a coluna diz quando está vazia. */
+  vazio: string;
+};
+
 export function KanbanBoard({
-  etapas,
-  negocios,
+  colunas,
   variante = "vendas",
   cadencias,
   aprovacoes,
-  totaisPorEtapa,
-  carregadosPorEtapa,
   carregandoMais,
   onCarregarMais,
   onNovoNegocio,
   onMoverNegocio,
 }: {
-  etapas: EtapaPipeline[];
-  negocios: NegocioComRelacoes[];
+  colunas: ColunaDoBoard[];
   /** Qual board e este. Vem de `pipeline.chave`, nao de adivinhacao. */
   variante?: VarianteDoCard;
   /** Andamento da cadencia por negocio. Vazio fora do board do SDR. */
   cadencias?: Record<string, ResumoCadencia>;
   aprovacoes?: Record<string, ResumoDeAprovacao>;
-  /** Quantos existem no banco por etapa — pode ser mais do que está carregado. */
-  totaisPorEtapa: Record<string, number>;
-  /** Quantos estão carregados por etapa, ANTES dos filtros de busca/foco. */
-  carregadosPorEtapa: Record<string, number>;
   carregandoMais: boolean;
   onCarregarMais: () => void;
   onNovoNegocio: (etapaId: string) => void;
@@ -40,10 +73,11 @@ export function KanbanBoard({
   const [etapaAlvo, setEtapaAlvo] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState<string | null>(null);
 
-  const handleDrop = (e: React.DragEvent, etapaId: string) => {
+  const handleDrop = (e: React.DragEvent, etapaId: string | null) => {
     e.preventDefault();
     setEtapaAlvo(null);
     setArrastando(null);
+    if (!etapaId) return;
     const negocioId = e.dataTransfer.getData("text/plain");
     if (!negocioId) return;
     onMoverNegocio(negocioId, etapaId);
@@ -70,40 +104,44 @@ export function KanbanBoard({
     <div className="mx-auto w-full max-w-pagina flex-1 min-h-0 flex flex-col">
       <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4">
         <div className="mx-auto flex h-full w-max gap-4 px-4 sm:px-6">
-        {etapas.map((etapa) => {
-          const doEtapa = ordenarPorCadencia(negocios.filter((n) => n.etapa_id === etapa.id));
-          const totalValor = doEtapa.reduce((acc, n) => acc + (n.valor || 0), 0);
+        {colunas.map((coluna) => {
+          const cards = coluna.cards;
+          const totalValor = cards.reduce((acc, n) => acc + (n.valor || 0), 0);
           // "Valor na etapa: R$ 0,00" em toda coluna era o mesmo ruido que o
           // "R$ 0,00" gigante no card: em prospeccao o valor ainda nao existe.
           // A coluna do SDR mede o que ele controla — quantos leads estao
           // sendo tocados.
-          const emCadencia = doEtapa.filter((n) => cadencias?.[n.id]).length;
-          const trabalhadosHoje = doEtapa.filter((n) => temAtividadeHoje(n)).length;
-          const atrasados = doEtapa.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
-          const cor = etapa.cor || "#6366f1";
-          const alvo = etapaAlvo === etapa.id;
+          const emCadencia = cards.filter((n) => cadencias?.[n.id]).length;
+          const trabalhadosHoje = cards.filter((n) => temAtividadeHoje(n)).length;
+          const atrasados = cards.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length;
+          const cor = coluna.cor || "#6366f1";
+          // Só acende como alvo o que de fato aceita o card. Uma coluna de
+          // cadência piscando "solte aqui" para depois ignorar o solto seria a
+          // mesma mentira que o alvo que não recusa.
+          const alvo = etapaAlvo === coluna.id && !!coluna.aceitaSolta;
           // Três números diferentes, e confundi-los é o que faz um board
           // mentir: `total` é quanto existe no banco, `carregados` é quanto
-          // veio nesta fatia, e `doEtapa.length` é quanto sobrou depois da
+          // veio nesta fatia, e `cards.length` é quanto sobrou depois da
           // busca e do foco. "Faltam" tem que sair dos dois primeiros — se
           // saísse do filtrado, digitar qualquer busca faria toda coluna pedir
           // "ver mais".
-          const total = totaisPorEtapa[etapa.id] ?? doEtapa.length;
-          const carregados = carregadosPorEtapa[etapa.id] ?? doEtapa.length;
+          const total = coluna.total;
+          const carregados = coluna.carregados;
           const faltam = Math.max(0, total - carregados);
-          const filtrando = doEtapa.length !== carregados;
+          const filtrando = cards.length !== carregados;
 
           return (
             <div
-              key={etapa.id}
+              key={coluna.id}
               onDragOver={(e) => {
+                if (!coluna.aceitaSolta) return;
                 e.preventDefault();
-                if (etapaAlvo !== etapa.id) setEtapaAlvo(etapa.id);
+                if (etapaAlvo !== coluna.id) setEtapaAlvo(coluna.id);
               }}
               onDragLeave={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) setEtapaAlvo(null);
               }}
-              onDrop={(e) => handleDrop(e, etapa.id)}
+              onDrop={(e) => handleDrop(e, coluna.aceitaSolta)}
               /**
                * `w-72` no celular e `w-80` a partir de `sm`: com 320px fixos, um
                * telefone de 360px mostrava uma coluna e uma lasca da seguinte.
@@ -131,37 +169,39 @@ export function KanbanBoard({
                       style={{ background: cor }}
                       aria-hidden
                     />
-                    <h2 className="font-medium text-corpo text-tinta truncate">{etapa.nome}</h2>
+                    <h2 className="font-medium text-corpo text-tinta truncate">{coluna.nome}</h2>
                     <span
                       className="shrink-0 rounded-full border border-fio bg-superficie px-2 py-0.5 text-rotulo font-medium text-tinta tabular"
                       title={
                         filtrando
-                          ? `${doEtapa.length} de ${carregados} carregados (${total} no total)`
+                          ? `${cards.length} de ${carregados} carregados (${total} no total)`
                           : faltam > 0
                             ? `${carregados} carregados de ${total}`
                             : undefined
                       }
                     >
-                      {filtrando ? doEtapa.length : faltam > 0 ? `${carregados}/${total}` : total}
+                      {filtrando ? cards.length : faltam > 0 ? `${carregados}/${total}` : total}
                     </span>
                   </div>
-                  <button
-                    onClick={() => onNovoNegocio(etapa.id)}
-                    className="foco shrink-0 rounded-lg p-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-superficie hover:text-tinta pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-                    title={`Adicionar negócio em ${etapa.nome}`}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
+                  {coluna.criarEm && (
+                    <button
+                      onClick={() => onNovoNegocio(coluna.criarEm!)}
+                      className="foco shrink-0 rounded-lg p-1.5 text-tinta-fraca transition-colors duration-150 ease-out hover:bg-superficie hover:text-tinta pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+                      title={`Adicionar negócio em ${coluna.nome}`}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center justify-between text-rotulo text-tinta-suave">
                   <span>{variante === "sdr" ? "Em cadência:" : "Valor na etapa:"}</span>
                   <span className="font-semibold text-tinta tabular">
                     {variante === "sdr"
-                      ? `${emCadencia} de ${doEtapa.length}`
+                      ? `${emCadencia} de ${cards.length}`
                       : formatarMoeda(totalValor)}
                   </span>
                 </div>
-                {doEtapa.length > 0 && (
+                {cards.length > 0 && (
                   <div className="flex items-center gap-3 mt-1.5 text-rotulo font-medium">
                     <span className="flex items-center gap-1 text-ok" title="Negócios com atividade registrada hoje">
                       <CheckCircle2 className="h-3 w-3" /> {trabalhadosHoje} hoje
@@ -176,13 +216,17 @@ export function KanbanBoard({
               </div>
 
               <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
-                {doEtapa.length === 0 ? (
+                {cards.length === 0 ? (
                   <div className="h-32 border-2 border-dashed border-fio rounded-xl flex flex-col items-center justify-center p-4 text-center">
                     <Layers className="h-6 w-6 text-tinta-fraca mb-1" />
-                    <p className="text-rotulo text-tinta-fraca font-medium">Nenhum negócio nesta etapa</p>
+                    {/* O texto vem da coluna: "Nenhum negócio nesta etapa" está
+                        errado numa coluna de cadência, e na fila de aprovação
+                        está errado duas vezes — ali vazio é VITÓRIA, não falta
+                        de card. */}
+                    <p className="text-rotulo text-tinta-fraca font-medium">{coluna.vazio}</p>
                   </div>
                 ) : (
-                  doEtapa.map((negocio, i) => (
+                  cards.map((negocio, i) => (
                     <div
                       key={negocio.id}
                       draggable
