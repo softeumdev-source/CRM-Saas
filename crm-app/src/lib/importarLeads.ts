@@ -215,12 +215,26 @@ export function classificarImportacao(
   return { classificadas, resumo };
 }
 
-/** Extrai só os campos gravaveis de uma linha classificada (sem os _metadados). */
+/**
+ * Extrai só os campos gravaveis de uma linha classificada (sem os _metadados).
+ *
+ * O e-mail sai em MINÚSCULAS, e isso não é cosmético: a comparação desta tela
+ * sempre usou `normalizarEmail`, mas a gravação só fazia `trim()`. Os dois
+ * lados discordavam, e o banco tem DOIS índices únicos de e-mail — um em
+ * `(tenant_id, email)`, sensível à caixa, e outro em `(tenant_id, lower(email))`,
+ * insensível. Gravar `Joao@x.com` com `joao@x.com` já na base não casava com o
+ * `onConflict`, então o Postgres tentava INSERIR e o índice do `lower` barrava
+ * com 23505 — derrubando o lote inteiro, não só a linha.
+ *
+ * Guardar já normalizado faz os dois índices concordarem e o `onConflict`
+ * reconhecer o conflito de verdade.
+ */
 export function paraContato(linha: LinhaClassificada): LinhaImportada {
   const out: LinhaImportada = {};
   for (const campo of CAMPOS_IMPORTAVEIS) {
     const v = linha[campo];
     if (v !== undefined && v !== null && String(v).trim() !== "") out[campo] = String(v).trim();
   }
+  if (out.email) out.email = normalizarEmail(out.email);
   return out;
 }

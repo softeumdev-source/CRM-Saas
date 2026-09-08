@@ -75,7 +75,11 @@ export function LeadsTab({
   const arquivoRef = useRef<HTMLInputElement>(null);
   const [processando, setProcessando] = useState(false);
   const [progresso, setProgresso] = useState<string | null>(null);
-  const [resultado, setResultado] = useState<{ inseridos: number; total: number } | null>(null);
+  // `recusados`: linhas que o BANCO barrou por ja existirem, depois de a tela
+  // ter classificado como novas. Acontece quando alguem grava o mesmo lead
+  // entre o upload e a confirmacao. Nao e erro — e a regra funcionando — mas
+  // precisa aparecer, senao o total nao fecha e ninguem entende por que.
+  const [resultado, setResultado] = useState<{ inseridos: number; total: number; recusados: number } | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [confirmando, setConfirmando] = useState(false);
@@ -210,21 +214,60 @@ export function LeadsTab({
     setConfirmando(true);
     setErro(null);
     try {
-      const TAMANHO_LOTE = 500;
+      // Lote menor DE PROPOSITO. Antes eram 500, e uma unica linha recusada
+      // pelo banco derrubava as outras 499: o `upsert` e uma instrucao so, e
+      // 23505 aborta a instrucao inteira. Com 50, o estrago de uma surpresa é
+      // 50 linhas — e o `catch` logo abaixo recupera essas 50 uma a uma.
+      const TAMANHO_LOTE = 50;
       const supabase = createClient();
       let inseridos = 0;
-      for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
-        const lote = novos.slice(i, i + TAMANHO_LOTE).map((c) => ({ ...c, nome: c.nome ?? "", tenant_id: usuarioAtual.tenant_id, origem: "importacao" }));
-        setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, novos.length)} de ${novos.length}...`);
+      let recusados = 0;
+
+      // `duplicado` cobre as tres chaves: os dois indices unicos de e-mail e o
+      // novo `ux_contatos_sem_email_empresa_nome`, para lead sem e-mail. O
+      // banco recusando e o desfecho CERTO — a linha ja existe. O que nao pode
+      // e isso virar erro de tela e cancelar a importacao inteira.
+      const duplicado = (e: unknown) =>
+        typeof e === "object" && e !== null && (e as { code?: string }).code === "23505";
+
+      const gravar = async (linhas: ReturnType<typeof paraContato>[]) => {
+        const lote = linhas.map((c) => ({
+          ...c,
+          nome: c.nome ?? "",
+          tenant_id: usuarioAtual.tenant_id,
+          origem: "importacao",
+        }));
         const { data, error } = await supabase
           .from("contatos")
           .upsert(lote, { onConflict: "tenant_id,email", ignoreDuplicates: true })
           .select("id");
         if (error) throw error;
-        inseridos += data?.length || 0;
+        return data?.length || 0;
+      };
+
+      for (let i = 0; i < novos.length; i += TAMANHO_LOTE) {
+        const fatia = novos.slice(i, i + TAMANHO_LOTE);
+        setProgresso(`Importando ${Math.min(i + TAMANHO_LOTE, novos.length)} de ${novos.length}...`);
+        try {
+          inseridos += await gravar(fatia);
+        } catch (e) {
+          if (!duplicado(e)) throw e;
+          // O lote bateu num duplicado que a classificacao nao viu — alguem
+          // gravou o mesmo lead entre o upload e a confirmacao, ou o arquivo
+          // trouxe o mesmo e-mail com outra caixa. Refaz linha a linha para
+          // salvar as que dao, em vez de perder a fatia toda.
+          for (const linha of fatia) {
+            try {
+              inseridos += await gravar([linha]);
+            } catch (e2) {
+              if (!duplicado(e2)) throw e2;
+              recusados += 1;
+            }
+          }
+        }
       }
 
-      setResultado({ inseridos, total: preview.resumo.total });
+      setResultado({ inseridos, total: preview.resumo.total, recusados });
       setPreview(null);
       const { data: atualizados } = await supabase.from("contatos").select("*").is("responsavel_id", null).order("criado_em", { ascending: false });
       if (atualizados) setContatosSemDono(atualizados);
@@ -440,7 +483,8 @@ export function LeadsTab({
         )}
         {resultado && (
           <p className="text-rotulo font-medium text-ok flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados).
+            <CheckCircle2 className="h-4 w-4" /> {resultado.inseridos} de {resultado.total} contatos importados. O restante foi ignorado (sem nome, duplicados ou já cadastrados)
+            {resultado.recusados > 0 && `, e ${resultado.recusados} foram barrados pelo sistema por já estarem cadastrados`}.
           </p>
         )}
         {erro && <Alerta tom="risco" icone={AlertTriangle}>{erro}</Alerta>}
