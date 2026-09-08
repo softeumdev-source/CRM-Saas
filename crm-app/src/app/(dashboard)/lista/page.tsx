@@ -34,8 +34,19 @@ export const LOTE_LISTA = 200;
  * só deixa de ESTREITAR o que a RLS já permitia — um vendedor com um lead de
  * prospecção no nome dele passa a achá-lo, e continua sem ver os dos outros.
  */
-export default async function ListaPage() {
-  const supabase = await createClient();
+export default async function ListaPage({
+  searchParams,
+}: {
+  // Nesta versao do Next `searchParams` e uma Promise — mesmo padrao do
+  // /admin e do /negocios/[id].
+  //
+  // `q` existe para o board poder MANDAR alguem para ca com a busca já feita.
+  // Quando o Pipeline Kanban acha um lead que não é do funil dele, ele oferece
+  // "ver na Lista de Leads": sem o termo na URL, a pessoa chegaria numa lista
+  // de 233 registros e teria que digitar tudo de novo.
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const [{ q }, supabase] = await Promise.all([searchParams, createClient()]);
 
   const funis = (
     await Promise.all(CHAVES_PIPELINE.map((chave) => carregarPipeline(supabase, chave)))
@@ -62,6 +73,7 @@ export default async function ListaPage() {
       total={count ?? 0}
       lote={LOTE_LISTA}
       etapas={etapasDeCadaFunil.flat() as EtapaPipeline[]}
+      buscaInicial={q ?? ""}
     />
   );
 }

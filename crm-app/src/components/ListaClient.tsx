@@ -28,6 +28,7 @@ export function ListaClient({
   total,
   lote,
   etapas,
+  buscaInicial,
 }: {
   /** TODOS os funis, não só o de vendas — ver o comentário da page. */
   funis: Pipeline[];
@@ -37,9 +38,14 @@ export function ListaClient({
   lote: number;
   /** As etapas dos dois funis. `pipeline_id` diz de qual é cada uma. */
   etapas: EtapaPipeline[];
+  /** Termo vindo de `?q=` — o board manda a pessoa para cá já procurando. */
+  buscaInicial: string;
 }) {
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
-  const [busca, setBusca] = useState("");
+  // Só o valor INICIAL: a partir daí quem manda é o campo. Sincronizar com a
+  // URL a cada tecla trocaria uma busca por um histórico de navegação cheio de
+  // entradas que ninguém quer percorrer com o botão "voltar".
+  const [busca, setBusca] = useState(buscaInicial);
   const [etapaFiltro, setEtapaFiltro] = useState("all");
   const [funilFiltro, setFunilFiltro] = useState("todos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
