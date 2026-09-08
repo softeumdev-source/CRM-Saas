@@ -21,8 +21,9 @@ import type { ResumoCadencia, ResumoDeAprovacao } from "@/lib/board";
  *
  * Os cards chegam JÁ ORDENADOS. Não é detalhe: a coluna de etapa ordena por
  * urgência (`ordenarPorCadencia`), e as de cadência vêm ordenadas pelo relógio
- * que importa em cada uma — o toque mais antigo parado na fila, a próxima data
- * a vencer. Reordenar aqui, igual para todas, desfaria a segunda.
+ * que importa em cada uma — em "toque pronto", o toque mais RECENTE no topo,
+ * porque é o momento em que aquele lead virou acionável; nas outras, a próxima
+ * data a vencer. Reordenar aqui, igual para todas, desfaria a segunda.
  */
 export type ColunaDoBoard = {
   /** Chave do React. É o id da etapa, ou o do estado de cadência. */

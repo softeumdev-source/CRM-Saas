@@ -604,9 +604,9 @@ export function KanbanPageClient({
       }
 
       // Os cards NÃO são reordenados aqui: eles chegam na ordem que
-      // `negocios_por_cadencia` deu a cada estado — o toque mais antigo parado
-      // na fila primeiro, a próxima data a vencer primeiro. `ordenarPorCadencia`
-      // por cima desfaria as duas.
+      // `negocios_por_cadencia` deu a cada estado — em "toque pronto" o toque
+      // mais RECENTE primeiro (é o que acabou de virar acionável), nas outras a
+      // próxima data a vencer. `ordenarPorCadencia` por cima desfaria as duas.
       const daEtapa = filtrados.filter((n) => n.etapa_id === etapaCadenciaId);
       for (const modelo of COLUNAS_DE_CADENCIA) {
         const cards = daEtapa.filter(
