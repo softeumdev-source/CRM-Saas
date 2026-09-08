@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Maximize2, Minimize2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
@@ -187,13 +188,36 @@ export function KanbanPageClient({
   const termoBusca = busca.trim();
   const buscaAtiva = termoBusca.length >= MINIMO_PARA_BUSCAR;
   /**
-   * Os cards que a busca achou, ou `null` se o board está na fatia paginada.
-   *
    * O resultado ANTERIOR fica na tela enquanto o novo não chega. É de propósito:
    * limpar a cada tecla faria o board piscar vazio entre "Silv" e "Silva", que
    * lê como resultado — e resultado errado.
    */
-  const achados = buscaAtiva ? (resultadoDaBusca?.itens ?? null) : null;
+  const todosOsAchados = buscaAtiva ? (resultadoDaBusca?.itens ?? null) : null;
+  /**
+   * A BUSCA VARRE OS DOIS FUNIS, MAS O BOARD SÓ DESENHA O DELE.
+   *
+   * O DEFEITO QUE ISTO FECHA, relatado com nome e sobrenome: procurar
+   * `daniel@lddistribuidora.com` no Pipeline Kanban não achava nada. O lead
+   * existe, está em Prospecção, e quem procurava era admin — não era permissão,
+   * era recorte. A busca ia ao banco já limitada ao funil desta tela, e a tela
+   * então dizia "A busca percorreu todo o funil", que a pessoa lê, com toda
+   * razão, como "esse lead não existe".
+   *
+   * Agora a consulta vai SEM funil e o recorte acontece aqui: o que é deste
+   * funil vira card, o que não é vira um aviso com link. O board continua
+   * desenhando só as colunas que ele tem — mas para de afirmar que não existe
+   * o que ele apenas não sabe mostrar.
+   *
+   * Uma consulta só, e não duas: o mesmo resultado serve para as duas metades.
+   */
+  const achados = todosOsAchados
+    ? todosOsAchados.filter((n) => n.pipeline_id === pipelineId)
+    : null;
+  const foraDoFunil = todosOsAchados
+    ? todosOsAchados.filter((n) => n.pipeline_id !== pipelineId)
+    : [];
+  /** Guardado à parte por causa do `noUncheckedIndexedAccess`. */
+  const primeiroForaDoFunil = foraDoFunil[0];
   const buscando = buscaAtiva && resultadoDaBusca?.termo !== termoBusca;
   const [foco, setFoco] = useState<Foco>("todos");
   /**
@@ -347,7 +371,9 @@ export function KanbanPageClient({
     if (resultadoDaBusca?.termo === termoBusca) return;
     let cancelado = false;
     const relogio = setTimeout(async () => {
-      const { data, error } = await buscarNegociosPorTermo(createClient(), termoBusca, pipelineId);
+      // Sem funil: ver o comentário de `foraDoFunil`. O recorte é feito no
+      // cliente porque o resultado tem dois destinos diferentes na mesma tela.
+      const { data, error } = await buscarNegociosPorTermo(createClient(), termoBusca, null);
       if (cancelado) return;
       if (error) {
         setErro(`Não foi possível buscar: ${error.message}`);
@@ -362,7 +388,7 @@ export function KanbanPageClient({
       cancelado = true;
       clearTimeout(relogio);
     };
-  }, [buscaAtiva, termoBusca, resultadoDaBusca, pipelineId]);
+  }, [buscaAtiva, termoBusca, resultadoDaBusca]);
 
   // Duas coisas nesta assinatura:
   //
@@ -813,18 +839,55 @@ export function KanbanPageClient({
                 de novo", e sem uma linha dizendo o contrário ela continuaria
                 desconfiando do resultado. */}
             {buscaAtiva && (
-              <p className="mt-1 text-rotulo text-tinta-suave" aria-live="polite">
-                {buscando ? (
-                  "Procurando no funil inteiro…"
-                ) : achados === null ? null : achados.length >= LIMITE_DA_BUSCA ? (
-                  <>Mais de {LIMITE_DA_BUSCA} leads casaram — refine o texto.</>
-                ) : (
-                  <>
-                    {achados.length} {achados.length === 1 ? "lead encontrado" : "leads encontrados"}{" "}
-                    no funil inteiro
-                  </>
+              <div className="mt-1 space-y-0.5" aria-live="polite">
+                <p className="text-rotulo text-tinta-suave">
+                  {buscando ? (
+                    "Procurando na base inteira…"
+                  ) : todosOsAchados === null ? null : todosOsAchados.length >= LIMITE_DA_BUSCA ? (
+                    <>Mais de {LIMITE_DA_BUSCA} leads casaram — refine o texto.</>
+                  ) : (
+                    <>
+                      {achados?.length ?? 0}{" "}
+                      {(achados?.length ?? 0) === 1 ? "lead encontrado" : "leads encontrados"} neste
+                      funil
+                    </>
+                  )}
+                </p>
+                {/* O ACHADO QUE ESTE BOARD NÃO SABE DESENHAR.
+                    Sem esta linha o board dizia "nada encontrado" para um lead
+                    que existe no outro funil — foi assim que
+                    `daniel@lddistribuidora.com` sumiu. O board continua sem
+                    mostrar card de outro funil (ele não tem coluna para isso),
+                    mas agora aponta onde o lead está em vez de negar que ele
+                    exista. */}
+                {!buscando && primeiroForaDoFunil && (
+                  <p className="text-rotulo text-tinta">
+                    {foraDoFunil.length === 1 ? (
+                      <>
+                        1 lead com esse texto está em outro funil:{" "}
+                        <Link
+                          href={`/negocios/${primeiroForaDoFunil.id}`}
+                          className="foco font-semibold text-acento underline underline-offset-2"
+                        >
+                          {primeiroForaDoFunil.contato?.empresa ||
+                            primeiroForaDoFunil.contato?.nome ||
+                            primeiroForaDoFunil.titulo}
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        {foraDoFunil.length} leads com esse texto estão em outro funil —{" "}
+                        <Link
+                          href={`/lista?q=${encodeURIComponent(termoBusca)}`}
+                          className="foco font-semibold text-acento underline underline-offset-2"
+                        >
+                          ver na Lista de Leads
+                        </Link>
+                      </>
+                    )}
+                  </p>
                 )}
-              </p>
+              </div>
             )}
           </div>
 
@@ -904,9 +967,11 @@ export function KanbanPageClient({
                 ? "Fila zerada"
                 : foco === "respondeu"
                   ? "Ninguém esperando"
-                  : achados !== null
-                    ? "Nada encontrado"
-                    : "Nada com esses filtros"
+                  : foraDoFunil.length > 0
+                    ? "Está em outro funil"
+                    : achados !== null
+                      ? "Nada encontrado"
+                      : "Nada com esses filtros"
             }
             acao={
               <button
@@ -921,12 +986,16 @@ export function KanbanPageClient({
               ? "Nenhuma mensagem esperando aprovação neste funil. Quando a cadência gerar o próximo toque, ele aparece aqui."
               : foco === "respondeu"
                 ? "Nenhuma resposta por ler neste funil."
-                : achados !== null
-                  ? // A frase mudou junto com a busca: agora ela procurou o
-                    // funil INTEIRO, e não só os cards carregados. "Não achei"
-                    // virou uma resposta que se pode acreditar.
-                    "A busca percorreu todo o funil e nenhum lead casou com esse texto — nome, empresa, e-mail, CNPJ, telefone ou WhatsApp."
-                  : "Nenhum card combina com os filtros ativos."}
+                : foraDoFunil.length > 0
+                  ? // O CASO QUE MENTIA. O lead existe, só não é deste funil —
+                    // e antes esta tela afirmava que ele não existia. O aviso
+                    // com o link está logo acima, junto do campo de busca.
+                    `Nenhum lead DESTE funil casou com esse texto, mas ${foraDoFunil.length === 1 ? "há 1 em outro funil" : `há ${foraDoFunil.length} em outro funil`}. O link está logo acima, ao lado da busca.`
+                  : achados !== null
+                    ? // Agora a busca percorreu a base inteira, os dois funis.
+                      // "Não achei" virou uma resposta em que se pode acreditar.
+                      "A busca percorreu os dois funis e nenhum lead casou com esse texto — nome, empresa, e-mail, CNPJ, telefone ou WhatsApp."
+                    : "Nenhum card combina com os filtros ativos."}
           </Vazio>
         </div>
       ) : (
