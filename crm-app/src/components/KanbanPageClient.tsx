@@ -13,19 +13,30 @@ import { moverEtapa } from "@/lib/negocios";
 import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
 import {
   CARDS_POR_ETAPA,
+  COLUNAS_DE_CADENCIA,
+  LIMITE_DA_BUSCA,
+  MINIMO_PARA_BUSCAR,
   buscarAprovacoesDoBoard,
   buscarCadenciaDoBoard,
   buscarNegociosDoBoard,
+  buscarNegociosPorCadencia,
+  buscarNegociosPorTermo,
+  contarPorCadencia,
   contarPorEtapa,
+  estadoDeCadencia,
   mapaDeAprovacoes,
   mapaDeCadencias,
+  mapaDeTotaisPorCadencia,
   temPendencia,
+  unirFatias,
+  type EstadoCadencia,
   type ResumoCadencia,
   type ResumoDeAprovacao,
 } from "@/lib/board";
+import type { ColunaDoBoard } from "@/components/KanbanBoard";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
 import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
-import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
+import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 
 type Foco = "todos" | "respondeu" | "aprovacao" | "atencao" | "atrasados" | "sem_agenda";
 
@@ -117,6 +128,8 @@ export function KanbanPageClient({
   usuarioAtual,
   cadencias: cadenciasIniciais,
   aprovacoes: aprovacoesIniciais,
+  etapaCadenciaId,
+  totaisPorCadencia: totaisPorCadenciaIniciais,
 }: {
   /** O funil desta tela. É ele que decide o recorte, o título e as métricas. */
   pipeline: Pipeline | null;
@@ -130,6 +143,9 @@ export function KanbanPageClient({
   /** Andamento da cadência por negócio. Vazio fora do board do SDR. */
   cadencias: Record<string, ResumoCadencia>;
   aprovacoes: Record<string, ResumoDeAprovacao>;
+  /** A etapa cuja coluna vira as quatro de cadência. `null` no board do vendedor. */
+  etapaCadenciaId: string | null;
+  totaisPorCadencia: Record<EstadoCadencia, number>;
 }) {
   const pipelineId = pipeline?.id ?? null;
   // O SDR nao vende: o que ele entrega e reuniao, nao receita. Por isso o
@@ -140,6 +156,7 @@ export function KanbanPageClient({
   const [totais, setTotais] = useEstadoDaProp(totaisPorEtapa);
   const [cadencias, setCadencias] = useEstadoDaProp(cadenciasIniciais);
   const [aprovacoes, setAprovacoes] = useEstadoDaProp(aprovacoesIniciais);
+  const [totaisCadencia, setTotaisCadencia] = useEstadoDaProp(totaisPorCadenciaIniciais);
   // Quantos cards por coluna estão carregados. Sobe quando o usuário pede mais;
   // o board inteiro recarrega com o teto novo, numa consulta só.
   const [porEtapa, setPorEtapa] = useState(porEtapaInicial);
@@ -147,6 +164,37 @@ export function KanbanPageClient({
   const [modalAberto, setModalAberto] = useState(false);
   const [etapaNovoNegocio, setEtapaNovoNegocio] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  /**
+   * A última resposta do banco, CARIMBADA COM O TERMO que a produziu.
+   *
+   * O termo junto não é enfeite: é ele que faz "estou buscando" e "o board está
+   * paginado" serem DERIVADOS em vez de mais dois estados para manter em dia.
+   * A primeira versão disto guardava `achados` e `buscando` como estado e os
+   * zerava dentro do efeito — o ESLint recusou, com razão: limpar estado no
+   * corpo de um efeito é uma renderização em cascata para calcular algo que já
+   * dava para ler do que existe.
+   *
+   * Nulo e vazio dizem coisas opostas e por isso não podem ser o mesmo valor:
+   * `null` é "o board está mostrando a fatia paginada", `[]` é "o banco
+   * procurou e não achou ninguém". Com um array vazio para os dois, o board
+   * ficaria em branco ao apagar a busca.
+   */
+  const [resultadoDaBusca, setResultadoDaBusca] = useState<{
+    termo: string;
+    itens: NegocioComRelacoes[];
+  } | null>(null);
+
+  const termoBusca = busca.trim();
+  const buscaAtiva = termoBusca.length >= MINIMO_PARA_BUSCAR;
+  /**
+   * Os cards que a busca achou, ou `null` se o board está na fatia paginada.
+   *
+   * O resultado ANTERIOR fica na tela enquanto o novo não chega. É de propósito:
+   * limpar a cada tecla faria o board piscar vazio entre "Silv" e "Silva", que
+   * lê como resultado — e resultado errado.
+   */
+  const achados = buscaAtiva ? (resultadoDaBusca?.itens ?? null) : null;
+  const buscando = buscaAtiva && resultadoDaBusca?.termo !== termoBusca;
   const [foco, setFoco] = useState<Foco>("todos");
   /**
    * O board ocupando a janela inteira.
@@ -178,7 +226,14 @@ export function KanbanPageClient({
   // `negocios`.
   const recarregar = useCallback(async () => {
     const supabase = createClient();
-    const [{ data }, { data: novosTotais }, inscricoes, pendentes] = await Promise.all([
+    const [
+      { data },
+      { data: novosTotais },
+      inscricoes,
+      pendentes,
+      porCadencia,
+      totaisCadenciaNovos,
+    ] = await Promise.all([
       buscarNegociosDoBoard(supabase, pipelineId, porEtapa),
       contarPorEtapa(supabase, pipelineId),
       ehSdr ? buscarCadenciaDoBoard(supabase) : Promise.resolve({ data: null }),
@@ -199,29 +254,115 @@ export function KanbanPageClient({
       // `mensagens_sinalizar_resposta` usa desde sempre para o selo azul de
       // "o cliente respondeu".
       buscarAprovacoesDoBoard(supabase),
+      // As colunas de cadência recarregam no MESMO tique dos outros dados. Sem
+      // isto elas congelariam no primeiro render: o toque que a cadência gera
+      // de 5 em 5 minutos move um card de "aguardando data" para "toque
+      // pronto", e é `negocios` que traz essa notícia pelo Realtime.
+      etapaCadenciaId
+        ? buscarNegociosPorCadencia(supabase, pipelineId, etapaCadenciaId, porEtapa)
+        : Promise.resolve({ data: null }),
+      etapaCadenciaId
+        ? contarPorCadencia(supabase, pipelineId, etapaCadenciaId)
+        : Promise.resolve({ data: null }),
     ]);
-    if (data) setNegocios(data as unknown as NegocioComRelacoes[]);
+    if (data) {
+      setNegocios(
+        unirFatias(
+          data as unknown as NegocioComRelacoes[],
+          porCadencia.data as unknown as NegocioComRelacoes[] | null,
+          etapaCadenciaId,
+        ),
+      );
+    }
     if (novosTotais) {
       setTotais(Object.fromEntries(novosTotais.map((t) => [t.etapa_id, Number(t.total)])));
     }
     if (ehSdr) setCadencias(mapaDeCadencias(inscricoes.data));
     setAprovacoes(mapaDeAprovacoes(pendentes.data));
-  }, [pipelineId, porEtapa, ehSdr, setNegocios, setTotais, setCadencias, setAprovacoes]);
+    if (totaisCadenciaNovos.data) {
+      setTotaisCadencia(
+        mapaDeTotaisPorCadencia(totaisCadenciaNovos.data as { estado: string; total: number }[]),
+      );
+    }
+  }, [
+    pipelineId,
+    porEtapa,
+    ehSdr,
+    etapaCadenciaId,
+    setNegocios,
+    setTotais,
+    setCadencias,
+    setAprovacoes,
+    setTotaisCadencia,
+  ]);
 
   // Busca com o teto novo ANTES de mexer no estado: assim o board nunca fica
   // um render com o teto alto e os cards antigos.
   const carregarMais = useCallback(async () => {
     const novo = porEtapa + CARDS_POR_ETAPA;
     setCarregandoMais(true);
-    const { data, error } = await buscarNegociosDoBoard(createClient(), pipelineId, novo);
+    const supabase = createClient();
+    // O teto novo vale para as DUAS fatias. Subir só a das etapas deixaria as
+    // colunas de cadência presas no teto antigo, e o "ver mais" delas não faria
+    // nada — o botão pediria mais e a coluna continuaria igual.
+    const [{ data, error }, porCadencia] = await Promise.all([
+      buscarNegociosDoBoard(supabase, pipelineId, novo),
+      etapaCadenciaId
+        ? buscarNegociosPorCadencia(supabase, pipelineId, etapaCadenciaId, novo)
+        : Promise.resolve({ data: null, error: null }),
+    ]);
     setCarregandoMais(false);
     if (error) {
       setErro(`Não foi possível carregar mais cards: ${error.message}`);
       return;
     }
-    setNegocios((data as unknown as NegocioComRelacoes[]) || []);
+    setNegocios(
+      unirFatias(
+        (data as unknown as NegocioComRelacoes[]) || [],
+        porCadencia.data as unknown as NegocioComRelacoes[] | null,
+        etapaCadenciaId,
+      ),
+    );
     setPorEtapa(novo);
-  }, [porEtapa, pipelineId, setNegocios]);
+  }, [porEtapa, pipelineId, etapaCadenciaId, setNegocios]);
+
+  /**
+   * A BUSCA DO BOARD PASSA A IR AO BANCO.
+   *
+   * Era `Array.filter` sobre `negocios` — isto é, sobre os 50 cards por coluna
+   * que a fatia trouxe, de uma etapa com 216 leads. Procurar alguém que não
+   * estava na fatia devolvia "Nada com esses filtros", que é uma resposta
+   * ERRADA: o lead existe, só não tinha vindo. O board dizia "não achei" quando
+   * a verdade era "não procurei ali".
+   *
+   * Os 300ms separam "digitou" de "está digitando". Sem eles, "Silva" seriam
+   * cinco consultas — e, pior, a resposta de "Sil" poderia chegar DEPOIS da de
+   * "Silva" e repintar a tela com o resultado errado. O `cancelado` fecha essa
+   * corrida: a resposta de uma busca que já não é a atual é descartada.
+   */
+  useEffect(() => {
+    if (!buscaAtiva) return;
+    // Já é a resposta deste termo: não repete a consulta ao voltar de um
+    // render qualquer.
+    if (resultadoDaBusca?.termo === termoBusca) return;
+    let cancelado = false;
+    const relogio = setTimeout(async () => {
+      const { data, error } = await buscarNegociosPorTermo(createClient(), termoBusca, pipelineId);
+      if (cancelado) return;
+      if (error) {
+        setErro(`Não foi possível buscar: ${error.message}`);
+        return;
+      }
+      setResultadoDaBusca({
+        termo: termoBusca,
+        itens: (data as unknown as NegocioComRelacoes[]) || [],
+      });
+    }, 300);
+    return () => {
+      cancelado = true;
+      clearTimeout(relogio);
+    };
+  }, [buscaAtiva, termoBusca, resultadoDaBusca, pipelineId]);
 
   // Duas coisas nesta assinatura:
   //
@@ -298,8 +439,15 @@ export function KanbanPageClient({
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const termoDigitos = termo.replace(/\D/g, "");
+    // Quando o banco respondeu, é a lista dele que o board desenha — e o termo
+    // JÁ foi aplicado lá, sobre a base inteira e com mais campos do que este
+    // filtro alcança. Reaplicá-lo aqui só poderia TIRAR da tela um card que o
+    // banco achou. O `foco` e o `responsável` continuam valendo nos dois casos:
+    // eles são recortes da tela, não da consulta.
+    const base = achados ?? negocios;
+    const aplicarTermoLocal = achados === null;
 
-    return negocios.filter((n) => {
+    return base.filter((n) => {
       if (responsavel !== "todos" && n.responsavel_id !== responsavel) return false;
 
       if (foco !== "todos") {
@@ -311,7 +459,7 @@ export function KanbanPageClient({
         if (foco === "sem_agenda" && proxima) return false;
       }
 
-      if (!termo) return true;
+      if (!aplicarTermoLocal || !termo) return true;
       const c = n.contato;
       if (termoDigitos.length >= 3) {
         // `telefone_comercial` saiu das duas listas: a coluna existe no schema
@@ -329,7 +477,7 @@ export function KanbanPageClient({
     // `aprovacoes` PRECISA estar aqui: sem ela a lista não recalcularia quando
     // alguém aprovasse um e-mail, e o card ficaria no filtro depois de sair da
     // fila.
-  }, [negocios, busca, foco, responsavel, aprovacoes]);
+  }, [negocios, achados, busca, foco, responsavel, aprovacoes]);
 
   const resumo = useMemo(() => {
     const abertos = filtrados.filter((n) => n.ganho === null || n.ganho === undefined);
@@ -372,6 +520,103 @@ export function KanbanPageClient({
     }
     return contagem;
   }, [negocios]);
+
+  /**
+   * AS COLUNAS QUE O BOARD DESENHA.
+   *
+   * Uma por etapa, como sempre — EXCETO a etapa de entrada do funil do SDR, que
+   * vira quatro colunas de cadência. É a coluna que estava impossível: 216
+   * leads dentro dela, 181 com um toque pronto esperando um clique, e nada na
+   * tela dizendo qual era qual.
+   *
+   * As quatro entram na posição da etapa que substituíram (`ordem` 1), então a
+   * fila de "toque pronto" é a primeira coisa que o SDR vê ao abrir o board.
+   *
+   * Durante uma busca no banco, `total` e `carregados` passam a ser o tamanho
+   * do resultado. Deixar os totais do funil ali faria a coluna dizer "1/181"
+   * com um card na tela — o "faltam 180" apareceria como se a busca tivesse
+   * mais páginas, e "ver mais" recarregaria a fatia paginada por cima do
+   * resultado.
+   */
+  const colunas = useMemo<ColunaDoBoard[]>(() => {
+    const buscandoNoBanco = achados !== null;
+
+    // Quantos cards de cada estado CARREGARAM, antes dos filtros de tela — o
+    // outro lado da conta do "ver mais", igual ao que `carregadosPorEtapa` faz.
+    const carregadosPorCadencia: Record<EstadoCadencia, number> = {
+      toque_pronto: 0,
+      aguardando_data: 0,
+      parada: 0,
+      sem_cadencia: 0,
+    };
+    if (etapaCadenciaId) {
+      for (const n of negocios) {
+        if (n.etapa_id !== etapaCadenciaId) continue;
+        carregadosPorCadencia[estadoDeCadencia(n.id, cadencias, aprovacoes)] += 1;
+      }
+    }
+
+    const lista: ColunaDoBoard[] = [];
+
+    for (const etapa of etapas) {
+      if (etapa.id !== etapaCadenciaId) {
+        const cards = ordenarPorCadencia(filtrados.filter((n) => n.etapa_id === etapa.id));
+        lista.push({
+          id: etapa.id,
+          nome: etapa.nome,
+          cor: etapa.cor || "#6366f1",
+          cards,
+          total: buscandoNoBanco ? cards.length : (totais[etapa.id] ?? cards.length),
+          carregados: buscandoNoBanco
+            ? cards.length
+            : (carregadosPorEtapa[etapa.id] ?? cards.length),
+          aceitaSolta: etapa.id,
+          criarEm: etapa.id,
+          vazio: "Nenhum negócio nesta etapa",
+        });
+        continue;
+      }
+
+      // Os cards NÃO são reordenados aqui: eles chegam na ordem que
+      // `negocios_por_cadencia` deu a cada estado — o toque mais antigo parado
+      // na fila primeiro, a próxima data a vencer primeiro. `ordenarPorCadencia`
+      // por cima desfaria as duas.
+      const daEtapa = filtrados.filter((n) => n.etapa_id === etapaCadenciaId);
+      for (const modelo of COLUNAS_DE_CADENCIA) {
+        const cards = daEtapa.filter(
+          (n) => estadoDeCadencia(n.id, cadencias, aprovacoes) === modelo.chave,
+        );
+        lista.push({
+          id: modelo.chave,
+          nome: modelo.nome,
+          cor: modelo.cor,
+          cards,
+          total: buscandoNoBanco ? cards.length : totaisCadencia[modelo.chave],
+          carregados: buscandoNoBanco ? cards.length : carregadosPorCadencia[modelo.chave],
+          aceitaSolta: null,
+          // O "+" fica só em "Sem cadência", e ali ele é a verdade: um lead
+          // recém-criado não tem inscrição, então é exatamente nesta coluna que
+          // ele vai aparecer. Sem isto o SDR perderia o único caminho de criar
+          // lead pelo board, porque a coluna que tinha o botão deixou de existir.
+          criarEm: modelo.chave === "sem_cadencia" ? etapaCadenciaId : null,
+          vazio: modelo.vazio,
+        });
+      }
+    }
+
+    return lista;
+  }, [
+    etapas,
+    filtrados,
+    negocios,
+    cadencias,
+    aprovacoes,
+    totais,
+    totaisCadencia,
+    carregadosPorEtapa,
+    etapaCadenciaId,
+    achados,
+  ]);
 
   // Maximizado, a Navbar fica coberta. `Esc` e o botão são as DUAS saídas: ter
   // só o botão seria uma armadilha para quem está acostumado com tela cheia.
@@ -562,6 +807,25 @@ export function KanbanPageClient({
               placeholder="Buscar por empresa, nome, e-mail, telefone ou CNPJ..."
               className="foco w-full pl-10 pr-4 py-2 text-corpo bg-superficie border border-fio rounded-xl"
             />
+            {/* A busca deixou de ser sobre os cards carregados e passou a ser
+                sobre o funil inteiro. Isto precisa estar ESCRITO: até aqui a
+                pessoa aprendeu que "não achei" queria dizer "role mais e tente
+                de novo", e sem uma linha dizendo o contrário ela continuaria
+                desconfiando do resultado. */}
+            {buscaAtiva && (
+              <p className="mt-1 text-rotulo text-tinta-suave" aria-live="polite">
+                {buscando ? (
+                  "Procurando no funil inteiro…"
+                ) : achados === null ? null : achados.length >= LIMITE_DA_BUSCA ? (
+                  <>Mais de {LIMITE_DA_BUSCA} leads casaram — refine o texto.</>
+                ) : (
+                  <>
+                    {achados.length} {achados.length === 1 ? "lead encontrado" : "leads encontrados"}{" "}
+                    no funil inteiro
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Este bloco era o segmento escrito a mao — e o admin, dois
@@ -631,7 +895,7 @@ export function KanbanPageClient({
           O `Vazio` já existe e já é usado assim no admin — a diferença aqui é
           que a frase muda com o motivo, porque "não achei nada" e "não há nada
           a fazer" são notícias opostas. */}
-      {filtroAtivo && filtrados.length === 0 ? (
+      {filtroAtivo && filtrados.length === 0 && !buscando ? (
         <div className="flex-1 min-h-0 overflow-auto">
           <Vazio
             icone={foco === "aprovacao" || foco === "respondeu" ? CheckCircle2 : Search}
@@ -640,7 +904,9 @@ export function KanbanPageClient({
                 ? "Fila zerada"
                 : foco === "respondeu"
                   ? "Ninguém esperando"
-                  : "Nada com esses filtros"
+                  : achados !== null
+                    ? "Nada encontrado"
+                    : "Nada com esses filtros"
             }
             acao={
               <button
@@ -655,18 +921,20 @@ export function KanbanPageClient({
               ? "Nenhuma mensagem esperando aprovação neste funil. Quando a cadência gerar o próximo toque, ele aparece aqui."
               : foco === "respondeu"
                 ? "Nenhuma resposta por ler neste funil."
-                : "Nenhum card combina com a busca e os filtros ativos."}
+                : achados !== null
+                  ? // A frase mudou junto com a busca: agora ela procurou o
+                    // funil INTEIRO, e não só os cards carregados. "Não achei"
+                    // virou uma resposta que se pode acreditar.
+                    "A busca percorreu todo o funil e nenhum lead casou com esse texto — nome, empresa, e-mail, CNPJ, telefone ou WhatsApp."
+                  : "Nenhum card combina com os filtros ativos."}
           </Vazio>
         </div>
       ) : (
       <KanbanBoard
-        etapas={etapas}
-        negocios={filtrados}
+        colunas={colunas}
         variante={ehSdr ? "sdr" : "vendas"}
         cadencias={cadencias}
         aprovacoes={aprovacoes}
-        totaisPorEtapa={totais}
-        carregadosPorEtapa={carregadosPorEtapa}
         carregandoMais={carregandoMais}
         onCarregarMais={carregarMais}
         onNovoNegocio={abrirNovoNegocio}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
-import { etapasParaEscolher, recorteDeFunil } from "@/lib/pipelines";
+import { LIMITE_DA_BUSCA, MINIMO_PARA_BUSCAR, buscarNegociosPorTermo } from "@/lib/board";
+import { NENHUM_FUNIL, etapasParaEscolher, type Pipeline } from "@/lib/pipelines";
 import { atrasoDaCascata } from "@/components/ui";
 import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { SELECT_NEGOCIO_COMPLETO, formatarMoeda, localDoContato } from "@/lib/types";
@@ -22,36 +23,82 @@ import {
 type Ordem = "recentes" | "sem_contato" | "valor" | "proxima_acao";
 
 export function ListaClient({
-  pipelineId,
+  funis,
   negocios: negociosIniciais,
   total,
   lote,
   etapas,
 }: {
-  pipelineId: string | null;
+  /** TODOS os funis, não só o de vendas — ver o comentário da page. */
+  funis: Pipeline[];
   negocios: NegocioComRelacoes[];
-  /** Quantos existem no funil, não quantos vieram. */
+  /** Quantos existem nos funis, não quantos vieram. */
   total: number;
   lote: number;
+  /** As etapas dos dois funis. `pipeline_id` diz de qual é cada uma. */
   etapas: EtapaPipeline[];
 }) {
   const [negocios, setNegocios] = useEstadoDaProp(negociosIniciais);
   const [busca, setBusca] = useState("");
   const [etapaFiltro, setEtapaFiltro] = useState("all");
+  const [funilFiltro, setFunilFiltro] = useState("todos");
   const [ordem, setOrdem] = useState<Ordem>("recentes");
   const [carregados, setCarregados] = useEstadoDaProp(negociosIniciais.length);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  /**
+   * A última resposta do banco, CARIMBADA COM A PERGUNTA que a produziu.
+   *
+   * A chave é `termo|funil` porque as duas mudam o resultado: trocar de funil
+   * com o mesmo texto digitado tem que refazer a consulta, e sem o funil na
+   * chave a tela continuaria mostrando o resultado do funil anterior.
+   *
+   * Guardar a pergunta junto é o que deixa "estou buscando" e "estou no lote
+   * paginado" serem DERIVADOS, em vez de mais dois estados para manter em dia —
+   * e é o que o ESLint exige aqui: zerar estado no corpo de um efeito é uma
+   * renderização em cascata para calcular algo que já dá para ler.
+   *
+   * `null` e `[]` dizem coisas opostas: o primeiro é "estou mostrando o lote
+   * paginado", o segundo é "o banco procurou e não achou ninguém". Com o mesmo
+   * valor para os dois, apagar a busca deixaria a tela em branco.
+   */
+  const [resultadoDaBusca, setResultadoDaBusca] = useState<{
+    chave: string;
+    itens: NegocioComRelacoes[];
+  } | null>(null);
+
+  // `.in()` com array vazio é sintaxe inválida no PostgREST: derrubaria a tela
+  // em vez de mostrá-la vazia.
+  const idsDosFunis = useMemo(
+    () => (funis.length ? funis.map((f) => f.id) : [NENHUM_FUNIL]),
+    [funis],
+  );
+
+  /** O funil que a busca deve percorrer. `null` = os dois. */
+  const funilDaBusca = funilFiltro === "todos" ? null : funilFiltro;
+
+  const termoBusca = busca.trim();
+  const buscaAtiva = termoBusca.length >= MINIMO_PARA_BUSCAR;
+  const chaveDaBusca = `${termoBusca}|${funilDaBusca ?? ""}`;
+  /**
+   * As linhas que a busca achou, ou `null` se a tela está no lote paginado.
+   *
+   * O resultado ANTERIOR fica visível enquanto o novo não chega — limpar a cada
+   * tecla faria a tabela piscar vazia entre "Silv" e "Silva", e tabela vazia lê
+   * como resposta.
+   */
+  const achados = buscaAtiva ? (resultadoDaBusca?.itens ?? null) : null;
+  const buscando = buscaAtiva && resultadoDaBusca?.chave !== chaveDaBusca;
 
   const buscarAte = useCallback(
     (limite: number) =>
       createClient()
         .from("negocios")
         .select(SELECT_NEGOCIO_COMPLETO)
-        .eq("pipeline_id", recorteDeFunil(pipelineId))
+        .in("pipeline_id", idsDosFunis)
         .order("criado_em", { ascending: false })
         .range(0, limite - 1),
-    [pipelineId],
+    [idsDosFunis],
   );
 
   const recarregar = useCallback(async () => {
@@ -75,18 +122,66 @@ export function ListaClient({
 
   // Sem `atividades`: o gatilho `atividades_tocar_negocio` já toca `negocios`
   // em tudo que esta tela mostra. Ver o comentário no KanbanPageClient.
+  // O `filtro: pipeline_id=eq.…` saiu junto com o recorte de um funil só. Ele
+  // existia para esta tela não recarregar quando alguém mexesse no OUTRO funil;
+  // agora os dois estão nela, e um lead de prospecção que muda de etapa é
+  // notícia daqui. A RLS continua sendo quem decide o que volta na consulta.
   useSincronizacao(recarregar, {
     canal: "lista-negocios",
-    tabelas: [
-      { tabela: "negocios", filtro: `pipeline_id=eq.${recorteDeFunil(pipelineId)}` },
-      { tabela: "contatos" },
-    ],
+    tabelas: [{ tabela: "negocios" }, { tabela: "contatos" }],
   });
+
+  /**
+   * A BUSCA PASSA A IR AO BANCO.
+   *
+   * Era `Array.filter` sobre os 200 primeiros — e a própria tela já admitia
+   * isso numa linha do cabeçalho ("os filtros trabalham sobre estes 200").
+   * Dizer que a resposta é parcial é melhor do que esconder, mas continua sendo
+   * uma busca que responde "não existe" quando a verdade é "não procurei ali".
+   *
+   * Os 300ms separam "digitou" de "está digitando", e o `cancelado` fecha a
+   * corrida: sem ele a resposta de "Sil" poderia chegar depois da de "Silva" e
+   * repintar a tabela com o resultado errado.
+   */
+  useEffect(() => {
+    if (!buscaAtiva) return;
+    // Já é a resposta desta pergunta: não repete a consulta a cada render.
+    if (resultadoDaBusca?.chave === chaveDaBusca) return;
+    let cancelado = false;
+    const relogio = setTimeout(async () => {
+      const { data, error } = await buscarNegociosPorTermo(
+        createClient(),
+        termoBusca,
+        funilDaBusca,
+      );
+      if (cancelado) return;
+      if (error) {
+        setErro(`Não foi possível buscar: ${error.message}`);
+        return;
+      }
+      setResultadoDaBusca({
+        chave: chaveDaBusca,
+        itens: (data as unknown as NegocioComRelacoes[]) || [],
+      });
+    }, 300);
+    return () => {
+      cancelado = true;
+      clearTimeout(relogio);
+    };
+  }, [buscaAtiva, chaveDaBusca, termoBusca, funilDaBusca, resultadoDaBusca]);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    const lista = negocios.filter((n) => {
+    // Com resposta do banco, o termo JÁ foi aplicado lá — sobre a base inteira
+    // e com mais campos do que este filtro alcança (telefone e WhatsApp, e os
+    // números comparados só por dígitos). Reaplicá-lo aqui só poderia TIRAR da
+    // tabela um lead que o banco achou.
+    const base = achados ?? negocios;
+    const aplicarTermoLocal = achados === null;
+
+    const lista = base.filter((n) => {
       const matchBusca =
+        !aplicarTermoLocal ||
         termo === "" ||
         n.titulo.toLowerCase().includes(termo) ||
         (n.contato?.nome || "").toLowerCase().includes(termo) ||
@@ -94,7 +189,8 @@ export function ListaClient({
         (n.contato?.email || "").toLowerCase().includes(termo) ||
         (n.contato?.cnpj || "").toLowerCase().includes(termo);
       const matchEtapa = etapaFiltro === "all" || n.etapa_id === etapaFiltro;
-      return matchBusca && matchEtapa;
+      const matchFunil = funilFiltro === "todos" || n.pipeline_id === funilFiltro;
+      return matchBusca && matchEtapa && matchFunil;
     });
 
     const semData = Number.MAX_SAFE_INTEGER;
@@ -108,7 +204,7 @@ export function ListaClient({
       }
       return new Date(b.criado_em || 0).getTime() - new Date(a.criado_em || 0).getTime();
     });
-  }, [negocios, busca, etapaFiltro, ordem]);
+  }, [negocios, achados, busca, etapaFiltro, funilFiltro, ordem]);
 
   /** O que o recorte visível soma. É o número grande do cabeçalho. */
   const totalFiltrado = useMemo(
@@ -135,11 +231,23 @@ export function ListaClient({
           </p>
           <p className="text-rotulo text-tinta-suave mt-1.5">
             {filtrados.length} {filtrados.length === 1 ? "negócio" : "negócios"}
-            {/* A busca só alcança o que está carregado. Dizer isso é a diferença
-                entre "não existe" e "ainda não veio" — sem esta linha, procurar
-                um cliente que está na posição 300 devolveria "nenhum negócio
-                encontrado", que é uma resposta errada. */}
-            {carregados < total ? (
+            {/* A frase mudou porque o fato mudou.
+
+                Ela dizia "os filtros trabalham sobre estes 200" — era honesta
+                sobre uma busca que só alcançava o lote carregado, mas a busca
+                continuava respondendo "não existe" para quem estava na posição
+                300. Agora a busca vai ao banco: enquanto há texto digitado, o
+                que a tela mostra é o resultado da base INTEIRA, e o aviso de
+                lote paginado não se aplica. Ele volta assim que a busca sai. */}
+            {buscando ? (
+              <> · procurando na base inteira…</>
+            ) : achados !== null ? (
+              <>
+                {" "}
+                · encontrados na base inteira
+                {achados.length >= LIMITE_DA_BUSCA ? ` (teto de ${LIMITE_DA_BUSCA} — refine o texto)` : ""}
+              </>
+            ) : carregados < total ? (
               <> · mostrando {carregados} de {total}, e os filtros trabalham sobre estes {carregados}</>
             ) : null}
           </p>
@@ -150,19 +258,52 @@ export function ListaClient({
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar empresa, contato, e-mail ou CNPJ..."
+              placeholder="Buscar nome, empresa, e-mail, CNPJ ou telefone..."
               className="foco pl-9 pr-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl w-64"
             />
           </div>
+          {/* O filtro de funil só aparece quando há mais de um — com um funil
+              só ele seria um controle que não escolhe nada. */}
+          {funis.length > 1 && (
+            <select
+              value={funilFiltro}
+              onChange={(e) => {
+                setFunilFiltro(e.target.value);
+                // A etapa escolhida pertence a UM funil. Trocar de funil sem
+                // limpar a etapa deixaria um filtro impossível ligado — nenhuma
+                // linha casaria, e a tela diria "nenhum negócio" sem motivo
+                // visível.
+                setEtapaFiltro("all");
+              }}
+              className="foco px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
+            >
+              <option value="todos">Todos os funis</option>
+              {funis.map((f) => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+          )}
           <select
             value={etapaFiltro}
             onChange={(e) => setEtapaFiltro(e.target.value)}
             className="foco px-3 py-2 text-rotulo bg-superficie border border-fio rounded-xl"
           >
             <option value="all">Todas as etapas</option>
-            {etapasParaEscolher(etapas).map((et) => (
-              <option key={et.id} value={et.id}>{et.nome}</option>
-            ))}
+            {/* Agrupado por funil, e não numa lista corrida: os dois funis têm
+                a MESMA lista de nomes (migration 20260903170000), então sem o
+                `optgroup` a pessoa veria "Novo Lead" duas vezes sem nada que
+                dissesse qual é qual. */}
+            {funis.map((f) => {
+              const doFunil = etapasParaEscolher(etapas.filter((et) => et.pipeline_id === f.id));
+              if (doFunil.length === 0) return null;
+              return (
+                <optgroup key={f.id} label={f.nome}>
+                  {doFunil.map((et) => (
+                    <option key={et.id} value={et.id}>{et.nome}</option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
           <select
             value={ordem}

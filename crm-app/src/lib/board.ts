@@ -74,6 +74,13 @@ export type DadosDoBoard = {
   cadencias: Record<string, ResumoCadencia>;
   /** O que espera um clique, nos DOIS boards — ver `buscarAprovacoesDoBoard`. */
   aprovacoes: Record<string, ResumoDeAprovacao>;
+  /**
+   * A etapa cuja coluna é substituída pelas quatro colunas de cadência. `null`
+   * no board do vendedor — lá o board continua sendo etapa por etapa.
+   */
+  etapaCadenciaId: string | null;
+  /** Quantos existem em cada coluna de cadência, no banco e não na tela. */
+  totaisPorCadencia: Record<EstadoCadencia, number>;
 };
 
 /**
@@ -99,17 +106,31 @@ export async function carregarBoard(
   // round-trip por um dado que ele não desenha.
   const mostraCadencia = chave === "sdr";
 
+  // As etapas saíram do `Promise.all` porque as colunas de cadência precisam do
+  // id da etapa de ENTRADA antes de consultar — e é uma ida a mais ao banco só
+  // no servidor, num componente que já espera o funil.
+  //
+  // É a etapa de entrada, e não "todas as etapas", de propósito: a cadência
+  // roda ali (216 dos 220 leads do funil), e é aquela coluna que está
+  // impossível de trabalhar. Espalhar as colunas de cadência por todas as
+  // etapas faria um lead sumir de "Nutrição / Futuro" para reaparecer numa
+  // coluna de cadência — o card deixaria de estar onde a pessoa o pôs.
+  const etapas = await carregarEtapas(supabase, pipeline?.id);
+  const etapaCadenciaId = mostraCadencia
+    ? (etapas.find((e) => e.funcao === "entrada")?.id ?? null)
+    : null;
+
   const [
-    etapas,
     { data: negocios },
     { data: totais },
     { data: responsaveis },
     { data: usuarioAtual },
     inscricoes,
     pendentes,
+    porCadencia,
+    totaisCadencia,
   ] =
     await Promise.all([
-      carregarEtapas(supabase, pipeline?.id),
       // `negocios_do_board` devolve as N primeiras de CADA etapa numa consulta
       // só; como ela retorna `setof negocios`, o PostgREST embute contato,
       // responsável, etapa e atividades exatamente como no select direto.
@@ -129,6 +150,14 @@ export async function carregarBoard(
       // pode chegar lá com um toque ainda na fila, e some-lo do card do
       // vendedor seria escondê-lo de quem passou a ser dono dele.
       buscarAprovacoesDoBoard(supabase),
+      // A fatia por COLUNA DE CADÊNCIA, e a contagem real de cada uma. Só no
+      // board do SDR, e só quando o funil tem etapa de entrada.
+      etapaCadenciaId
+        ? buscarNegociosPorCadencia(supabase, pipeline?.id, etapaCadenciaId, porEtapa)
+        : Promise.resolve({ data: null }),
+      etapaCadenciaId
+        ? contarPorCadencia(supabase, pipeline?.id, etapaCadenciaId)
+        : Promise.resolve({ data: null }),
     ]);
 
   const totaisPorEtapa = Object.fromEntries((totais || []).map((t) => [t.etapa_id, Number(t.total)]));
@@ -149,14 +178,52 @@ export async function carregarBoard(
     // negócio filtrado na tela, não pode fazer a coluna sumir com card dentro.
     // ─────────────────────────────────────────────────────────────────────
     etapas: etapas.filter((e) => !e.oculta_quando_vazia || (totaisPorEtapa[e.id] ?? 0) > 0),
-    negocios: (negocios as unknown as NegocioComRelacoes[]) || [],
+    negocios: unirFatias(
+      (negocios as unknown as NegocioComRelacoes[]) || [],
+      porCadencia.data as unknown as NegocioComRelacoes[] | null,
+      etapaCadenciaId,
+    ),
     totaisPorEtapa,
     porEtapa,
     responsaveis: responsaveis || [],
     usuarioAtual: usuarioAtual!,
     cadencias: mapaDeCadencias(inscricoes.data),
     aprovacoes: mapaDeAprovacoes(pendentes.data),
+    etapaCadenciaId,
+    totaisPorCadencia: mapaDeTotaisPorCadencia(
+      totaisCadencia.data as { estado: string; total: number }[] | null,
+    ),
   };
+}
+
+/**
+ * Junta as DUAS fatias que o board do SDR carrega.
+ *
+ * `negocios_do_board` traz as N primeiras de cada ETAPA — é ela que enche
+ * "Qualificação", "Perdido" e "Nutrição / Futuro". `negocios_por_cadencia` traz
+ * as N primeiras de cada ESTADO dentro da etapa de entrada — é ela que enche as
+ * quatro colunas novas.
+ *
+ * Os cards da etapa de entrada que vieram pela primeira são DESCARTADOS: aquela
+ * etapa agora é desenhada pelas colunas de cadência, e misturar as duas fatias
+ * juntaria duas ordenações diferentes na mesma coluna (uma por último contato,
+ * outra pelo relógio de cada estado).
+ *
+ * O `Set` não é redundância: entre as duas consultas — que são paralelas — um
+ * card pode ter mudado de etapa e aparecer nas duas listas. Um `key` duplicado
+ * no React quebra a coluna inteira.
+ */
+export function unirFatias(
+  doBoard: NegocioComRelacoes[],
+  porCadencia: NegocioComRelacoes[] | null,
+  etapaCadenciaId: string | null,
+): NegocioComRelacoes[] {
+  if (!porCadencia || !etapaCadenciaId) return doBoard;
+  const naFatiaDeCadencia = new Set(porCadencia.map((n) => n.id));
+  const resto = doBoard.filter(
+    (n) => n.etapa_id !== etapaCadenciaId && !naFatiaDeCadencia.has(n.id),
+  );
+  return [...resto, ...porCadencia];
 }
 
 /**
@@ -224,7 +291,18 @@ export function buscarCadenciaDoBoard(supabase: SupabaseClient<Database>) {
       "negocio_id, passo_atual, status, proximo_envio_em, " +
         "cadencia:cadencias(nome, passos:cadencia_passos(ordem, canal))",
     )
-    .in("status", ["ativa", "pausada"])
+    // O `.in("status", ["ativa", "pausada"])` que morava aqui virou dívida no
+    // instante em que a cadência virou COLUNA.
+    //
+    // A coluna "Cadência parada" existe justamente para `respondeu`,
+    // `concluida` e `cancelada`. Com o filtro, essas inscrições não chegavam ao
+    // cliente e `estadoDeCadencia` classificaria o lead como "sem cadência" —
+    // enquanto `contagem_por_cadencia`, que lê o banco, o contaria em "parada".
+    // O card cairia numa coluna e o cabeçalho da outra o contaria. As duas
+    // regras TÊM que ver o mesmo dado.
+    //
+    // O volume não muda de ordem de grandeza: a RLS já limita às inscrições dos
+    // negócios visíveis, e são 216 leads com no máximo uma inscrição viva cada.
     // Um negocio pode ter sido inscrito mais de uma vez ao longo da vida. Sem
     // ordem, qual das inscricoes o card mostraria dependeria do plano do
     // Postgres; com ela, `mapaDeCadencias` sobrescreve ate sobrar a mais nova.
@@ -257,6 +335,179 @@ export function mapaDeCadencias(linhas: unknown): Record<string, ResumoCadencia>
     };
   }
   return mapa;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// AS COLUNAS DE CADÊNCIA
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Os quatro estados em que um lead de prospecção pode estar, e que no board do
+ * SDR viram COLUNA.
+ *
+ * O que motivou: 216 leads numa única coluna ("Novo Lead"), 181 deles com um
+ * toque pronto esperando um clique. A informação existia — o filtro "Precisa
+ * aprovação" já a lia —, mas um filtro é um recorte que a pessoa precisa
+ * lembrar de ligar. Coluna é o contrário: está lá, com o número no cabeçalho,
+ * antes de alguém procurar.
+ *
+ * O lead NÃO muda de etapa ao mudar de estado. `etapa_id` continua sendo o que
+ * era, e é `processar_cadencias()` — não a tela — quem manda no relógio.
+ */
+export const ESTADOS_DE_CADENCIA = [
+  "toque_pronto",
+  "aguardando_data",
+  "parada",
+  "sem_cadencia",
+] as const;
+
+export type EstadoCadencia = (typeof ESTADOS_DE_CADENCIA)[number];
+
+/**
+ * Nome, cor e texto de coluna vazia de cada estado.
+ *
+ * As cores não são decoração e seguem o tom que o resto do board já usa: âmbar
+ * é "fila nossa esperando um clique" (o mesmo tom do contador "Precisa
+ * aprovação"), índigo é "está andando sozinho", cinza é "parou", e o vazio é o
+ * fio neutro. Repetir o âmbar aqui é o que faz a coluna e o selo do card
+ * dizerem a mesma coisa.
+ */
+export const COLUNAS_DE_CADENCIA: {
+  chave: EstadoCadencia;
+  nome: string;
+  cor: string;
+  vazio: string;
+}[] = [
+  {
+    chave: "toque_pronto",
+    nome: "Toque pronto p/ enviar",
+    cor: "#f59e0b",
+    vazio: "Nenhum toque esperando — a fila está limpa",
+  },
+  {
+    chave: "aguardando_data",
+    nome: "Em cadência — aguardando data",
+    cor: "#6366f1",
+    vazio: "Nenhum lead com toque agendado",
+  },
+  {
+    chave: "parada",
+    nome: "Cadência parada",
+    cor: "#94a3b8",
+    vazio: "Nenhuma cadência parada",
+  },
+  {
+    chave: "sem_cadencia",
+    nome: "Sem cadência",
+    cor: "#f43f5e",
+    vazio: "Todo lead desta etapa está numa cadência",
+  },
+];
+
+/**
+ * ESPELHO, NO CLIENTE, DO `case` DA MIGRATION 20260908200000.
+ *
+ * O banco decide QUAIS leads vêm em cada coluna e QUANTOS existem; esta função
+ * decide em qual coluna cada card CARREGADO aparece. Se as duas divergirem, o
+ * card cai numa coluna e o cabeçalho da outra o conta — que é pior do que não
+ * ter as colunas, porque parece certo.
+ *
+ * A ordem dos testes é a regra, e é a mesma dos dois lados: a pendência ganha
+ * do status da inscrição, porque uma cadência pausada também pode ter um toque
+ * parado na fila, e o que importa para quem olha o board é o clique que falta.
+ */
+export function estadoDeCadencia(
+  negocioId: string,
+  cadencias: Record<string, ResumoCadencia> | undefined,
+  aprovacoes: Record<string, ResumoDeAprovacao> | undefined,
+): EstadoCadencia {
+  if (temPendencia(aprovacoes?.[negocioId])) return "toque_pronto";
+  const inscricao = cadencias?.[negocioId];
+  if (!inscricao) return "sem_cadencia";
+  return inscricao.status === "ativa" ? "aguardando_data" : "parada";
+}
+
+/**
+ * A fatia do board agrupada por estado de cadência: as N primeiras de CADA
+ * estado, dentro de uma etapa.
+ *
+ * Não dá para reaproveitar `negocios_do_board` aqui, e a razão é de dado, não
+ * de gosto: ela traz as 50 primeiras da ETAPA, ordenadas por último contato.
+ * Com 216 leads em "Novo Lead", as 50 que chegam não são as 181 que têm toque
+ * pendente — a coluna "Toque pronto" mostraria um punhado e a pessoa teria que
+ * clicar "ver mais" até o fim para achar o resto. Aqui a fatia é por coluna, e
+ * cada coluna vem cheia desde o primeiro render.
+ */
+export function buscarNegociosPorCadencia(
+  supabase: SupabaseClient<Database>,
+  pipelineId: string | null | undefined,
+  etapaId: string | null | undefined,
+  porEstado: number,
+) {
+  return supabase
+    .rpc("negocios_por_cadencia", {
+      p_pipeline_id: pipelineId ?? NENHUM_FUNIL,
+      p_etapa_id: etapaId ?? null,
+      p_por_estado: porEstado,
+    })
+    .select(SELECT_NEGOCIO_COMPLETO);
+}
+
+/** O par de contagem: o cabeçalho da coluna sai daqui, não do que carregou. */
+export function contarPorCadencia(
+  supabase: SupabaseClient<Database>,
+  pipelineId: string | null | undefined,
+  etapaId: string | null | undefined,
+) {
+  return supabase.rpc("contagem_por_cadencia", {
+    p_pipeline_id: pipelineId ?? NENHUM_FUNIL,
+    p_etapa_id: etapaId ?? null,
+  });
+}
+
+export function mapaDeTotaisPorCadencia(
+  linhas: { estado: string; total: number }[] | null,
+): Record<EstadoCadencia, number> {
+  const mapa = { toque_pronto: 0, aguardando_data: 0, parada: 0, sem_cadencia: 0 };
+  for (const linha of linhas || []) {
+    if (linha.estado in mapa) mapa[linha.estado as EstadoCadencia] = Number(linha.total);
+  }
+  return mapa;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// A BUSCA
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Quantos caracteres já valem uma ida ao banco. Uma letra só casaria com quase
+ * tudo e gastaria uma consulta para devolver um resultado inútil.
+ */
+export const MINIMO_PARA_BUSCAR = 2;
+
+/** Teto de resultados. Quem precisa de mais que isto está filtrando, não procurando. */
+export const LIMITE_DA_BUSCA = 100;
+
+/**
+ * Procura no BANCO, e não no que a tela carregou.
+ *
+ * `pipelineId` nulo procura nos dois funis — é o que a tela de leads usa, onde
+ * quem digita um nome quer achar a pessoa e não saber em que funil ela mora. O
+ * board passa o funil dele, porque ali a pergunta é "onde está este card".
+ */
+export function buscarNegociosPorTermo(
+  supabase: SupabaseClient<Database>,
+  termo: string,
+  pipelineId: string | null | undefined,
+  limite: number = LIMITE_DA_BUSCA,
+) {
+  return supabase
+    .rpc("buscar_negocios", {
+      p_termo: termo,
+      p_pipeline_id: pipelineId ?? null,
+      p_limite: limite,
+    })
+    .select(SELECT_NEGOCIO_COMPLETO);
 }
 
 /** Usada pelo servidor e pelo refetch do cliente — a mesma fatia nos dois. */

@@ -316,11 +316,24 @@ export function LeadCard({
             <span className="tabular">
               Passo {cadencia.passoAtual} de {totalDePassos}
             </span>
+            {/* O trilho passou a receber inscrição ENCERRADA também.
+                `buscarCadenciaDoBoard` trazia só `ativa` e `pausada`; agora traz
+                todas, porque a coluna "Cadência parada" precisa delas. Sem estes
+                rótulos o card diria "Passo 5 de 12" e mais nada — um lead que
+                respondeu e um que ainda vai receber o toque 5 ficariam
+                idênticos, que é justamente a diferença que faz a coluna
+                existir. */}
             {cadencia.status === "pausada"
               ? " · pausada"
-              : cadencia.proximoEnvioEm
-                ? ` · ${descreverPrazo(cadencia.proximoEnvioEm)}`
-                : ""}
+              : cadencia.status === "respondeu"
+                ? " · parou: o lead respondeu"
+                : cadencia.status === "concluida"
+                  ? " · sequência concluída"
+                  : cadencia.status === "cancelada"
+                    ? " · cancelada"
+                    : cadencia.proximoEnvioEm
+                      ? ` · ${descreverPrazo(cadencia.proximoEnvioEm)}`
+                      : ""}
           </p>
         </div>
       ) : (
