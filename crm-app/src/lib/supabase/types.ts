@@ -557,6 +557,7 @@ export type Database = {
       etapas_pipeline: {
         Row: {
           cor: string | null
+          encerra_cadencia: boolean
           funcao: string | null
           id: string
           nome: string
@@ -569,6 +570,7 @@ export type Database = {
         }
         Insert: {
           cor?: string | null
+          encerra_cadencia?: boolean
           funcao?: string | null
           id?: string
           nome: string
@@ -581,6 +583,7 @@ export type Database = {
         }
         Update: {
           cor?: string | null
+          encerra_cadencia?: boolean
           funcao?: string | null
           id?: string
           nome?: string
