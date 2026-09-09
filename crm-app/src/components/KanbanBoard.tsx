@@ -113,7 +113,12 @@ export function KanbanBoard({
      * e a última coluna não termina colada na borda.
      */
     <div className="mx-auto w-full max-w-pagina flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 overflow-x-auto pb-6 pt-4">
+      {/* `barra-de-rolagem-forte`: o board do SDR tem sete colunas e num
+          notebook cabem quatro — as tres ultimas ficam fora da tela. Com a
+          barra padrao de 8px, cinza-borda e sem trilho, ninguem percebe que da
+          para rolar, e as colunas de "Perdido" e "Nutricao / Futuro" passam por
+          inexistentes. Ver a regra em globals.css. */}
+      <div className="barra-de-rolagem-forte flex-1 min-h-0 overflow-x-auto pb-3 pt-4">
         <div className="mx-auto flex h-full w-max gap-4 px-4 sm:px-6">
         {colunas.map((coluna) => {
           const cards = coluna.cards;

@@ -290,6 +290,74 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+   A BARRA QUE PRECISA SER VISTA
+
+   A barra de 8px acima e o padrao do app: discreta de proposito em lista e
+   modal, onde a rolagem e vertical e obvia.
+
+   No KANBAN ela nao pode ser discreta. O board do SDR tem SETE colunas de
+   320px: num notebook cabem quatro, e as tres ultimas — "Qualificacao",
+   "Perdido" e "Nutricao / Futuro" — comecam fora da tela. Quem nao percebe que
+   da para rolar conclui que as colunas nao existem. Foi o que aconteceu: as
+   colunas estavam la, desenhadas, e passaram por inexistentes.
+
+   Tres coisas mudam, e cada uma resolve uma parte:
+
+   1. ALTURA 14px em vez de 8. Alvo de mouse, nao so indicador.
+   2. TRILHO visivel (`--cor-recuo` com fio em volta). Sem trilho, a barra so
+      existe onde o polegar esta; com trilho, o espaco vazio a direita diz
+      "tem mais board ali" mesmo com o polegar todo a esquerda.
+   3. POLEGAR em `--cor-tinta-fraca` em vez de `--cor-fio-forte`. Esse era o
+      furo real: `--cor-fio-forte` e #d4d4d8, uma cor de BORDA sobre fundo
+      #f4f4f5 — praticamente invisivel. `--cor-tinta-fraca` (#63636d) e cor de
+      TEXTO secundario, e le como elemento, nao como sombra.
+
+   NAO uso `scrollbar-gutter: stable` aqui, e a razao e concreta: este container
+   tem `overflow-x: auto` e `overflow-y: visible`, e o CSS promove o eixo
+   vertical a `auto` quando o outro nao e `visible`. Ou seja, ele e container de
+   rolagem nos DOIS eixos, e a calha estavel reservaria 14px vazios tambem a
+   direita do board — uma faixa morta permanente para uma barra vertical que
+   nunca aparece (as colunas sao `h-full` e rolam por dentro).
+
+   Firefox nao tem `::-webkit-scrollbar` e usa `scrollbar-color`/`width`, entao
+   as duas declaracoes estao aqui — nao sao alternativas, sao navegadores
+   diferentes.
+
+   O `!important` no `height` existe porque a regra generica acima tem a mesma
+   especificidade e vem antes; sem ele, qual das duas vence depende da ordem
+   que o bundler emitir.
+   --------------------------------------------------------------------------- */
+@utility barra-de-rolagem-forte {
+  /* Firefox */
+  scrollbar-width: auto;
+  scrollbar-color: var(--cor-tinta-fraca) var(--cor-recuo);
+
+  &::-webkit-scrollbar {
+    height: 14px !important;
+    width: 14px;
+  }
+  &::-webkit-scrollbar-track {
+    background: var(--cor-recuo);
+    border: 1px solid var(--cor-fio);
+    border-radius: 999px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--cor-tinta-fraca);
+    border-radius: 999px;
+    /* A borda transparente com `background-clip` afina o polegar dentro do
+       trilho sem encolher a AREA de clique: o alvo continua tendo 14px. */
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  /* `background-color` nomeado, nunca `all`: `transition: all` animaria ate
+     `border` e `background-clip` (craft R12). */
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--cor-tinta-suave);
+    background-clip: content-box;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    MOVIMENTO L2
 
    Duas entradas e uma barra que reage a rolagem. `IntersectionObserver` + CSS,
