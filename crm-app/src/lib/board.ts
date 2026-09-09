@@ -390,19 +390,36 @@ export const COLUNAS_DE_CADENCIA: {
     cor: "#6366f1",
     vazio: "Nenhum lead com toque agendado",
   },
-  {
-    chave: "parada",
-    nome: "Cadência parada",
-    cor: "#94a3b8",
-    vazio: "Nenhuma cadência parada",
-  },
-  {
-    chave: "sem_cadencia",
-    nome: "Sem cadência",
-    cor: "#f43f5e",
-    vazio: "Todo lead desta etapa está numa cadência",
-  },
 ];
+
+/**
+ * OS ESTADOS QUE NÃO TÊM COLUNA PRÓPRIA — e o que impede que eles sumam.
+ *
+ * "Cadência parada" e "Sem cadência" saíram do board: hoje as duas estão
+ * vazias (medido: 172 em "toque pronto" e 40 em "aguardando data", zero nas
+ * outras) e duas colunas permanentemente vazias são ruído numa esteira.
+ *
+ * Mas os dois estados CONTINUAM ACONTECENDO, e é por isso que esta lista
+ * existe em vez de o código simplesmente esquecê-los:
+ *
+ *   parada        a inscrição virou 'pausada' (o contato não tem e-mail,
+ *                 WhatsApp nem telefone), 'cancelada' (revogou consentimento)
+ *                 ou 'respondeu';
+ *   sem_cadencia  o lead entrou sem inscrição — a cadência do funil está
+ *                 inativa ou sem passos, e o gatilho desiste em silêncio.
+ *
+ * Um lead nesses estados fica na etapa de entrada, cuja coluna foi SUBSTITUÍDA
+ * pelas de cadência (`unirFatias` descarta os cards dela vindos de
+ * `negocios_do_board`). Sem esta lista, ele não apareceria em coluna nenhuma —
+ * existiria no banco e não na tela. É o mesmo desfecho de esconder uma coluna
+ * atrás da rolagem, só que pior, porque nem rolando se acha.
+ *
+ * Derivada de `COLUNAS_DE_CADENCIA`, e não escrita à mão: devolver uma coluna
+ * ao board tira o estado daqui sozinho, sem ninguém precisar lembrar.
+ */
+export const ESTADOS_SEM_COLUNA: EstadoCadencia[] = ESTADOS_DE_CADENCIA.filter(
+  (e) => !COLUNAS_DE_CADENCIA.some((c) => c.chave === e),
+);
 
 /**
  * ESPELHO, NO CLIENTE, DO `case` DA MIGRATION 20260908200000.

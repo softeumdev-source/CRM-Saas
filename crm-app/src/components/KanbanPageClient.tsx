@@ -15,6 +15,7 @@ import { etapasParaEscolher, recorteDeFunil, type Pipeline } from "@/lib/pipelin
 import {
   CARDS_POR_ETAPA,
   COLUNAS_DE_CADENCIA,
+  ESTADOS_SEM_COLUNA,
   LIMITE_DA_BUSCA,
   MINIMO_PARA_BUSCAR,
   buscarAprovacoesDoBoard,
@@ -695,12 +696,59 @@ export function KanbanPageClient({
           total: buscandoNoBanco ? cards.length : totaisCadencia[modelo.chave],
           carregados: buscandoNoBanco ? cards.length : carregadosPorCadencia[modelo.chave],
           aceitaSolta: null,
-          // O "+" fica só em "Sem cadência", e ali ele é a verdade: um lead
-          // recém-criado não tem inscrição, então é exatamente nesta coluna que
-          // ele vai aparecer. Sem isto o SDR perderia o único caminho de criar
-          // lead pelo board, porque a coluna que tinha o botão deixou de existir.
-          criarEm: modelo.chave === "sem_cadencia" ? etapaCadenciaId : null,
+          // Sem "+" nas colunas de cadência: elas são um RECORTE do estado da
+          // fila, não um lugar onde se põe lead. Criar continua no botão "Novo
+          // Lead" do cabeçalho, e também no "+" da coluna de resto abaixo,
+          // quando ela existe — ali o botão é honesto, porque aquela coluna É a
+          // etapa.
+          criarEm: null,
           vazio: modelo.vazio,
+        });
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // A COLUNA DE RESTO. Só aparece quando tem alguém dentro.
+      //
+      // "Cadência parada" e "Sem cadência" deixaram de ser colunas fixas — as
+      // duas vivem vazias e ocupavam 640px de board. Mas os dois estados
+      // continuam acontecendo (contato sem canal, consentimento revogado, lead
+      // que respondeu, cadência do funil desativada), e um lead nesses estados
+      // fica na etapa de entrada, cuja coluna foi substituída pelas de
+      // cadência. Sem isto ele não apareceria em coluna nenhuma.
+      //
+      // Some quando zera — que é o caso normal e é o caso de hoje —, então o
+      // board fica com as duas colunas pedidas. Quando um lead cai fora das
+      // duas, a coluna reaparece com ele dentro, com o nome da própria etapa.
+      // É a mesma regra de `oculta_quando_vazia`, aplicada a uma coluna que não
+      // é uma linha de `etapas_pipeline`.
+      //
+      // O total vem do BANCO (`totaisCadencia`), e não dos cards carregados:
+      // com o teto de 50 por estado, contar o que está na tela faria a coluna
+      // sumir com lead dentro — exatamente o que ela existe para impedir.
+      // ─────────────────────────────────────────────────────────────────────
+      const restantes = daEtapa.filter((n) =>
+        ESTADOS_SEM_COLUNA.includes(estadoDeCadencia(n.id, cadencias, aprovacoes)),
+      );
+      const totalRestante = buscandoNoBanco
+        ? restantes.length
+        : ESTADOS_SEM_COLUNA.reduce((soma, chave) => soma + (totaisCadencia[chave] ?? 0), 0);
+
+      if (totalRestante > 0 || restantes.length > 0) {
+        lista.push({
+          id: `${etapa.id}:resto`,
+          nome: etapa.nome,
+          cor: etapa.cor || "#94a3b8",
+          cards: restantes,
+          total: totalRestante,
+          carregados: buscandoNoBanco
+            ? restantes.length
+            : ESTADOS_SEM_COLUNA.reduce((soma, chave) => soma + carregadosPorCadencia[chave], 0),
+          // Aceita arrasto: é a etapa de verdade, e devolver um card para cá é
+          // um movimento legítimo — diferente das colunas de cadência, onde
+          // soltar não criaria toque nenhum.
+          aceitaSolta: etapa.id,
+          criarEm: etapa.id,
+          vazio: "Nenhum lead fora da cadência",
         });
       }
     }
