@@ -538,6 +538,32 @@ export function KanbanPageClient({
    */
   const etapasDoMenu = useMemo(() => etapasParaEscolher(etapas), [etapas]);
 
+  /**
+   * As etapas que ENCERRAM o negócio, por id.
+   *
+   * O cabeçalho perguntava a `negocios.ganho` se o card estava fechado, mas o
+   * board desenha o card pela ETAPA. Dois donos da mesma verdade — e eles já
+   * tinham divergido: três negócios estavam parados na coluna "Perdido" com
+   * `ganho` nulo, criados ali antes de a regra existir. O cabeçalho os somava
+   * ao pipeline aberto e cobrava "sem próximo passo" de lead perdido.
+   *
+   * A migration `20260910020000` faz o banco manter `ganho` colado na etapa,
+   * então daqui para frente os dois concordam. Ainda assim a tela pergunta AOS
+   * DOIS e considera fechado se qualquer um disser que sim: para um alarme
+   * essa é a direção segura — o preço de errar é cobrar ação de negócio morto.
+   */
+  const etapasQueFecham = useMemo(
+    () => new Set(etapas.filter((e) => resultadoDaEtapa(e) !== null).map((e) => e.id)),
+    [etapas],
+  );
+
+  const estaFechado = useCallback(
+    (n: NegocioComRelacoes) =>
+      (n.ganho !== null && n.ganho !== undefined) ||
+      (!!n.etapa_id && etapasQueFecham.has(n.etapa_id)),
+    [etapasQueFecham],
+  );
+
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const termoDigitos = termo.replace(/\D/g, "");
@@ -556,6 +582,21 @@ export function KanbanPageClient({
         const proxima = proximaAtividade(n.atividades_pendentes);
         if (foco === "respondeu" && (n.respostas_nao_lidas ?? 0) === 0) return false;
         if (foco === "aprovacao" && !temPendencia(aprovacoes[n.id])) return false;
+
+        // Os TRÊS de baixo perguntam "quem está parado esperando ação?", e um
+        // negócio fechado não está parado — está encerrado. Sem esta linha o
+        // filtro e o contador ao lado dele discordariam na tela: o cabeçalho
+        // diria "2 sem próximo passo" e o clique traria 5 cards, três deles em
+        // "Perdido". Os dois recortes precisam ser o MESMO recorte.
+        //
+        // "Responderam" e "Precisa aprovação" ficam de fora desta regra de
+        // propósito: eles não são trabalho parado, são coisa que CHEGOU. Um
+        // cliente que escreve depois de ter sido dado como perdido é
+        // justamente a mensagem que não se pode esconder.
+        if (foco === "atencao" || foco === "atrasados" || foco === "sem_agenda") {
+          if (estaFechado(n)) return false;
+        }
+
         if (foco === "atencao" && temAtividadeHoje(n)) return false;
         if (foco === "atrasados" && !estaAtrasada(proxima?.data_agendada)) return false;
         if (foco === "sem_agenda" && proxima) return false;
@@ -579,32 +620,9 @@ export function KanbanPageClient({
     // `aprovacoes` PRECISA estar aqui: sem ela a lista não recalcularia quando
     // alguém aprovasse um e-mail, e o card ficaria no filtro depois de sair da
     // fila.
-  }, [negocios, achados, busca, foco, responsavel, aprovacoes]);
-
-  /**
-   * As etapas que ENCERRAM o negócio, por id.
-   *
-   * O resumo perguntava a `negocios.ganho` se o card estava fechado, mas o
-   * board desenha o card pela ETAPA. Dois donos da mesma verdade — e eles já
-   * tinham divergido: três negócios estavam parados na coluna "Perdido" com
-   * `ganho` nulo, criados ali antes de a regra existir. O cabeçalho os somava
-   * ao pipeline aberto e cobrava "sem próximo passo" de lead perdido.
-   *
-   * A migration `20260910020000` faz o banco manter `ganho` colado na etapa,
-   * então daqui para frente os dois concordam. Ainda assim a tela pergunta AOS
-   * DOIS e considera fechado se qualquer um disser que sim: para um alarme
-   * essa é a direção segura — o preço de errar é cobrar ação de negócio morto.
-   */
-  const etapasQueFecham = useMemo(
-    () => new Set(etapas.filter((e) => resultadoDaEtapa(e) !== null).map((e) => e.id)),
-    [etapas],
-  );
+  }, [negocios, achados, busca, foco, responsavel, aprovacoes, estaFechado]);
 
   const resumo = useMemo(() => {
-    const estaFechado = (n: NegocioComRelacoes) =>
-      (n.ganho !== null && n.ganho !== undefined) ||
-      (!!n.etapa_id && etapasQueFecham.has(n.etapa_id));
-
     const abertos = filtrados.filter((n) => !estaFechado(n));
     return {
       abertos: abertos.length,
@@ -620,7 +638,7 @@ export function KanbanPageClient({
       atrasados: abertos.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length,
       semAgenda: abertos.filter((n) => !proximaAtividade(n.atividades_pendentes)).length,
     };
-  }, [filtrados, etapasQueFecham]);
+  }, [filtrados, estaFechado]);
 
   /**
    * Quantos responderam no board INTEIRO, e não dentro do recorte atual.
