@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Plus, Layers, CheckCircle2, AlertTriangle } from "lucide-react";
-import type { NegocioComRelacoes } from "@/lib/types";
+import type { EtapaPipeline, NegocioComRelacoes } from "@/lib/types";
 import { formatarMoeda } from "@/lib/types";
+import { MenuDoCard } from "@/components/MenuDoCard";
 // `ordenarPorCadencia` saiu daqui junto com o `etapas.map`: a ordem passou a
 // ser responsabilidade de quem monta a coluna — ver `ColunaDoBoard`.
 import { estaAtrasada, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
@@ -56,9 +57,11 @@ export function KanbanBoard({
   cadencias,
   aprovacoes,
   carregandoMais,
+  etapasDoMenu = [],
   onCarregarMais,
   onNovoNegocio,
   onMoverNegocio,
+  onFecharNegocio,
 }: {
   colunas: ColunaDoBoard[];
   /** Qual board e este. Vem de `pipeline.chave`, nao de adivinhacao. */
@@ -67,9 +70,16 @@ export function KanbanBoard({
   cadencias?: Record<string, ResumoCadencia>;
   aprovacoes?: Record<string, ResumoDeAprovacao>;
   carregandoMais: boolean;
+  /**
+   * Os destinos que o menu do card oferece. Vazio esconde o menu — e o que
+   * mantem o board utilizavel se as etapas ainda nao carregaram.
+   */
+  etapasDoMenu?: EtapaPipeline[];
   onCarregarMais: () => void;
   onNovoNegocio: (etapaId: string) => void;
   onMoverNegocio: (negocioId: string, etapaId: string) => void;
+  /** Abre o dialogo de fechamento. `true` = ganho, `false` = perda. */
+  onFecharNegocio?: (negocioId: string, ganho: boolean) => void;
 }) {
   const [etapaAlvo, setEtapaAlvo] = useState<string | null>(null);
   const [arrastando, setArrastando] = useState<string | null>(null);
@@ -254,6 +264,16 @@ export function KanbanBoard({
                         variante={variante}
                         cadencia={cadencias?.[negocio.id]}
                         aprovacao={aprovacoes?.[negocio.id]}
+                        acoes={
+                          etapasDoMenu.length > 0 && onFecharNegocio ? (
+                            <MenuDoCard
+                              etapas={etapasDoMenu}
+                              etapaAtualId={negocio.etapa_id}
+                              aoMover={(etapaId) => onMoverNegocio(negocio.id, etapaId)}
+                              aoFechar={(ganho) => onFecharNegocio(negocio.id, ganho)}
+                            />
+                          ) : null
+                        }
                       />
                       </CardQueSurge>
                     </div>

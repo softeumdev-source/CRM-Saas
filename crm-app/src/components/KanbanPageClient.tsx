@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { Vazio } from "@/components/ui/Cartao";
-import { Segmentado } from "@/components/ui";
+import { AreaTexto, Botao, Campo, Modal, Segmentado } from "@/components/ui";
 import { NewLeadModal } from "@/components/NewLeadModal";
-import { moverEtapa } from "@/lib/negocios";
-import { recorteDeFunil, type Pipeline } from "@/lib/pipelines";
+import { fecharNegocio, moverEtapa } from "@/lib/negocios";
+import { etapasParaEscolher, recorteDeFunil, type Pipeline } from "@/lib/pipelines";
 import {
   CARDS_POR_ETAPA,
   COLUNAS_DE_CADENCIA,
@@ -461,6 +461,81 @@ export function KanbanPageClient({
     },
     [negocios, etapas, usuarioAtual.id, recarregar, setNegocios],
   );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FECHAR O NEGÓCIO PELO CARD.
+  //
+  // Arrastar até "Fechado (Ganho)"/"Perdido" continua funcionando e continua
+  // sendo `moverEtapa`. O que este caminho acrescenta é o que só `fecharNegocio`
+  // faz: crava a probabilidade em 100/0 e REGISTRA O MOTIVO da perda. Arrastar
+  // deixa `motivo_perda` nulo, e um relatório de perda sem motivo não responde
+  // a única pergunta que ele existe para responder.
+  //
+  // As etapas de fechamento são as duas últimas colunas de oito em Vendas, e no
+  // SDR ficam depois das quatro colunas de cadência — fora da tela num
+  // notebook, e inalcançáveis por arrasto porque o board rola na horizontal e o
+  // drag nativo não rola contêiner. Sem este menu, fechar um negócio pelo
+  // kanban simplesmente não era possível.
+  // ─────────────────────────────────────────────────────────────────────────
+  const [fechando, setFechando] = useState<{ negocioId: string; ganho: boolean } | null>(null);
+  const [motivoPerda, setMotivoPerda] = useState("");
+  const [fechandoAgora, setFechandoAgora] = useState(false);
+
+  const abrirFechamento = useCallback((negocioId: string, ganho: boolean) => {
+    setMotivoPerda("");
+    setErro(null);
+    setAviso(null);
+    setFechando({ negocioId, ganho });
+  }, []);
+
+  const confirmarFechamento = async () => {
+    if (!fechando) return;
+    const etapaAlvo = etapas.find((e) => resultadoDaEtapa(e) === fechando.ganho);
+    if (!etapaAlvo) {
+      setErro(`Não encontrei a etapa de ${fechando.ganho ? "ganho" : "perda"} neste funil.`);
+      setFechando(null);
+      return;
+    }
+
+    setFechandoAgora(true);
+    const motivo = motivoPerda.trim();
+    const r = await fecharNegocio({
+      negocioId: fechando.negocioId,
+      etapaAlvo,
+      ganho: fechando.ganho,
+      // Ganho não tem motivo de perda; perda sem texto grava null em vez de
+      // string vazia, para o relatório distinguir "não informado" de "".
+      motivo: fechando.ganho || !motivo ? null : motivo,
+      usuarioId: usuarioAtual.id,
+    });
+    setFechandoAgora(false);
+
+    if (!r.ok) {
+      setErro(`Não foi possível fechar o negócio: ${r.erro}`);
+      return;
+    }
+    setFechando(null);
+    setAviso(
+      fechando.ganho
+        ? `Negócio marcado como GANHO e movido para "${etapaAlvo.nome}".`
+        : `Negócio marcado como PERDIDO e movido para "${etapaAlvo.nome}".`,
+    );
+    void recarregar();
+  };
+
+  /**
+   * Os destinos que o menu do card oferece.
+   *
+   * `etapasParaEscolher` é o mesmo filtro do seletor de etapa da tela do
+   * negócio: tira as etapas que só existem para as ordens dos dois funis
+   * casarem ("Novo Lead" e "Qualificação" de Vendas), mas mantém a nutrição —
+   * ela é destino legítimo, e como coluna vazia também não aceita arrasto.
+   *
+   * A etapa ATUAL não é passada aqui de propósito: ela é por card, e quem a
+   * remove da lista é o próprio `MenuDoCard`. Passar uma só faria a etapa de um
+   * card sobreviver ao filtro no menu de todos os outros.
+   */
+  const etapasDoMenu = useMemo(() => etapasParaEscolher(etapas), [etapas]);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -1005,11 +1080,60 @@ export function KanbanPageClient({
         cadencias={cadencias}
         aprovacoes={aprovacoes}
         carregandoMais={carregandoMais}
+        etapasDoMenu={etapasDoMenu}
         onCarregarMais={carregarMais}
         onNovoNegocio={abrirNovoNegocio}
         onMoverNegocio={moverNegocio}
+        onFecharNegocio={abrirFechamento}
       />
       )}
+
+      {/* O diálogo do fechamento. Não é `Confirmar` porque a perda PEDE um
+          campo de texto, e `Confirmar` só tem descrição e botão. */}
+      <Modal
+        aberto={fechando !== null}
+        aoFechar={() => setFechando(null)}
+        titulo={fechando?.ganho ? "Marcar como ganho" : "Marcar como perdido"}
+        rodape={
+          <>
+            <Botao variante="sutil" onClick={() => setFechando(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              variante={fechando?.ganho ? "primario" : "perigo"}
+              carregando={fechandoAgora}
+              onClick={confirmarFechamento}
+            >
+              {fechando?.ganho ? "Marcar como ganho" : "Marcar como perdido"}
+            </Botao>
+          </>
+        }
+      >
+        {fechando?.ganho ? (
+          <p className="text-corpo text-tinta-suave">
+            O negócio vai para a etapa de ganho, com probabilidade 100%, e a data de fechamento
+            fica registrada.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-corpo text-tinta-suave">
+              O negócio vai para a etapa de perda, com probabilidade 0%. O motivo fica no
+              histórico do lead e é o que alimenta o relatório de perdas.
+            </p>
+            <Campo rotulo="Motivo da perda" dica="Opcional, mas é o que explica a perda depois.">
+              {(props) => (
+                <AreaTexto
+                  {...props}
+                  rows={3}
+                  value={motivoPerda}
+                  onChange={(e) => setMotivoPerda(e.target.value)}
+                  placeholder="Ex.: preço acima do orçamento; escolheu concorrente; sem fit com o produto."
+                />
+              )}
+            </Campo>
+          </div>
+        )}
+      </Modal>
 
       {modalAberto && (
         <NewLeadModal

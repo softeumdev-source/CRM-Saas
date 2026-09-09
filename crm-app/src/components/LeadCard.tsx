@@ -52,9 +52,17 @@ export function LeadCard({
   variante = "vendas",
   cadencia,
   aprovacao,
+  acoes,
 }: {
   negocio: NegocioComRelacoes;
   variante?: VarianteDoCard;
+  /**
+   * O menu de acoes do card, quando quem desenha o board tem para onde mover.
+   * E um slot, e nao props de acao, porque o card continua sendo so
+   * apresentacao: quem sabe as etapas e quem chama `moverEtapa`/`fecharNegocio`
+   * e o board — ver `MenuDoCard`.
+   */
+  acoes?: React.ReactNode;
   /** Andamento da cadencia deste negocio. So o board do SDR passa. */
   cadencia?: ResumoCadencia;
   /** O que esta parado esperando um clique. Os dois boards passam. */
@@ -185,13 +193,18 @@ export function LeadCard({
           ) : null}
         </div>
 
-        {/* "baixa" nao aparece: um selo cinza em todo card era parte do ruido
-            que deixava o board denso. Alta e media continuam. */}
-        {negocio.prioridade === "alta" || negocio.prioridade === "media" ? (
-          <Selo tom={negocio.prioridade === "alta" ? "risco" : "alerta"}>
-            {negocio.prioridade === "alta" ? "Alta" : "Média"}
-          </Selo>
-        ) : null}
+        {/* O selo de prioridade e o menu dividem o canto superior direito. O
+            menu vem por ultimo — e a acao, e fica na quina, onde o polegar
+            alcanca. "baixa" nao aparece: um selo cinza em todo card era parte
+            do ruido que deixava o board denso. Alta e media continuam. */}
+        <div className="flex shrink-0 items-center gap-1">
+          {negocio.prioridade === "alta" || negocio.prioridade === "media" ? (
+            <Selo tom={negocio.prioridade === "alta" ? "risco" : "alerta"}>
+              {negocio.prioridade === "alta" ? "Alta" : "Média"}
+            </Selo>
+          ) : null}
+          {acoes}
+        </div>
       </div>
 
       <div className="space-y-1 pl-3.5">
