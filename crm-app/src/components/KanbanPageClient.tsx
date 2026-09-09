@@ -581,18 +581,46 @@ export function KanbanPageClient({
     // fila.
   }, [negocios, achados, busca, foco, responsavel, aprovacoes]);
 
+  /**
+   * As etapas que ENCERRAM o negócio, por id.
+   *
+   * O resumo perguntava a `negocios.ganho` se o card estava fechado, mas o
+   * board desenha o card pela ETAPA. Dois donos da mesma verdade — e eles já
+   * tinham divergido: três negócios estavam parados na coluna "Perdido" com
+   * `ganho` nulo, criados ali antes de a regra existir. O cabeçalho os somava
+   * ao pipeline aberto e cobrava "sem próximo passo" de lead perdido.
+   *
+   * A migration `20260910020000` faz o banco manter `ganho` colado na etapa,
+   * então daqui para frente os dois concordam. Ainda assim a tela pergunta AOS
+   * DOIS e considera fechado se qualquer um disser que sim: para um alarme
+   * essa é a direção segura — o preço de errar é cobrar ação de negócio morto.
+   */
+  const etapasQueFecham = useMemo(
+    () => new Set(etapas.filter((e) => resultadoDaEtapa(e) !== null).map((e) => e.id)),
+    [etapas],
+  );
+
   const resumo = useMemo(() => {
-    const abertos = filtrados.filter((n) => n.ganho === null || n.ganho === undefined);
+    const estaFechado = (n: NegocioComRelacoes) =>
+      (n.ganho !== null && n.ganho !== undefined) ||
+      (!!n.etapa_id && etapasQueFecham.has(n.etapa_id));
+
+    const abertos = filtrados.filter((n) => !estaFechado(n));
     return {
       abertos: abertos.length,
       valor: abertos.reduce((acc, n) => acc + (n.valor || 0), 0),
       ponderado: abertos.reduce((acc, n) => acc + (n.valor || 0) * ((n.probabilidade ?? 0) / 100), 0),
+      // "Responderam" é o ÚNICO que continua olhando o board inteiro, e de
+      // propósito. Os outros três são alarmes de trabalho parado, e trabalho
+      // parado num negócio fechado não é trabalho. Uma resposta, não: cliente
+      // que escreve depois de ter sido dado como perdido é justamente a
+      // mensagem que não se pode esconder.
       responderam: filtrados.filter((n) => (n.respostas_nao_lidas ?? 0) > 0).length,
-      hoje: filtrados.filter((n) => temAtividadeHoje(n)).length,
-      atrasados: filtrados.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length,
+      hoje: abertos.filter((n) => temAtividadeHoje(n)).length,
+      atrasados: abertos.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length,
       semAgenda: abertos.filter((n) => !proximaAtividade(n.atividades_pendentes)).length,
     };
-  }, [filtrados]);
+  }, [filtrados, etapasQueFecham]);
 
   /**
    * Quantos responderam no board INTEIRO, e não dentro do recorte atual.
