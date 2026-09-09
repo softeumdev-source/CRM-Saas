@@ -1916,6 +1916,10 @@ export type Database = {
       disparar_reunioes: { Args: never; Returns: string }
       disparar_sync_gmail: { Args: never; Returns: string }
       distribuir_leads: { Args: { p_contato_ids: string[] }; Returns: number }
+      encerrar_cadencia_por_reuniao: {
+        Args: { p_negocio_id: string }
+        Returns: Json
+      }
       enviar_para_prospeccao: {
         Args: { p_contato_ids: string[] }
         Returns: Json

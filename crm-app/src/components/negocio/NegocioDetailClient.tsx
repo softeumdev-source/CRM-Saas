@@ -26,7 +26,12 @@ import { MensagensTab } from "@/components/negocio/MensagensTab";
 import { useRespostasLidas } from "@/components/negocio/useRespostasLidas";
 import { EmailTab } from "@/components/negocio/EmailTab";
 import { RegistroDeResposta } from "@/components/negocio/RegistroDeResposta";
-import { fecharNegocio, moverEtapa, transferirDeFunil } from "@/lib/negocios";
+import {
+  encerrarCadenciaPorReuniao,
+  fecharNegocio,
+  moverEtapa,
+  transferirDeFunil,
+} from "@/lib/negocios";
 import type { Pipeline } from "@/lib/pipelines";
 import {
   Abas,
@@ -300,7 +305,25 @@ export function NegocioDetailClient({
     quando: string | null;
     comMeet: boolean;
   }): Promise<string | void> => {
-    if (!entrega) return;
+    // A CADÊNCIA MORRE ANTES DA TRANSFERÊNCIA, e a ordem é deliberada.
+    //
+    // `processar_cadencias()` seleciona por `status = 'ativa'` e mais nada —
+    // não há recorte de funil. Uma inscrição viva sobrevive à mudança de funil
+    // e o cron continua mandando toque de prospecção em quem já tem hora
+    // marcada. Encerrar primeiro significa que, se a transferência falhar, o
+    // pior caso é um lead parado no funil do SDR sem cadência — e não um lead
+    // no vendedor sendo prospectado.
+    const fim = await encerrarCadenciaPorReuniao(negocio.id);
+    if (!fim.ok) return `A reunião foi criada, mas não consegui encerrar a cadência: ${fim.erro}`;
+
+    // Sem funil de destino não há o que entregar (é o caso do board de vendas,
+    // onde `pipelines.pipeline_destino_id` é nulo). A cadência acima já parou,
+    // que é o certo nos dois casos.
+    if (!entrega) {
+      void recarregar();
+      return;
+    }
+
     const r = await transferirDeFunil({
       negocioId: negocio.id,
       etapaDestino: entrega.etapa,
@@ -308,7 +331,8 @@ export function NegocioDetailClient({
       titulo: `Entregue para ${entrega.funil.nome}`,
       descricao:
         `Reunião agendada para ${formatarDataHora(quando)}${comMeet ? ", com Meet" : ""}. ` +
-        `O lead passou de "${negocio.etapa?.nome ?? "—"}" para "${entrega.etapa.nome}" em ` +
+        `A cadência de prospecção foi encerrada e o lead passou de ` +
+        `"${negocio.etapa?.nome ?? "—"}" para "${entrega.etapa.nome}" em ` +
         `${entrega.funil.nome}, sem dono, para o próximo vendedor livre assumir.`,
     });
     if (!r.ok) return r.erro;
@@ -916,7 +940,38 @@ export function NegocioDetailClient({
           ]}
           aoAgendado={(r) => {
             if (r.aviso) setErro(r.aviso);
-            void recarregar();
+            // ─────────────────────────────────────────────────────────────
+            // AGENDAR É ENTREGAR, TAMBÉM POR AQUI.
+            //
+            // Havia dois caminhos para marcar a mesma reunião e eles faziam
+            // coisas diferentes: "Agendar e entregar ao vendedor", na aba
+            // Cadência, encerrava a prospecção e passava o lead adiante; este
+            // botão do cabeçalho só criava a reunião e deixava o card onde
+            // estava, com a cadência viva. Mesmo ato, dois resultados — e o do
+            // cabeçalho é o que está sempre à vista.
+            //
+            // `entregarComReuniao` é a MESMA função dos dois lados: encerra a
+            // cadência, cancela os toques na fila e entrega em "Demonstração
+            // Agendada". Reescrever a lógica aqui é o erro que este projeto já
+            // pagou com `moverEtapa`.
+            //
+            // `comMeet` sai do link REAL, e não da caixa marcada no modal: a
+            // criação do convite pode falhar e deixar a reunião só no CRM (é o
+            // que `r.aviso` acima conta), e aí a descrição no histórico não
+            // pode afirmar que houve Meet.
+            //
+            // Só na criação. O modal de edição, logo abaixo, continua sem isto:
+            // corrigir a hora de uma reunião não é agendar de novo, e re-entregar
+            // um lead que já está no vendedor lançaria uma segunda "Entregue
+            // para Vendas" no histórico.
+            void (async () => {
+              const problema = await entregarComReuniao({
+                quando: r.atividade.data_agendada,
+                comMeet: !!(r.evento?.meetLink ?? r.atividade.google_meet_link),
+              });
+              if (problema) setErro(problema);
+              else void recarregar();
+            })();
           }}
         />
       )}

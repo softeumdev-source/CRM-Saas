@@ -210,3 +210,28 @@ export async function transferirDeFunil({
   if (error) return { ok: false, erro: error.message };
   return { ok: true, ganho: resultadoDaEtapa(etapaDestino) };
 }
+
+/**
+ * Encerra a cadência de prospecção porque a reunião foi agendada.
+ *
+ * A cadência existe para conseguir UMA coisa — a reunião. Conseguida, ela para,
+ * e os toques já escritos esperando um clique são descartados: mandar "podemos
+ * conversar 20 minutos?" para quem já tem hora marcada é o pior desfecho.
+ *
+ * Vai por RPC porque são duas tabelas (`cadencia_inscricoes` e `mensagens`) e
+ * elas TÊM que mudar juntas: parar a inscrição e deixar o toque na fila
+ * manteria o card em "Toque pronto p/ enviar" com a cadência morta.
+ *
+ * NÃO é chamada pela mudança de funil, e sim por quem agenda — ver o cabeçalho
+ * da migration `20260909160000`. O mesmo `transferir_negocio_de_funil` leva o
+ * no-show de volta ao SDR, e ali a cadência precisa COMEÇAR.
+ */
+export async function encerrarCadenciaPorReuniao(
+  negocioId: string,
+): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const { error } = await createClient().rpc("encerrar_cadencia_por_reuniao", {
+    p_negocio_id: negocioId,
+  });
+  if (error) return { ok: false, erro: error.message };
+  return { ok: true };
+}
