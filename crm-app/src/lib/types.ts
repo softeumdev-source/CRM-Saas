@@ -261,6 +261,34 @@ export function resultadoDaEtapa(
   return null;
 }
 
+/**
+ * "Este negócio está encerrado?" — perguntado às DUAS fontes que respondiam.
+ *
+ * Existiam duas: `negocios.ganho` e o `resultado` da etapa em que o card está.
+ * Elas divergiram na prática — três negócios ficaram parados na coluna
+ * "Perdido" com `ganho` nulo, e todo contador que lia só `ganho` os somava ao
+ * pipeline aberto: o cabeçalho do Kanban cobrava "sem próximo passo" de lead
+ * perdido, e a aba de vendedores os chamava de "negócios ativos".
+ *
+ * A migration `20260910020000` põe um gatilho que mantém `ganho` colado na
+ * etapa, então as duas passam a concordar sempre. Esta função ainda pergunta
+ * às duas e responde "fechado" se qualquer uma disser que sim, porque a
+ * assimetria importa: o preço de errar para "aberto" é cobrar ação de um
+ * negócio morto — o contrário só esconde uma linha de uma soma.
+ *
+ * Ela existe como função, e não como três `filter` parecidos espalhados, pelo
+ * motivo que criou o defeito: a pergunta era copiada, e as cópias divergiram.
+ */
+export function negocioEstaFechado(
+  negocio: {
+    ganho?: boolean | null;
+    etapa?: { nome?: string | null; resultado?: string | null } | null;
+  },
+): boolean {
+  if (negocio.ganho !== null && negocio.ganho !== undefined) return true;
+  return resultadoDaEtapa(negocio.etapa) !== null;
+}
+
 /** A etapa que encerra o negócio como perda — não mais "a de maior ordem". */
 export function ehEtapaDePerda(etapa: { resultado?: string | null } | null | undefined): boolean {
   return etapa?.resultado === "perdido";

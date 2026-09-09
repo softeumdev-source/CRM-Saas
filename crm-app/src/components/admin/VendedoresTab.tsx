@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
 import { mensagemDeFalha } from "@/lib/erros";
 import type { Convite, NegocioComRelacoes, Papel, Usuario } from "@/lib/types";
-import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais } from "@/lib/types";
+import { DESCRICAO_PAPEL, PAPEIS, ROTULO_PAPEL, ehDoTime, formatarMoeda, iniciais, negocioEstaFechado } from "@/lib/types";
 import { Alerta, Botao, Cartao, Confirmar, Rotulo, Selecao } from "@/components/ui";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 
@@ -166,6 +166,21 @@ export function VendedoresTab({
   const totalMeta = membrosState.filter((v) => ehDoTime(v) && v.ativo !== false).reduce((acc, v) => acc + (v.meta_mensal || 0), 0);
   const pendentes = convites.filter((c) => c.status === "pendente");
   const ativos = membrosState.filter((v) => v.ativo !== false);
+
+  /**
+   * "Ativos" aqui quer dizer EM ABERTO, e antes não queria.
+   *
+   * A conta era `negocios.filter((n) => !n.ganho)` — e `!ganho` é verdadeiro
+   * tanto para `null` (aberto) quanto para `false` (PERDIDO). O rótulo dizia
+   * "negócios ativos" e o número somava os perdidos junto; o mesmo dado errado
+   * caía na carteira de cada vendedor logo abaixo, inflando o valor em R$ e a
+   * contagem de "leads em mãos".
+   *
+   * `negocioEstaFechado` é a mesma pergunta que o cabeçalho do Kanban faz,
+   * agora num lugar só — e a página de admin já traz `etapa` embutida em cada
+   * negócio, então ela responde com as duas fontes.
+   */
+  const negociosAbertos = negocios.filter((n) => !negocioEstaFechado(n));
   const inativos = membrosState.filter((v) => v.ativo === false);
   const vendedoresAtivos = ativos.filter(ehDoTime);
 
@@ -304,14 +319,14 @@ export function VendedoresTab({
             </p>
             <p className="text-corpo text-tinta-suave">
               <span className="text-titulo font-medium text-ok tabular">
-                {negocios.filter((n) => !n.ganho).length}
+                {negociosAbertos.length}
               </span>{" "}
               negócios ativos
             </p>
           </div>
 
           {ativos.map((v) => {
-            const deles = negocios.filter((n) => n.responsavel_id === v.id);
+            const deles = negociosAbertos.filter((n) => n.responsavel_id === v.id);
             const valorAtivo = deles.reduce((acc, n) => acc + (n.valor || 0), 0);
             return (
               <div key={v.id} className="col-span-full sm:col-span-3 bg-superficie p-4 rounded-2xl border border-fio shadow-cartao flex items-center justify-between gap-3">

@@ -37,7 +37,7 @@ import {
 } from "@/lib/board";
 import type { ColunaDoBoard } from "@/components/KanbanBoard";
 import type { EtapaPipeline, NegocioComRelacoes, Usuario } from "@/lib/types";
-import { formatarMoeda, resultadoDaEtapa } from "@/lib/types";
+import { formatarMoeda, negocioEstaFechado, resultadoDaEtapa } from "@/lib/types";
 import { estaAtrasada, ordenarPorCadencia, proximaAtividade, temAtividadeHoje } from "@/lib/atividades";
 
 type Foco = "todos" | "respondeu" | "aprovacao" | "atencao" | "atrasados" | "sem_agenda";
@@ -538,32 +538,6 @@ export function KanbanPageClient({
    */
   const etapasDoMenu = useMemo(() => etapasParaEscolher(etapas), [etapas]);
 
-  /**
-   * As etapas que ENCERRAM o negócio, por id.
-   *
-   * O cabeçalho perguntava a `negocios.ganho` se o card estava fechado, mas o
-   * board desenha o card pela ETAPA. Dois donos da mesma verdade — e eles já
-   * tinham divergido: três negócios estavam parados na coluna "Perdido" com
-   * `ganho` nulo, criados ali antes de a regra existir. O cabeçalho os somava
-   * ao pipeline aberto e cobrava "sem próximo passo" de lead perdido.
-   *
-   * A migration `20260910020000` faz o banco manter `ganho` colado na etapa,
-   * então daqui para frente os dois concordam. Ainda assim a tela pergunta AOS
-   * DOIS e considera fechado se qualquer um disser que sim: para um alarme
-   * essa é a direção segura — o preço de errar é cobrar ação de negócio morto.
-   */
-  const etapasQueFecham = useMemo(
-    () => new Set(etapas.filter((e) => resultadoDaEtapa(e) !== null).map((e) => e.id)),
-    [etapas],
-  );
-
-  const estaFechado = useCallback(
-    (n: NegocioComRelacoes) =>
-      (n.ganho !== null && n.ganho !== undefined) ||
-      (!!n.etapa_id && etapasQueFecham.has(n.etapa_id)),
-    [etapasQueFecham],
-  );
-
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const termoDigitos = termo.replace(/\D/g, "");
@@ -594,7 +568,7 @@ export function KanbanPageClient({
         // cliente que escreve depois de ter sido dado como perdido é
         // justamente a mensagem que não se pode esconder.
         if (foco === "atencao" || foco === "atrasados" || foco === "sem_agenda") {
-          if (estaFechado(n)) return false;
+          if (negocioEstaFechado(n)) return false;
         }
 
         if (foco === "atencao" && temAtividadeHoje(n)) return false;
@@ -620,10 +594,10 @@ export function KanbanPageClient({
     // `aprovacoes` PRECISA estar aqui: sem ela a lista não recalcularia quando
     // alguém aprovasse um e-mail, e o card ficaria no filtro depois de sair da
     // fila.
-  }, [negocios, achados, busca, foco, responsavel, aprovacoes, estaFechado]);
+  }, [negocios, achados, busca, foco, responsavel, aprovacoes]);
 
   const resumo = useMemo(() => {
-    const abertos = filtrados.filter((n) => !estaFechado(n));
+    const abertos = filtrados.filter((n) => !negocioEstaFechado(n));
     return {
       abertos: abertos.length,
       valor: abertos.reduce((acc, n) => acc + (n.valor || 0), 0),
@@ -638,7 +612,7 @@ export function KanbanPageClient({
       atrasados: abertos.filter((n) => estaAtrasada(proximaAtividade(n.atividades_pendentes)?.data_agendada)).length,
       semAgenda: abertos.filter((n) => !proximaAtividade(n.atividades_pendentes)).length,
     };
-  }, [filtrados, estaFechado]);
+  }, [filtrados]);
 
   /**
    * Quantos responderam no board INTEIRO, e não dentro do recorte atual.
