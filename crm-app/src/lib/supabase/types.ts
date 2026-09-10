@@ -99,6 +99,7 @@ export type Database = {
           id: string
           lembrete_data: string | null
           lembrete_enviado: boolean | null
+          mensagem_id: string | null
           negocio_id: string | null
           tipo: string
           titulo: string
@@ -118,6 +119,7 @@ export type Database = {
           id?: string
           lembrete_data?: string | null
           lembrete_enviado?: boolean | null
+          mensagem_id?: string | null
           negocio_id?: string | null
           tipo?: string
           titulo: string
@@ -137,6 +139,7 @@ export type Database = {
           id?: string
           lembrete_data?: string | null
           lembrete_enviado?: boolean | null
+          mensagem_id?: string | null
           negocio_id?: string | null
           tipo?: string
           titulo?: string
