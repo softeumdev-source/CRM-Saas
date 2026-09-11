@@ -1906,6 +1906,17 @@ export type Database = {
           total: number
         }[]
       }
+      cota_de_email_do_dia: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          enviados: number
+          reservados: number
+          limite: number
+          folga: number
+          pausado: boolean
+          dentro_do_expediente: boolean
+        }[]
+      }
       contatos_por_telefone: {
         Args: { p_numero: string }
         Returns: {
