@@ -13,6 +13,7 @@ import { formatarDataHora } from "@/lib/atividades";
 type Template = Tables<"templates_mensagem">;
 type ConfigWhats = Tables<"whatsapp_config">;
 type ConfigEmail = Tables<"email_config">;
+type Expediente = Tables<"preferencias_agenda">;
 type Passo = CadenciaComPassos["passos"][number];
 
 /**
@@ -50,6 +51,43 @@ function saiPelaMao(passo: Passo): boolean {
   return passo.canal === "whatsapp";
 }
 
+/**
+ * O INTERVALO ENTRE UM E-MAIL E O SEGUINTE, que era o que faltava dizer.
+ *
+ * A tela mostrava só "até 50/dia", e 50/dia não responde a pergunta que a
+ * pessoa realmente tem — "vai disparar tudo junto?". O número que responde é
+ * este: um a cada tantos minutos.
+ *
+ * A conta é a mesma de `email_folga`, de trás para frente: aquela divide o teto
+ * pelos minutos úteis do dia para liberar aos poucos; esta divide os minutos
+ * úteis pelo teto para dizer de quanto em quanto tempo sai um.
+ *
+ * Devolve `null` quando não dá para afirmar — sem expediente configurado, ou
+ * com teto zero. Melhor não dizer nada do que dizer um número inventado.
+ */
+function intervaloEntreEmails(expediente: Expediente | null, limite: number): string | null {
+  if (!expediente || limite <= 0) return null;
+
+  const minutos = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const almoco =
+    expediente.almoco_inicio && expediente.almoco_fim
+      ? minutos(expediente.almoco_fim) - minutos(expediente.almoco_inicio)
+      : 0;
+  const uteis = minutos(expediente.hora_fim) - minutos(expediente.hora_inicio) - almoco;
+  if (uteis <= 0) return null;
+
+  const cada = uteis / limite;
+  // Abaixo de um minuto "a cada 0 min" não informa nada; acima de uma hora, a
+  // pessoa pensa em horas e não em 90 minutos.
+  if (cada < 1) return "vários por minuto";
+  if (cada >= 60) return `1 a cada ${(cada / 60).toFixed(1).replace(".", ",")} h`;
+  return `1 a cada ${Math.round(cada)} min`;
+}
+
 function resumoDeCanais(passos: Passo[]): string {
   const emails = passos.filter((p) => p.canal === "email").length;
   const zaps = passos.length - emails;
@@ -65,6 +103,7 @@ export function CadenciasTab() {
   const [whats, setWhats] = useState<ConfigWhats | null>(null);
   const [email, setEmail] = useState<ConfigEmail | null>(null);
   const [limiteDia, setLimiteDia] = useState("");
+  const [expediente, setExpediente] = useState<Expediente | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState<string | null>(null);
@@ -77,15 +116,16 @@ export function CadenciasTab() {
   const carregar = useCallback(async () => {
     const supabase = createClient();
     try {
-      const [cad, tpl, wa, em] = await comPrazo(
+      const [cad, tpl, wa, em, ex] = await comPrazo(
         Promise.all([
           supabase.from("cadencias").select("*, passos:cadencia_passos(*)").order("criado_em"),
           supabase.from("templates_mensagem").select("*").order("canal").order("nome"),
           supabase.from("whatsapp_config").select("*").maybeSingle(),
           supabase.from("email_config").select("*").maybeSingle(),
+          supabase.from("preferencias_agenda").select("*").maybeSingle(),
         ]),
       );
-      const falha = cad.error || tpl.error || wa.error || em.error;
+      const falha = cad.error || tpl.error || wa.error || em.error || ex.error;
       if (falha) {
         setErro(`Não foi possível carregar: ${falha.message}`);
         return;
@@ -96,6 +136,7 @@ export function CadenciasTab() {
       setWhats(wa.data ?? null);
       setEmail(em.data ?? null);
       setLimiteDia(em.data ? String(em.data.limite_por_dia) : "");
+      setExpediente(ex.data ?? null);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar.");
     } finally {
@@ -287,23 +328,58 @@ export function CadenciasTab() {
                         : " · usada em lead novo"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    {/* ESTADO E AÇÃO SEPARADOS, e é correção de um defeito
+                        que custou caro.
+
+                        Os dois botões tinham o ESTADO no rótulo: um dizia
+                        "Autônoma", o outro "Ativa". Mas rótulo de botão se lê
+                        como AÇÃO — "Autônoma" parece "clique para tornar
+                        autônoma". Quem clicava esperando ligar, desligava. E o
+                        estado ligado ainda vinha de vermelho (`perigo`), que
+                        todo mundo lê como "desligado/errado".
+
+                        Aconteceu: a cadência de primeiro contato, com 58 leads,
+                        foi desligada por um clique que pretendia ligá-la, e
+                        ninguém tinha como perceber pela tela.
+
+                        Agora o estado é um PONTO COLORIDO COM TEXTO, que não é
+                        clicável e por isso só pode ser lido como estado; e o
+                        botão tem VERBO NO INFINITIVO, que só pode ser lido como
+                        o que vai acontecer. */}
+                    <span className="flex items-center gap-1.5 text-rotulo">
+                      <span
+                        aria-hidden
+                        className={`h-2 w-2 rounded-full shrink-0 ${
+                          !c.ativa ? "bg-tinta-fraca" : c.autonoma ? "bg-ok" : "bg-alerta"
+                        }`}
+                      />
+                      <span className={c.ativa ? "text-tinta" : "text-tinta-fraca"}>
+                        {!c.ativa
+                          ? "Parada"
+                          : c.autonoma
+                            ? "E-mails saem sozinhos"
+                            : "E-mails esperam seu clique"}
+                      </span>
+                    </span>
+                    {c.ativa && (
+                      <Botao
+                        tamanho="sm"
+                        variante="secundario"
+                        disabled={salvando === c.id + "autonoma"}
+                        onClick={() => void alternar(c.id, "autonoma", !c.autonoma)}
+                      >
+                        {c.autonoma ? <ShieldCheck className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                        {c.autonoma ? "Exigir aprovação" : "Deixar automático"}
+                      </Botao>
+                    )}
                     <Botao
                       tamanho="sm"
                       variante="secundario"
                       disabled={salvando === c.id + "ativa"}
                       onClick={() => void alternar(c.id, "ativa", !c.ativa)}
                     >
-                      {c.ativa ? "Ativa" : "Pausada"}
-                    </Botao>
-                    <Botao
-                      tamanho="sm"
-                      variante={c.autonoma ? "perigo" : "secundario"}
-                      disabled={salvando === c.id + "autonoma"}
-                      onClick={() => void alternar(c.id, "autonoma", !c.autonoma)}
-                    >
-                      {c.autonoma ? <Bot className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                      {c.autonoma ? "Autônoma" : "Com aprovação"}
+                      {c.ativa ? "Parar cadência" : "Retomar cadência"}
                     </Botao>
                   </div>
                 </div>
@@ -388,19 +464,19 @@ export function CadenciasTab() {
               <Mail className="h-4 w-4 text-acento" /> Ritmo do e-mail
             </Rotulo>
             <p className="text-rotulo text-tinta-suave mt-1">
-              Os e-mails de cadencia saem sozinhos, espalhados pelo expediente — nunca todos de
-              uma vez. A janela e o Horario de Atendimento configurado aqui no admin: fora dele, e
-              nos fins de semana e no almoco, nao sai nada.
+              Vale para as cadências marcadas como <strong className="font-medium">automáticas</strong> na
+              lista acima. A janela é o Horário de Atendimento configurado aqui no admin: fora dele,
+              nos fins de semana e no almoço, não sai nada.
             </p>
           </div>
 
           {email.pausado ? (
             <div className="rounded-2xl border border-fio bg-recuo p-4">
               <p className="text-corpo font-medium text-tinta flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" /> Envio automatico desligado
+                <ShieldCheck className="h-4 w-4" /> Envio automático desligado
               </p>
               <p className="text-rotulo mt-1 text-tinta-suave">
-                Os toques continuam sendo escritos e ficam na fila. Nenhum sai ate voce religar.
+                Os toques continuam sendo escritos e ficam na fila. Nenhum sai até você religar.
               </p>
               <div className="mt-3">
                 <Botao
@@ -416,11 +492,25 @@ export function CadenciasTab() {
           ) : (
             <div className="rounded-2xl border border-ok/40 bg-ok-fraco p-4 flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <p className="text-corpo font-medium text-ok">Envio automatico ligado</p>
+                <p className="text-corpo font-medium text-ok">Envio automático ligado</p>
+                {/* O INTERVALO VEM PRIMEIRO, e em negrito.
+                    "50/dia" não responde "vai disparar tudo junto?". "1 a cada
+                    10 min" responde, e era a dúvida real de quem abre esta
+                    tela. */}
                 <p className="text-rotulo text-ok mt-0.5">
-                  Ate {email.limite_por_dia}/dia, no ritmo do expediente. Se as cadencias em
-                  andamento nao encherem a cota, o sistema puxa lead novo da etapa &quot;Novo
-                  Lead&quot; para completar.
+                  {intervaloEntreEmails(expediente, email.limite_por_dia) ? (
+                    <>
+                      <strong className="font-medium">
+                        {intervaloEntreEmails(expediente, email.limite_por_dia)}
+                      </strong>
+                      {", até "}
+                      {email.limite_por_dia} por dia.{" "}
+                    </>
+                  ) : (
+                    <>Até {email.limite_por_dia} por dia, no ritmo do expediente. </>
+                  )}
+                  Se as cadências em andamento não encherem a cota, o sistema puxa lead novo para
+                  completar.
                 </p>
               </div>
               <Botao
@@ -455,6 +545,16 @@ export function CadenciasTab() {
               {salvando === "email-limite" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               Salvar
             </Botao>
+            {/* O EFEITO DO NÚMERO, ENQUANTO SE DIGITA.
+                Sem isto, "200 por dia" é abstrato e parece só "mais". Com isto
+                a pessoa vê que virou um a cada 2 minutos ANTES de salvar — que
+                é a informação que a faria mudar de ideia. */}
+            {intervaloEntreEmails(expediente, Number(limiteDia)) && (
+              <p className="text-rotulo text-tinta-suave pb-2.5">
+                ≈ {intervaloEntreEmails(expediente, Number(limiteDia))}
+                {limiteDia !== String(email.limite_por_dia) && " depois de salvar"}
+              </p>
+            )}
           </div>
         </Cartao>
       )}
