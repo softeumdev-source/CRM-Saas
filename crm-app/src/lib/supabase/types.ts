@@ -509,6 +509,38 @@ export type Database = {
           },
         ]
       }
+      email_config: {
+        Row: {
+          criado_em: string | null
+          id: string
+          limite_por_dia: number
+          pausado: boolean
+          tenant_id: string
+        }
+        Insert: {
+          criado_em?: string | null
+          id?: string
+          limite_por_dia?: number
+          pausado?: boolean
+          tenant_id: string
+        }
+        Update: {
+          criado_em?: string | null
+          id?: string
+          limite_por_dia?: number
+          pausado?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       envelopes: {
         Row: {
           campos_assinatura: Json | null

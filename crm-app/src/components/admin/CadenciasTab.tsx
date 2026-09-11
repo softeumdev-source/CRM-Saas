@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Bot, Check, FileText, Loader2, Mail, MessageCircle, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { comPrazo } from "@/lib/prazo";
-import { AreaTexto, Botao, Cartao, Entrada, Modal, Rotulo, Selo } from "@/components/ui";
+import { AreaTexto, Botao, Campo, Cartao, Entrada, Modal, Rotulo, Selo } from "@/components/ui";
 import { ROTULO_CANAL, ROTULO_CATEGORIA, ROTULO_TIPO_CADENCIA } from "@/lib/cadencia";
 import type { CadenciaComPassos } from "@/lib/cadencia";
 import type { Tables } from "@/lib/supabase/types";
@@ -12,6 +12,7 @@ import { formatarDataHora } from "@/lib/atividades";
 
 type Template = Tables<"templates_mensagem">;
 type ConfigWhats = Tables<"whatsapp_config">;
+type ConfigEmail = Tables<"email_config">;
 type Passo = CadenciaComPassos["passos"][number];
 
 /**
@@ -32,13 +33,21 @@ function comDia(passos: Passo[]): (Passo & { dia: number })[] {
 }
 
 /**
- * O motor PULA um toque de WhatsApp cujo modelo não tem id aprovado na Meta —
- * em vez de pausar a inscrição inteira, que levaria junto os e-mails do mesmo
- * lead. Pular, porém, não deixa rastro no card do negócio: esta é a tela que
- * precisa contar.
+ * Todo toque de WhatsApp sai PELA MÃO de alguém — nunca pela API da Meta.
+ *
+ * Antes isto dependia do modelo ter id aprovado na Meta: com id, o motor
+ * mandava sozinho; sem id, virava tarefa. Agora o canal inteiro é manual
+ * (`processar_cadencias` marca `envio_manual` em todo WhatsApp), então o id da
+ * Meta deixou de decidir qualquer coisa aqui — quem manda é uma pessoa, e
+ * pessoa não precisa de template aprovado.
+ *
+ * A consequência precisa aparecer nesta tela: enquanto o toque de WhatsApp não
+ * for enviado, a cadência daquele lead PARA — o e-mail seguinte dele não é
+ * escrito. É o mesmo princípio de sempre (não se manda o segundo argumento
+ * para quem não recebeu o primeiro), só que agora ele encosta no WhatsApp.
  */
-function seraPulado(passo: Passo, modelo: Template | undefined): boolean {
-  return passo.canal === "whatsapp" && !modelo?.template_externo_id;
+function saiPelaMao(passo: Passo): boolean {
+  return passo.canal === "whatsapp";
 }
 
 function resumoDeCanais(passos: Passo[]): string {
@@ -54,6 +63,8 @@ export function CadenciasTab() {
   const [cadencias, setCadencias] = useState<CadenciaComPassos[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [whats, setWhats] = useState<ConfigWhats | null>(null);
+  const [email, setEmail] = useState<ConfigEmail | null>(null);
+  const [limiteDia, setLimiteDia] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState<string | null>(null);
@@ -66,14 +77,15 @@ export function CadenciasTab() {
   const carregar = useCallback(async () => {
     const supabase = createClient();
     try {
-      const [cad, tpl, wa] = await comPrazo(
+      const [cad, tpl, wa, em] = await comPrazo(
         Promise.all([
           supabase.from("cadencias").select("*, passos:cadencia_passos(*)").order("criado_em"),
           supabase.from("templates_mensagem").select("*").order("canal").order("nome"),
           supabase.from("whatsapp_config").select("*").maybeSingle(),
+          supabase.from("email_config").select("*").maybeSingle(),
         ]),
       );
-      const falha = cad.error || tpl.error || wa.error;
+      const falha = cad.error || tpl.error || wa.error || em.error;
       if (falha) {
         setErro(`Não foi possível carregar: ${falha.message}`);
         return;
@@ -82,6 +94,8 @@ export function CadenciasTab() {
       setCadencias((cad.data || []) as unknown as CadenciaComPassos[]);
       setTemplates(tpl.data || []);
       setWhats(wa.data ?? null);
+      setEmail(em.data ?? null);
+      setLimiteDia(em.data ? String(em.data.limite_por_dia) : "");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível carregar.");
     } finally {
@@ -106,6 +120,51 @@ export function CadenciasTab() {
     // afrouxar o tipo.
     const patch = campo === "autonoma" ? { autonoma: valor } : { ativa: valor };
     const { error } = await createClient().from("cadencias").update(patch).eq("id", id);
+    setSalvando(null);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setErro(null);
+    void carregar();
+  };
+
+  /**
+   * O freio do e-mail: quantos podem sair por dia, e o botao de pausa.
+   *
+   * O numero NAO e o ritmo. Quem espalha os envios ao longo do expediente e
+   * `email_folga`, no banco: ela divide este teto pelos minutos uteis do dia e
+   * libera aos poucos. Mudar 50 para 200 aqui nao faz 200 sairem de uma vez —
+   * faz sairem quatro vezes mais rapido dentro da mesma janela.
+   */
+  const salvarLimite = async () => {
+    if (!email) return;
+    const n = Number(limiteDia);
+    if (!Number.isInteger(n) || n < 0) {
+      setErro("O limite diario tem de ser um numero inteiro, zero ou mais.");
+      return;
+    }
+    setSalvando("email-limite");
+    const { error } = await createClient()
+      .from("email_config")
+      .update({ limite_por_dia: n })
+      .eq("id", email.id);
+    setSalvando(null);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    setErro(null);
+    void carregar();
+  };
+
+  const alternarEmail = async (pausar: boolean) => {
+    if (!email) return;
+    setSalvando("email-pausa");
+    const { error } = await createClient()
+      .from("email_config")
+      .update({ pausado: pausar })
+      .eq("id", email.id);
     setSalvando(null);
     if (error) {
       setErro(error.message);
@@ -252,22 +311,21 @@ export function CadenciasTab() {
                 {c.autonoma && (
                   <p className="text-rotulo font-medium text-risco bg-risco-fraco rounded-lg px-3 py-2 flex items-start gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />
-                    As mensagens desta cadência saem sem ninguém ler. Todo lead inscrito nela vai
-                    receber os {(c.passos || []).length} toques automaticamente.
+                    Os e-mails desta cadência saem sem ninguém ler:{" "}
+                    {(c.passos || []).filter((p) => p.canal === "email").length} dos{" "}
+                    {(c.passos || []).length} toques. Os de WhatsApp continuam esperando você.
                   </p>
                 )}
 
                 {(() => {
                   const passos = comDia(c.passos || []);
-                  const pulados = passos.filter((p) =>
-                    seraPulado(p, templates.find((t) => t.id === p.template_id)),
-                  );
+                  const naMao = passos.filter(saiPelaMao);
                   return (
                     <>
                       <ol className="space-y-1">
                         {passos.map((p) => {
                           const modelo = templates.find((t) => t.id === p.template_id);
-                          const pulado = seraPulado(p, modelo);
+                          const mao = saiPelaMao(p);
                           return (
                             <li
                               key={p.id}
@@ -290,31 +348,27 @@ export function CadenciasTab() {
                               ) : (
                                 <Mail className="h-3.5 w-3.5 shrink-0 text-acento" />
                               )}
-                              <span className={pulado ? "line-through" : undefined}>
-                                {modelo?.nome || "sem modelo"}
-                              </span>
-                              {pulado && <Selo tom="alerta">pulado</Selo>}
+                              <span>{modelo?.nome || "sem modelo"}</span>
+                              {mao && <Selo tom="alerta">na sua mão</Selo>}
                             </li>
                           );
                         })}
                       </ol>
 
-                      {/* A ÚNICA tela onde este estado aparece. O motor deixou
-                          de pausar a inscrição por causa disto — pular é o
-                          certo, porque senão um passo de WhatsApp sem conta na
-                          Meta mataria também os e-mails do mesmo lead. Mas
-                          pular é silencioso no card do negócio, então tem que
-                          ser barulhento aqui. */}
-                      {pulados.length > 0 && (
+                      {/* Isto tem que ser barulhento AQUI, porque no card do
+                          negócio a cadência parada parece só uma cadência
+                          lenta. É a diferença entre "o robô está trabalhando"
+                          e "o robô está te esperando". */}
+                      {naMao.length > 0 && (
                         <p className="text-rotulo text-tinta-suave bg-recuo rounded-lg px-3 py-2 flex items-start gap-2">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px text-alerta" />
                           <span>
-                            {pulados.length === 1
-                              ? "1 toque de WhatsApp não vai sair"
-                              : `${pulados.length} toques de WhatsApp não vão sair`}
-                            : falta o id do template aprovado na Meta. O lead recebe normalmente os
-                            de e-mail, e estes voltam sozinhos assim que você colar o id no modelo,
-                            aqui embaixo.
+                            {naMao.length === 1
+                              ? "1 toque desta sequência é WhatsApp"
+                              : `${naMao.length} toques desta sequência são WhatsApp`}
+                            , e WhatsApp você manda. Enquanto o toque não for enviado, a cadência
+                            daquele lead fica parada nele — o e-mail seguinte só é escrito depois.
+                            Os cards esperando aparecem em &quot;Toque pronto p/ enviar&quot;.
                           </span>
                         </p>
                       )}
@@ -326,6 +380,84 @@ export function CadenciasTab() {
           </div>
         )}
       </Cartao>
+
+      {email && (
+        <Cartao className="space-y-4">
+          <div>
+            <Rotulo className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-acento" /> Ritmo do e-mail
+            </Rotulo>
+            <p className="text-rotulo text-tinta-suave mt-1">
+              Os e-mails de cadencia saem sozinhos, espalhados pelo expediente — nunca todos de
+              uma vez. A janela e o Horario de Atendimento configurado aqui no admin: fora dele, e
+              nos fins de semana e no almoco, nao sai nada.
+            </p>
+          </div>
+
+          {email.pausado ? (
+            <div className="rounded-2xl border border-fio bg-recuo p-4">
+              <p className="text-corpo font-medium text-tinta flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" /> Envio automatico desligado
+              </p>
+              <p className="text-rotulo mt-1 text-tinta-suave">
+                Os toques continuam sendo escritos e ficam na fila. Nenhum sai ate voce religar.
+              </p>
+              <div className="mt-3">
+                <Botao
+                  tamanho="sm"
+                  variante="secundario"
+                  disabled={salvando === "email-pausa"}
+                  onClick={() => void alternarEmail(false)}
+                >
+                  Ligar o envio automatico
+                </Botao>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-ok/40 bg-ok-fraco p-4 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-corpo font-medium text-ok">Envio automatico ligado</p>
+                <p className="text-rotulo text-ok mt-0.5">
+                  Ate {email.limite_por_dia}/dia, no ritmo do expediente. Se as cadencias em
+                  andamento nao encherem a cota, o sistema puxa lead novo da etapa &quot;Novo
+                  Lead&quot; para completar.
+                </p>
+              </div>
+              <Botao
+                tamanho="sm"
+                variante="perigo"
+                disabled={salvando === "email-pausa"}
+                onClick={() => void alternarEmail(true)}
+              >
+                Desligar
+              </Botao>
+            </div>
+          )}
+
+          <div className="flex items-end gap-2 flex-wrap">
+            <Campo rotulo="E-mails por dia" className="w-40">
+              {(p) => (
+                <Entrada
+                  {...p}
+                  type="number"
+                  min={0}
+                  value={limiteDia}
+                  onChange={(e) => setLimiteDia(e.target.value)}
+                />
+              )}
+            </Campo>
+            <Botao
+              tamanho="sm"
+              variante="secundario"
+              disabled={salvando === "email-limite" || limiteDia === String(email.limite_por_dia)}
+              onClick={() => void salvarLimite()}
+            >
+              {salvando === "email-limite" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+              Salvar
+            </Botao>
+          </div>
+        </Cartao>
+      )}
 
       {whats && (
         <Cartao className="space-y-4">
