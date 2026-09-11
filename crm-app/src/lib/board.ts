@@ -81,7 +81,39 @@ export type DadosDoBoard = {
   etapaCadenciaId: string | null;
   /** Quantos existem em cada coluna de cadência, no banco e não na tela. */
   totaisPorCadencia: Record<EstadoCadencia, number>;
+  /**
+   * A cota de e-mail do dia. `null` no board do vendedor — a cadência é do SDR,
+   * e um número que ele não controla no cabeçalho dele seria só ruído.
+   */
+  cotaDeEmail: CotaDeEmail | null;
 };
+
+/**
+ * O dia de e-mail da prospecção, como o BANCO o conta.
+ *
+ * Vem inteira do RPC `cota_de_email_do_dia`, e isso é deliberado: o dia é
+ * contado no fuso do tenant, e o freio (`email_folga`) usa essa mesma conta
+ * para decidir. Recalcular qualquer parte disto aqui no cliente criaria uma
+ * segunda verdade — e a tela diria "48/50" enquanto o motor já tinha parado.
+ */
+export type CotaDeEmail = {
+  /** O que de fato saiu hoje. É o número que a pessoa reconhece. */
+  enviados: number;
+  /** O que consumiu cota, incluindo o que falhou depois de reservado. */
+  reservados: number;
+  limite: number;
+  /** Quantos cabem AGORA. Zero fora do expediente, e zero se está no ritmo. */
+  folga: number;
+  pausado: boolean;
+  dentro_do_expediente: boolean;
+};
+
+export async function buscarCotaDeEmail(
+  supabase: SupabaseClient<Database>,
+): Promise<CotaDeEmail | null> {
+  const { data } = await supabase.rpc("cota_de_email_do_dia");
+  return data?.[0] ?? null;
+}
 
 /**
  * Carrega um board de kanban inteiro a partir da chave do funil.
@@ -129,6 +161,7 @@ export async function carregarBoard(
     pendentes,
     porCadencia,
     totaisCadencia,
+    cotaDeEmail,
   ] =
     await Promise.all([
       // `negocios_do_board` devolve as N primeiras de CADA etapa numa consulta
@@ -158,6 +191,7 @@ export async function carregarBoard(
       etapaCadenciaId
         ? contarPorCadencia(supabase, pipeline?.id, etapaCadenciaId)
         : Promise.resolve({ data: null }),
+      mostraCadencia ? buscarCotaDeEmail(supabase) : Promise.resolve(null),
     ]);
 
   const totaisPorEtapa = Object.fromEntries((totais || []).map((t) => [t.etapa_id, Number(t.total)]));
@@ -193,6 +227,7 @@ export async function carregarBoard(
     totaisPorCadencia: mapaDeTotaisPorCadencia(
       totaisCadencia.data as { estado: string; total: number }[] | null,
     ),
+    cotaDeEmail,
   };
 }
 

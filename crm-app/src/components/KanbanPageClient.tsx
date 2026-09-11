@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, MessageCircle, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Search, X, AlertTriangle, CheckCircle2, CalendarClock, Mail, MessageCircle, Maximize2, Minimize2 } from "lucide-react";
 import { useEstadoDaProp } from "@/lib/estadoDaProp";
 import { createClient } from "@/lib/supabase/client";
 import { useSincronizacao } from "@/lib/supabase/realtime";
@@ -33,6 +33,7 @@ import {
   unirFatias,
   type EstadoCadencia,
   type ResumoCadencia,
+  type CotaDeEmail,
   type ResumoDeAprovacao,
 } from "@/lib/board";
 import type { ColunaDoBoard } from "@/components/KanbanBoard";
@@ -132,6 +133,7 @@ export function KanbanPageClient({
   aprovacoes: aprovacoesIniciais,
   etapaCadenciaId,
   totaisPorCadencia: totaisPorCadenciaIniciais,
+  cotaDeEmail,
 }: {
   /** O funil desta tela. É ele que decide o recorte, o título e as métricas. */
   pipeline: Pipeline | null;
@@ -148,6 +150,8 @@ export function KanbanPageClient({
   /** A etapa cuja coluna vira as quatro de cadência. `null` no board do vendedor. */
   etapaCadenciaId: string | null;
   totaisPorCadencia: Record<EstadoCadencia, number>;
+  /** A cota de e-mail do dia. `null` no board do vendedor, que não a mostra. */
+  cotaDeEmail: CotaDeEmail | null;
 }) {
   const pipelineId = pipeline?.id ?? null;
   // O SDR nao vende: o que ele entrega e reuniao, nao receita. Por isso o
@@ -942,6 +946,34 @@ export function KanbanPageClient({
               rotulo="sem próximo passo"
               cor={resumo.semAgenda > 0 ? "text-alerta" : undefined}
             />
+            {/* O DIA DE E-MAIL DA CADÊNCIA.
+
+                Entra na mesma faixa dos outros estados de propósito: é um
+                número para conferir de relance, não um painel. Só no board do
+                SDR — no do vendedor seria um número que ele não controla.
+
+                Os dois lados vêm do RPC, que conta o dia no fuso do TENANT e
+                usa a mesma conta do freio. Nada aqui é recalculado: a tela não
+                pode ter uma segunda definição de "hoje", senão diria 48/50
+                enquanto o motor já parou em 50.
+
+                `reservados` só aparece quando difere de `enviados` — a
+                diferença é envio que falhou depois de consumir cota, e sem
+                isso o board mostraria "47 de 50" sem explicar por que parou. */}
+            {cotaDeEmail && (
+              <Estado
+                icone={<Mail className="h-3.5 w-3.5" />}
+                valor={cotaDeEmail.enviados}
+                rotulo={
+                  cotaDeEmail.pausado
+                    ? `de ${cotaDeEmail.limite} e-mails hoje · envio desligado`
+                    : cotaDeEmail.reservados > cotaDeEmail.enviados
+                      ? `de ${cotaDeEmail.limite} e-mails hoje (${cotaDeEmail.reservados} consumiram cota)`
+                      : `de ${cotaDeEmail.limite} e-mails hoje`
+                }
+                cor={cotaDeEmail.enviados > 0 ? "text-acento" : undefined}
+              />
+            )}
           </div>
         </div>
         )}
